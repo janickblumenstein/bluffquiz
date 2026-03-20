@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>BluffQuiz 😈</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+
+<style>
+body { font-family: Arial; background:#111; color:#fff; text-align:center; }
+input, button { padding:10px; margin:5px; font-size:16px; }
+.card { margin:20px; padding:20px; background:#222; border-radius:10px; }
+</style>
+</head>
+<body>
+
+<h1>🔥 BluffQuiz 😈</h1>
+
+<div id="login" class="card">
+  <input id="name" placeholder="Name">
+  <input id="room" placeholder="Code (z.B. 1234)">
+  <button onclick="join()">Join</button>
+</div>
+
+<div id="game" style="display:none">
+  <h2 id="question"></h2>
+
+  <div id="answerBox">
+    <input id="answer" placeholder="Deine Fake-Antwort">
+    <button onclick="submitAnswer()">Absenden</button>
+  </div>
+
+  <div id="voting"></div>
+  <h3 id="leaderboard"></h3>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
+  authDomain: "bierkultur-d2fea.firebaseapp.com",
+  databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
+  projectId: "bierkultur-d2fea",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let player = "";
+let room = "";
+
+const question = "Die dümmste Ausrede fürs Fremdgehen war…";
+
+window.join = function() {
+  player = document.getElementById("name").value;
+  room = document.getElementById("room").value;
+
+  set(ref(db, "rooms/" + room + "/players/" + player), {
+    score: 0
+  });
+
+  document.getElementById("login").style.display = "none";
+  document.getElementById("game").style.display = "block";
+  document.getElementById("question").innerText = question;
+
+  listenAnswers();
+  listenVotes();
+};
+
+window.submitAnswer = function() {
+  let val = document.getElementById("answer").value;
+
+  set(ref(db, "rooms/" + room + "/answers/" + player), val);
+
+  document.getElementById("answerBox").innerHTML = "Antwort gesendet 😄";
+};
+
+function listenAnswers() {
+  onValue(ref(db, "rooms/" + room + "/answers"), (snap) => {
+    let data = snap.val();
+    if (!data) return;
+
+    let votingDiv = document.getElementById("voting");
+    votingDiv.innerHTML = "<h3>Voting</h3>";
+
+    Object.entries(data).forEach(([p, text]) => {
+      let btn = document.createElement("button");
+      btn.innerText = text;
+      btn.onclick = () => vote(p);
+      votingDiv.appendChild(btn);
+      votingDiv.appendChild(document.createElement("br"));
+    });
+  });
+}
+
+function vote(target) {
+  set(ref(db, "rooms/" + room + "/votes/" + player), target);
+}
+
+function listenVotes() {
+  onValue(ref(db, "rooms/" + room + "/votes"), (snap) => {
+    let votes = snap.val();
+    if (!votes) return;
+
+    let scores = {};
+
+    Object.values(votes).forEach(target => {
+      scores[target] = (scores[target] || 0) + 1;
+    });
+
+    let text = "🏆 Punkte:<br>";
+    Object.entries(scores).forEach(([p, s]) => {
+      text += p + ": " + s + "<br>";
+    });
+
+    document.getElementById("leaderboard").innerHTML = text;
+  });
+}
+</script>
+</body>
+</html>
