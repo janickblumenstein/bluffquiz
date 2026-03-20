@@ -1,212 +1,268 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-<meta charset="UTF-8">
-<title>BluffQuiz Party Edition – Host Version 😈</title>
+    <meta charset="UTF-8">
+    <!-- WICHTIG: Verhindert automatisches Zoomen auf Mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BluffQuiz Mobile 📱</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #f43f5e;
+            --secondary: #38bdf8;
+            --text: #f8fafc;
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        h1 { font-size: 1.8rem; margin: 10px 0; color: var(--primary); text-shadow: 0 0 10px rgba(244, 63, 94, 0.3); }
+
+        .card { 
+            background: var(--card); 
+            border-radius: 20px; 
+            padding: 25px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); 
+            width: 100%; 
+            max-width: 400px; 
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        input, select { 
+            width: 100%; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 12px; 
+            border: 2px solid #334155; 
+            background: #0f172a; 
+            color: white; 
+            font-size: 16px; /* Wichtig: Mindestens 16px verhindert iOS-Auto-Zoom */
+            box-sizing: border-box;
+        }
+
+        button { 
+            width: 100%; 
+            padding: 16px; 
+            border-radius: 12px; 
+            border: none; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: transform 0.1s, opacity 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:active { transform: scale(0.96); }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-vote { background: var(--secondary); color: #0f172a; margin-top: 10px; }
+        .btn-host { background: #10b981; color: white; }
+
+        .host-controls {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10b981;
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+            display: none;
+        }
+
+        #questionDisplay { font-size: 1.4rem; line-height: 1.4; margin: 20px 0; min-height: 80px; }
+        
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .hidden { display: none !important; }
+        .label-small { font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; display: block; }
+    </style>
+</head>
+<body>
+
+    <h1>🔥 BluffQuiz</h1>
+
+    <!-- LOGIN -->
+    <div id="login" class="card">
+        <span class="label-small">DEIN NAME</span>
+        <input id="name" type="text" placeholder="z.B. PartyLöwe" autocomplete="off">
+        
+        <span class="label-small">RAUM-CODE</span>
+        <input id="room" type="text" value="0819" autocomplete="off">
+        
+        <span class="label-small">SPIELMODUS</span>
+        <select id="gameSelect">
+            <option value="game1">Fake oder Fakt</option>
+            <option value="game2">Wer von uns...?</option>
+            <option value="game3">Dümmste Antwort</option>
+        </select>
+
+        <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="hostCheck" style="width: 20px; margin: 0;"> 
+            <span>Ich bin Host 👑</span>
+        </div>
+
+        <button class="btn-primary" onclick="join()">JETZT BEITRETEN</button>
+    </div>
+
+    <!-- GAME AREA -->
+    <div id="game" class="card hidden">
+        <div id="gameHeader" style="color: var(--secondary); font-weight: bold; font-size: 0.9rem;"></div>
+        <div id="questionDisplay">Warte auf Host...</div>
+
+        <!-- Antwort-Eingabe (Spieler) -->
+        <div id="answerArea">
+            <input id="answerInput" type="text" placeholder="Deine Antwort hier..." autocomplete="off">
+            <button class="btn-primary" onclick="submitAnswer()">ANTWORT SENDEN</button>
+        </div>
+
+        <!-- Voting-Liste (Spieler) -->
+        <div id="votingArea" class="hidden">
+            <p style="font-weight: bold;">Wer lügt am besten?</p>
+            <div id="voteButtons"></div>
+        </div>
+    </div>
+
+    <!-- HOST CONTROLS -->
+    <div id="hostControls" class="host-controls">
+        <p style="margin: 0 0 10px 0; font-weight: bold; color: #10b981;">HOST PANEL</p>
+        <button class="btn-host" onclick="nextQuestion()">NÄCHSTE FRAGE</button>
+        <button style="background: #f59e0b; color: white;" onclick="revealAnswers()">VOTING FREIGEBEN</button>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div id="leaderboardArea" class="card hidden">
+        <h4 style="margin-top: 0;">🏆 SCOREBOARD</h4>
+        <div id="scoreList">Warte auf Ergebnisse...</div>
+    </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { initializeApp } from "https://gstatic.com";
+    import { getDatabase, ref, set, onValue, update, get } from "https://gstatic.com";
 
-// 🔥 Füge hier DEINE Firebase Config ein
-const firebaseConfig = {
-  apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
-  authDomain: "bierkultur-d2fea.firebaseapp.com",
-  databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
-  projectId: "bierkultur-d2fea",
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
+        authDomain: "://firebaseapp.com",
+        databaseURL: "https://firebasedatabase.app",
+        projectId: "bierkultur-d2fea",
+    };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-// -------------------- Spieler & Raum --------------------
-let player = "";
-let room = "0819";  // fixierter Raumcode
-let isHost = false;
-let currentGame = "game1";
-let currentQuestionIndex = 0;
+    let state = { player: "", room: "", isHost: false, mode: "", currentIdx: -1 };
 
-// -------------------- Fragen --------------------
-const game1_questions = [
-  "Das meistgeklaute Objekt in Hotels weltweit ist…",
-  "Die dümmste Ausrede fürs Zuspätkommen im Büro war…",
-  "Das peinlichste, was ein Mann auf Tinder erlebt hat…",
-  "Die schlimmste Lüge beim ersten Date war…",
-  "Der peinlichste Job, den jemand geheim hält, ist…",
-  "Was ein Typ heimlich googelt, aber nie zugibt…",
-  "Das absurdeste Alkohol-Desaster im Urlaub war…",
-  "Der schlechteste Anmachspruch aller Zeiten…",
-  "Die absurdeste Ausrede für das Vergessen eines Geburtstags…",
-  "Das dämlichste, was ein Mann betrunken getan hat…"
-];
+    const questions = {
+        game1: ["Das meistgeklaute Objekt in Hotels...", "Die dümmste Ausrede fürs Zuspätkommen...", "Das peinlichste Tinder-Erlebnis...", "Die schlimmste Lüge beim Date..."],
+        game2: ["Wer würde betrunken den Chef anrufen?", "Wer hat die peinlichste Jugendsünde?", "Wer landet am schnellsten im Knast?", "Wer ist der größte Drama-Magnet?"],
+        game3: ["Wofür steht IKEA wirklich?", "Neue Tinder Premium Funktion:", "Männer-Gruppenchat Name:", "Schlimmster Satz beim ersten Date:"]
+    };
 
-const game2_questions = [
-  "Wer würde am ehesten betrunken den Chef anrufen?",
-  "Wer hat die peinlichste Jugendsünde?",
-  "Wer würde heimlich für Geld alles machen?",
-  "Wer schreibt nachts betrunken Nachrichten, die er bereut?",
-  "Wer lügt am meisten ohne rot zu werden?",
-  "Wer würde am schnellsten im Knast landen?",
-  "Wer hat die schlimmsten Eltern-Storys?",
-  "Wer ist heimlich der größte Drama-Magnet?",
-  "Wer übertreibt im Urlaub am meisten?",
-  "Wer hat die absurdeste Tattoo-Idee?"
-];
+    window.join = function() {
+        state.player = document.getElementById("name").value.trim();
+        state.room = document.getElementById("room").value.trim();
+        state.isHost = document.getElementById("hostCheck").checked;
+        state.mode = document.getElementById("gameSelect").value;
 
-const game3_questions = [
-  "Wofür steht IKEA wirklich?",
-  "Neue Tinder Premium Funktion:",
-  "Was steht heimlich auf dem Männer-Gruppenchat?",
-  "Das schlimmste, was man beim ersten Date sagen kann:",
-  "Neuer Werbeslogan für Bier:",
-  "Die dämlichste Ausrede, um nicht zum Training zu gehen:",
-  "Das absurdeste Geschenk für die Freundin:",
-  "Was man niemals laut im Büro sagen sollte:",
-  "Das schlechteste Pick-Up-Line aller Zeiten:",
-  "Eine völlig absurde Verschwörung, die Männer glauben könnten:"
-];
+        if(!state.player || !state.room) return alert("Gib Name und Raum ein!");
 
-const questionsByGame = { game1: game1_questions, game2: game2_questions, game3: game3_questions };
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("game").classList.remove("hidden");
+        document.getElementById("leaderboardArea").classList.remove("hidden");
+        
+        if(state.isHost) {
+            document.getElementById("hostControls").style.display = "block";
+            set(ref(db, `rooms/${state.room}/config`), { mode: state.mode, currentQ: -1, phase: "join" });
+        }
 
-// -------------------- Chaos Features --------------------
-const systemFakes = [
-  "Ein Einhorn hat es getan",
-  "Mein Ex war schuld",
-  "Das NSA-Team",
-  "Aliens übernehmen die Macht",
-  "Mein Hamster wollte es so"
-];
+        set(ref(db, `rooms/${state.room}/players/${state.player}`), 0);
+        setupListeners();
+    };
 
-// -------------------- Host & Spieler --------------------
-window.join = function() {
-  player = document.getElementById("name").value;
-  let codeInput = document.getElementById("room").value;
-  if (codeInput !== room) {
-    alert("Falscher Raumcode!");
-    return;
-  }
+    function setupListeners() {
+        onValue(ref(db, `rooms/${state.room}/config`), (snap) => {
+            const data = snap.val();
+            if(!data) return;
 
-  isHost = document.getElementById("hostCheck").checked;
+            const qList = questions[data.mode];
+            document.getElementById("gameHeader").innerText = data.mode.toUpperCase();
+            
+            if(data.currentQ >= 0) {
+                document.getElementById("questionDisplay").innerText = qList[data.currentQ];
+            }
 
-  set(ref(db, "rooms/" + room + "/players/" + player), { score: 0 });
-  document.getElementById("login").style.display = "none";
-  document.getElementById("game").style.display = "block";
+            if(data.phase === "answer") {
+                document.getElementById("answerArea").classList.remove("hidden");
+                document.getElementById("votingArea").classList.add("hidden");
+            } else if(data.phase === "vote") {
+                document.getElementById("answerArea").classList.add("hidden");
+                document.getElementById("votingArea").classList.remove("hidden");
+                loadVotes();
+            }
+        });
 
-  listenAnswers();
-  listenVotes();
-  updateLeaderboard();
-};
+        onValue(ref(db, `rooms/${state.room}/players`), (snap) => {
+            const p = snap.val();
+            if(!p) return;
+            let h = "";
+            Object.entries(p).sort((a,b)=>b[1]-a[1]).forEach(([n,s]) => {
+                h += `<div class="score-row"><span>${n}</span><span>${s} Pt.</span></div>`;
+            });
+            document.getElementById("scoreList").innerHTML = h;
+        });
+    }
 
-// -------------------- Host Controls --------------------
-window.nextQuestion = function() {
-  currentQuestionIndex++;
-  if (currentQuestionIndex >= questionsByGame[currentGame].length) currentQuestionIndex = 0;
-  const q = questionsByGame[currentGame][currentQuestionIndex];
-  set(ref(db, "rooms/" + room + "/currentQuestion"), q);
-  set(ref(db, "rooms/" + room + "/answers"), {}); // reset answers
-  set(ref(db, "rooms/" + room + "/votes"), {});   // reset votes
-  document.getElementById("voting").style.display = "none";
-};
+    window.submitAnswer = function() {
+        const val = document.getElementById("answerInput").value;
+        if(!val) return;
+        set(ref(db, `rooms/${state.room}/answers/${state.player}`), val);
+        document.getElementById("answerArea").innerHTML = "<h3>✅ Gesendet!</h3><p>Warte auf die anderen...</p>";
+    };
 
-window.revealAnswers = function() {
-  document.getElementById("voting").style.display = "block";
-};
+    function loadVotes() {
+        get(ref(db, `rooms/${state.room}/answers`)).then(snap => {
+            const container = document.getElementById("voteButtons");
+            container.innerHTML = "";
+            Object.entries(snap.val() || {}).forEach(([n, text]) => {
+                if(n === state.player) return;
+                const b = document.createElement("button");
+                b.className = "btn-vote";
+                b.innerText = text;
+                b.onclick = () => {
+                    const r = ref(db, `rooms/${state.room}/players/${n}`);
+                    get(r).then(s => update(ref(db, `rooms/${state.room}/players`), {[n]: (s.val()||0)+1}));
+                    container.innerHTML = "<h4>Voted! ⭐</h4>";
+                };
+                container.appendChild(b);
+            });
+        });
+    }
 
-// -------------------- Spieler antworten --------------------
-window.submitAnswer = function() {
-  let val = document.getElementById("answer").value;
-  if (!val) return;
-  set(ref(db, "rooms/" + room + "/answers/" + player), val);
+    window.nextQuestion = function() {
+        state.currentIdx++;
+        update(ref(db, `rooms/${state.room}/config`), { currentQ: state.currentIdx, phase: "answer" });
+        set(ref(db, `rooms/${state.room}/answers`), {});
+        document.getElementById("answerArea").innerHTML = `<input id="answerInput" type="text" placeholder="Deine Antwort hier..." autocomplete="off"><button class="btn-primary" onclick="submitAnswer()">ANTWORT SENDEN</button>`;
+    };
 
-  // System Fake zufügen
-  let sysFake = systemFakes[Math.floor(Math.random() * systemFakes.length)];
-  set(ref(db, "rooms/" + room + "/answers/SYSTEM"), sysFake);
-
-  document.getElementById("answerBox").innerHTML = "Antwort gesendet 😄";
-};
-
-// -------------------- Voting --------------------
-function vote(target) {
-  set(ref(db, "rooms/" + room + "/votes/" + player), target);
-  alert("Du hast gewählt: " + target);
-}
-
-// -------------------- Live Updates --------------------
-function listenAnswers() {
-  onValue(ref(db, "rooms/" + room + "/currentQuestion"), (snap) => {
-    const q = snap.val();
-    if (q) document.getElementById("question").innerText = q;
-  });
-}
-
-function listenVotes() {
-  onValue(ref(db, "rooms/" + room + "/answers"), (snap) => {
-    const data = snap.val();
-    if (!data) return;
-    const votingDiv = document.getElementById("voting");
-    votingDiv.innerHTML = "";
-    Object.entries(data).forEach(([p, text]) => {
-      let btn = document.createElement("button");
-      btn.innerText = text;
-      btn.onclick = () => vote(p);
-      votingDiv.appendChild(btn);
-      votingDiv.appendChild(document.createElement("br"));
-    });
-  });
-}
-
-// -------------------- Leaderboard --------------------
-function updateLeaderboard() {
-  onValue(ref(db, "rooms/" + room + "/votes"), (snap) => {
-    const votes = snap.val();
-    if (!votes) return;
-    const scores = {};
-    Object.values(votes).forEach(target => {
-      scores[target] = (scores[target] || 0) + 1;
-    });
-    let text = "🏆 Punkte:<br>";
-    Object.entries(scores).forEach(([p, s]) => { text += p + ": " + s + "<br>"; });
-    document.getElementById("leaderboard").innerHTML = text;
-  });
-}
+    window.revealAnswers = function() {
+        update(ref(db, `rooms/${state.room}/config`), { phase: "vote" });
+    };
 </script>
-
-<style>
-body { font-family: Arial; background:#111; color:#fff; text-align:center; }
-input, button, select { padding:10px; margin:5px; font-size:16px; }
-.card { margin:20px; padding:20px; background:#222; border-radius:10px; }
-#voting { display:none; }
-</style>
-
-<body>
-<h1>🔥 BluffQuiz Party Edition – Host 😈</h1>
-
-<div id="login" class="card">
-  <input id="name" placeholder="Dein Name">
-  <input id="room" placeholder="Raum-Code z.B. 0819">
-  <label><input type="checkbox" id="hostCheck"> Ich bin Host</label>
-  <select id="gameSelect" onchange="currentGame=this.value;">
-    <option value="game1">Fake oder Fakt</option>
-    <option value="game2">Wer von uns…?</option>
-    <option value="game3">Dümmste Antwort gewinnt</option>
-  </select>
-  <button onclick="join()">Join</button>
-</div>
-
-<div id="game" class="card" style="display:none">
-  <h2 id="question">Frage erscheint hier</h2>
-  <div id="answerBox">
-    <input id="answer" placeholder="Deine Antwort">
-    <button onclick="submitAnswer()">Absenden</button>
-  </div>
-
-  <div id="hostControls" style="margin:10px;">
-    <button onclick="nextQuestion()" style="background:#4CAF50">Nächste Frage</button>
-    <button onclick="revealAnswers()" style="background:#FF5722">Antworten freischalten</button>
-  </div>
-
-  <div id="voting" class="card"></div>
-  <h3 id="leaderboard"></h3>
-</div>
 </body>
 </html>
