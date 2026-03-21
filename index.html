@@ -12,12 +12,13 @@
         .gv-info { font-size: 0.8em; color: var(--gold); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
         .hidden { display: none; }
         input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; box-sizing: border-box; font-size: 1rem; }
-        button { background: var(--gold); color: black; font-weight: bold; cursor: pointer; }
-        button:disabled { background: #777; cursor: not-allowed; }
-        .btn-host { background: #4a90e2; color: white; }
+        button { background: var(--gold); color: black; font-weight: bold; cursor: pointer; border-bottom: 3px solid #b89500; }
+        button:active { border-bottom: none; transform: translateY(2px); }
+        .btn-host { background: #4a90e2; color: white; border-bottom-color: #2c5a8d; }
         .btn-vote { background: #444; color: white; border: 1px solid var(--gold); margin-bottom: 10px; }
-        .score-list { background: #222; padding: 15px; border-radius: 12px; margin-top: 25px; }
-        .score-entry { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; }
+        .score-list { background: #222; padding: 15px; border-radius: 12px; margin-top: 25px; border: 1px solid #444; }
+        .score-entry { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
+        #questionDisplay { min-height: 60px; color: var(--gold); }
     </style>
 </head>
 <body>
@@ -30,10 +31,10 @@
         <div class="gv-info">Generalversammlung • Brittnau • 21.03.2026</div>
     </div>
 
-    <!-- LOGIN -->
+    <!-- LOGIN SCREEN -->
     <div id="login">
         <input type="text" id="userName" placeholder="Dein Name">
-        <input type="text" id="roomCode" placeholder="Raum Code">
+        <input type="text" id="roomCode" placeholder="Raum Code (z.B. GV26)">
         <div id="hostSelectionArea">
             <select id="gameSelect">
                 <option value="game1">Smalltalk-Fail</option>
@@ -41,36 +42,39 @@
                 <option value="game3">Quatsch-Lexikon</option>
             </select>
             <button id="joinHostBtn" class="btn-host">Als HOST beitreten</button>
+            <hr style="border:0; border-top: 1px solid #555; margin: 15px 0;">
         </div>
         <button id="joinPlayerBtn">Als SPIELER beitreten</button>
     </div>
 
-    <!-- GAME -->
+    <!-- GAME AREA -->
     <div id="gameArea" class="hidden">
         <h2 id="gameTitle">Warte auf Start...</h2>
         
         <div id="hostPanel" class="hidden">
-            <button id="nextBtn">Nächste Frage (Runde starten)</button>
-            <button id="voteBtn">Voting-Phase einleiten</button>
+            <div style="background: #444; padding: 10px; border-radius: 10px; margin-bottom: 15px;">
+                <button id="nextBtn">Nächste Runde starten</button>
+                <button id="voteBtn" style="background: #eee;">Voting freigeben</button>
+            </div>
         </div>
 
-        <h3 id="questionDisplay">Der Host startet gleich die Runde...</h3>
+        <h3 id="questionDisplay">Der Host bereitet die erste Frage vor...</h3>
 
         <div id="answerSection" class="hidden">
-            <div id="answerInputWrapper">
-                <input type="text" id="answerInput" placeholder="Deine Antwort...">
+            <div id="inputBox">
+                <input type="text" id="answerInput" placeholder="Deine Antwort hier tippen...">
                 <button id="sendAnswerBtn">Antwort abschicken</button>
             </div>
-            <p id="waitMessage" class="hidden">Antwort gespeichert. Warte auf die anderen...</p>
+            <p id="waitMsg" class="hidden">✅ Antwort gesendet. Warte auf die anderen...</p>
         </div>
 
         <div id="voteSection" class="hidden">
-            <h4>Wähle deinen Favoriten:</h4>
+            <h4>Wer hat am besten geantwortet?</h4>
             <div id="voteButtons"></div>
         </div>
 
         <div class="score-list">
-            <strong>Rangliste</strong>
+            <strong>Aktuelle Rangliste</strong>
             <div id="scoreList"></div>
         </div>
     </div>
@@ -96,19 +100,19 @@
         game3: ["Was bedeutet IKEA wirklich?", "Neue Tinder-Funktion:", "Männer-Chat Name:"]
     };
 
-    let myName, myRoom, iAmHost = false, hasVotedThisRound = false;
+    let myName, myRoom, iAmHost = false, lastSyncedQ = -2;
 
-    // JOIN
+    // LOGIN LOGIK
     async function join(asHost) {
         myName = document.getElementById('userName').value.trim();
         myRoom = document.getElementById('roomCode').value.trim().toUpperCase();
-        if (!myName || !myRoom) return alert("Daten unvollständig!");
+        if (!myName || !myRoom) return alert("Bitte Name und Raum ausfüllen!");
 
         const stateRef = ref(db, `rooms/${myRoom}/state`);
         const snap = await get(stateRef);
 
         if (asHost) {
-            if (snap.exists() && snap.val().host) return alert("Host existiert schon!");
+            if (snap.exists() && snap.val().host) return alert("Es gibt schon einen Host!");
             await set(stateRef, { host: myName, mode: document.getElementById('gameSelect').value, phase: 'lobby', qIdx: -1 });
             iAmHost = true;
         } else {
@@ -126,23 +130,25 @@
     document.getElementById('joinHostBtn').onclick = () => join(true);
     document.getElementById('joinPlayerBtn').onclick = () => join(false);
 
+    // SYNC LOGIK (Der Kern des Spiels)
     function startSync() {
         onValue(ref(db, `rooms/${myRoom}/state`), snap => {
             const data = snap.val();
             if (!data) return;
 
-            document.getElementById('gameTitle').innerText = "Modus: " + data.mode.toUpperCase();
-            
-            // Phase Management
+            document.getElementById('gameTitle').innerText = data.mode.toUpperCase();
+
+            // Check ob neue Runde gestartet wurde (Reset UI)
+            if (data.qIdx !== lastSyncedQ) {
+                lastSyncedQ = data.qIdx;
+                resetRoundUI(); 
+            }
+
             if (data.phase === 'answer') {
                 const qList = questions[data.mode] || [];
-                document.getElementById('questionDisplay').innerText = qList[data.qIdx % qList.length];
+                document.getElementById('questionDisplay').innerText = qList[data.qIdx % qList.length] || "Warten...";
                 document.getElementById('answerSection').classList.remove('hidden');
                 document.getElementById('voteSection').classList.add('hidden');
-                // UI Reset für neue Runde
-                document.getElementById('answerInputWrapper').classList.remove('hidden');
-                document.getElementById('waitMessage').classList.add('hidden');
-                hasVotedThisRound = false;
             } 
             else if (data.phase === 'vote') {
                 document.getElementById('answerSection').classList.add('hidden');
@@ -159,11 +165,20 @@
         });
     }
 
-    // HOST ACTIONS
+    function resetRoundUI() {
+        // Macht das Eingabefeld für alle wieder sichtbar
+        document.getElementById('inputBox').classList.remove('hidden');
+        document.getElementById('waitMsg').classList.add('hidden');
+        document.getElementById('answerInput').value = "";
+        document.getElementById('voteButtons').innerHTML = "";
+    }
+
+    // HOST AKTIONEN
     document.getElementById('nextBtn').onclick = async () => {
         const stateRef = ref(db, `rooms/${myRoom}/state`);
         const snap = await get(stateRef);
-        const nextIdx = (snap.val().qIdx || 0) + 1;
+        const currentData = snap.val();
+        const nextIdx = (currentData.qIdx || 0) + 1;
         
         await set(ref(db, `rooms/${myRoom}/answers`), {}); // Antworten löschen
         await update(stateRef, { phase: 'answer', qIdx: nextIdx });
@@ -173,21 +188,21 @@
         update(ref(db, `rooms/${myRoom}/state`), { phase: 'vote' });
     };
 
-    // PLAYER ACTIONS
+    // SPIELER AKTIONEN
     document.getElementById('sendAnswerBtn').onclick = () => {
         const val = document.getElementById('answerInput').value.trim();
         if (!val) return;
         set(ref(db, `rooms/${myRoom}/answers/${myName}`), val);
-        document.getElementById('answerInput').value = "";
-        document.getElementById('answerInputWrapper').classList.add('hidden');
-        document.getElementById('waitMessage').classList.remove('hidden');
+        document.getElementById('inputBox').classList.add('hidden');
+        document.getElementById('waitMsg').classList.remove('hidden');
     };
 
     function renderVotes() {
-        if (hasVotedThisRound) return;
+        const container = document.getElementById('voteButtons');
+        if (container.innerHTML !== "") return; // Schon gerendert
+
         get(ref(db, `rooms/${myRoom}/answers`)).then(snap => {
             const answers = snap.val() || {};
-            const container = document.getElementById('voteButtons');
             container.innerHTML = "";
             
             Object.entries(answers).forEach(([name, text]) => {
@@ -196,7 +211,6 @@
                 btn.innerText = text;
                 btn.className = "btn-vote";
                 btn.onclick = async () => {
-                    hasVotedThisRound = true;
                     container.innerHTML = "<p>Stimme gezählt! ✅</p>";
                     const pRef = ref(db, `rooms/${myRoom}/players/${name}`);
                     const pSnap = await get(pRef);
@@ -204,7 +218,7 @@
                 };
                 container.appendChild(btn);
             });
-            if (container.innerHTML === "") container.innerHTML = "Keine Antworten zum Voten da...";
+            if (container.innerHTML === "") container.innerHTML = "Keine Antworten eingegangen.";
         });
     }
 </script>
