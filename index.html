@@ -17,7 +17,7 @@
         .btn-danger { background:#e74c3c; color:white; font-size: 0.8rem; }
         
         #qDisplay { font-size:1.5rem; color:var(--gold); margin:20px 0; font-weight:bold; min-height: 50px; line-height: 1.2; }
-        #waitMsg { color: #e74c3c; font-weight: bold; margin: 10px 0; font-size: 1.6rem; }
+        #waitMsg { color: #e74c3c; font-weight: bold; margin: 10px 0; font-size: 1.6rem; min-height: 1.6rem; }
         
         .score-item { 
             display:flex; justify-content:space-between; 
@@ -53,8 +53,8 @@
     <div id="gameSection" style="display:none">
         <div id="hostControls" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
             <button id="btnNext">Nächste Zufallsfrage</button>
-            <button id="btnVote">Voting starten</button>
-            <button id="btnScore" class="btn-score">🏆 Rangliste enthüllen</button>
+            <button id="btnVote">Manuelles Voting (Freitext)</button>
+            <button id="btnScore" class="btn-score">🏆 Rangliste</button>
             <button id="btnEvent" class="btn-event">🎲 TRINK-EVENT</button>
             <button id="btnReset" class="btn-danger">Reset</button>
         </div>
@@ -63,7 +63,6 @@
         <div id="waitMsg"></div>
 
         <div id="inputArea" style="display:none">
-            <!-- Wird dynamisch befüllt (Text oder Dropdown) -->
             <div id="dynamicInput"></div>
             <button id="btnSend">Senden</button>
         </div>
@@ -110,6 +109,7 @@ const baseQuestions = [
 ];
 
 const drinkRules = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!","ELITEN-TRINKEN! 👑 Die Top 3 der Rangliste trinken","PROST PRÄSIDENT! Der Präsi trinkt","PROST PRÄSIDENT! Alle trinken auf den Präsi"];
+
 const sounds = {
     send: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"),
     event: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
@@ -161,9 +161,8 @@ function sync() {
 
         if(d.phase === "lobby") { qDisplay.innerText = "Warten auf Host..."; } 
         else if(d.phase === "answer") {
-            const currentQ = d.gameQs ? d.gameQs[d.qIdx] : "Keine Fragen mehr!";
+            const currentQ = d.gameQs ? d.gameQs[d.qIdx] : "Ende!";
             qDisplay.innerText = currentQ;
-            
             if (!waitMsg.innerText.includes("✅")) {
                 setupInput(currentQ);
                 inputArea.style.display = "block";
@@ -182,17 +181,23 @@ function sync() {
             loadBigScores();
         }
 
-        // TIMER & AUTO-VOTE
         if(timerInt) clearInterval(timerInt);
         if(d.phase === "answer" && d.endTime) {
-            timerInt = setInterval(() => {
+            timerInt = setInterval(async () => {
                 const diff = Math.ceil((d.endTime - Date.now()) / 1000);
                 if(diff <= 0) { 
                     clearInterval(timerInt); 
                     waitMsg.innerText = "⏱️ Zeit um!"; 
                     inputArea.style.display = "none";
-                    // AUTO-VOTE: Nur der Host löst den Phasenwechsel aus
-                    if(isH) update(ref(db, `rooms/${room}/state`), { phase: "vote" });
+                    if(isH) {
+                        const currentQ = d.gameQs[d.qIdx];
+                        if(currentQ.toLowerCase().startsWith("wer")) {
+                            await evaluateAutoVote();
+                            update(ref(db, `rooms/${room}/state`), { phase: "score" });
+                        } else {
+                            update(ref(db, `rooms/${room}/state`), { phase: "vote" });
+                        }
+                    }
                 } else { waitMsg.innerText = "⏳ " + diff + "s"; }
             }, 1000);
         }
@@ -214,15 +219,29 @@ function sync() {
     });
 }
 
-// Erstellt entweder ein Textfeld oder ein Dropdown
 function setupInput(question) {
     const area = document.getElementById("dynamicInput");
     if(question.toLowerCase().startsWith("wer")) {
-        let options = currentPlayers.map(p => `<option value="${p}">${p}</option>`).join("");
-        area.innerHTML = `<select id="ansInp"><option value="">-- Wähle jemanden --</option>${options}</select>`;
+        let opts = currentPlayers.map(p => `<option value="${p}">${p}</option>`).join("");
+        area.innerHTML = `<select id="ansInp"><option value="">-- Wähle --</option>${opts}</select>`;
     } else {
         area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`;
     }
+}
+
+async function evaluateAutoVote() {
+    const snap = await get(ref(db, `rooms/${room}/answers`));
+    const ans = snap.val() || {};
+    const votes = {};
+    Object.values(ans).forEach(v => votes[v] = (votes[v] || 0) + 1);
+    const entries = Object.entries(votes);
+    if(entries.length === 0) return;
+    const maxV = Math.max(...entries.map(e => e[1]));
+    const winners = entries.filter(e => e[1] === maxV).map(e => e[0]);
+    const pSnap = await get(ref(db, `rooms/${room}/players`));
+    const players = pSnap.val() || {};
+    winners.forEach(w => { if(players[w] !== undefined) players[w] += 1; });
+    await update(ref(db, `rooms/${room}/players`), players);
 }
 
 async function loadBigScores() {
@@ -241,34 +260,17 @@ async function loadVotes() {
     voteArea.innerHTML = "";
     const snap = await get(ref(db, `rooms/${room}/answers`));
     const ans = snap.val() || {};
-    
-    // Wir zählen, wie oft welche Antwort gegeben wurde
     const counts = {};
     Object.values(ans).forEach(v => counts[v] = (counts[v] || 0) + 1);
-
     Object.entries(counts).forEach(([text, count]) => {
         const b = document.createElement("button");
         b.className = "vote-btn";
-        // Zeige bei Dropdown-Fragen den Namen, sonst den Text
-        b.innerText = `${text} (${count} Stimmen)`; 
-        
+        b.innerText = `${text} (${count}x)`; 
         b.onclick = async () => {
-            // Logik: Wenn die Antwort ein existierender Spielername ist, kriegt DIESER die Punkte
-            // Falls es Freitext ist, kriegt (wie vorher) jeder die Punkte, der das geschrieben hat
-            const playersToReward = Object.keys(ans).filter(player => ans[player] === text);
-            
-            // Falls die Antwort ein Name aus der Spielerliste ist, kriegt nur DIESER Spieler den Punkt
-            if(currentPlayers.includes(text)) {
-                const pRef = ref(db, `rooms/${room}/players/${text}`);
-                const curVal = (await get(pRef)).val() || 0;
-                update(ref(db, `rooms/${room}/players`), { [text]: curVal + 1 });
-            } else {
-                // Klassisch: Alle die das getippt haben kriegen Punkte
-                for(let pName of playersToReward) {
-                    const pRef = ref(db, `rooms/${room}/players/${pName}`);
-                    const curVal = (await get(pRef)).val() || 0;
-                    update(ref(db, `rooms/${room}/players`), { [pName]: curVal + 1 });
-                }
+            const playersToReward = Object.keys(ans).filter(p => ans[p] === text);
+            for(let pName of playersToReward) {
+                const pRef = ref(db, `rooms/${room}/players/${pName}`);
+                update(ref(db, `rooms/${room}/players`), { [pName]: ((await get(pRef)).val() || 0) + 1 });
             }
             voteArea.innerHTML = "✅ Stimme gezählt!";
         };
@@ -278,16 +280,11 @@ async function loadVotes() {
 
 btnNext.onclick = async () => {
     const s = (await get(ref(db, `rooms/${room}/state`))).val();
-    const nextIdx = (s.qIdx !== undefined ? s.qIdx : -1) + 1;
-    if(s.gameQs && nextIdx >= s.gameQs.length) return alert("Alle Fragen durch!");
-    
+    const nIdx = (s.qIdx !== undefined ? s.qIdx : -1) + 1;
+    if(s.gameQs && nIdx >= s.gameQs.length) return alert("Alle Fragen durch!");
     await set(ref(db, `rooms/${room}/answers`), {});
     waitMsg.innerText = "";
-    update(ref(db, `rooms/${room}/state`), { 
-        phase: "answer", 
-        qIdx: nextIdx, 
-        endTime: Date.now() + 21000 
-    });
+    update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: nIdx, endTime: Date.now() + 21000 });
     sounds.next.play().catch(() => {});
 };
 
@@ -298,16 +295,14 @@ btnEvent.onclick = () => {
     update(ref(db, `rooms/${room}/state/event`), { text: r, ts: Date.now() });
 };
 btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
-
 btnSend.onclick = () => {
-    const val = document.getElementById("ansInp").value.trim();
-    if(!val) return;
-    set(ref(db, `rooms/${room}/answers/${user}`), val);
+    const v = document.getElementById("ansInp").value.trim();
+    if(!v) return;
+    set(ref(db, `rooms/${room}/answers/${user}`), v);
     inputArea.style.display = "none";
     waitMsg.innerText = "✅ Gesendet!";
     sounds.send.play().catch(() => {});
 };
-
 btnPlayer.onclick = () => start(false);
 btnHost.onclick = () => start(true);
 </script>
