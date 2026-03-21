@@ -10,17 +10,15 @@
         .card { max-width:420px; margin:auto; background:var(--grey); padding:20px; border-radius:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
         input, button, select { width:100%; padding:15px; margin:8px 0; border-radius:10px; border:none; font-size:16px; box-sizing: border-box; }
         button { background:var(--gold); font-weight:bold; cursor:pointer; }
-        select { background: white; color: black; height: 50px; }
         .btn-host { background:var(--blue); color:white; }
         .btn-score { background:var(--green); color:white; }
-        .btn-danger { background:var(--red); color:white; font-size: 0.8rem; margin-top: 20px; }
         
         #qDisplay { font-size:1.5rem; color:var(--gold); margin:15px 0; font-weight:bold; min-height: 50px; }
-        #waitMsg { color: var(--red); font-weight: bold; font-size: 1.5rem; margin: 10px 0; }
+        #waitMsg { color: var(--red); font-weight: bold; font-size: 1.2rem; margin: 10px 0; }
         
-        /* Ergebnis-Banner */
+        /* Ergebnis Banner */
         #resBanner { background: rgba(0,0,0,0.4); border: 2px solid var(--gold); border-radius: 10px; padding: 15px; margin: 10px 0; display: none; }
-        .win-text { font-size: 1.3rem; color: var(--gold); display: block; font-weight: bold; }
+        .win-text { font-size: 1.2rem; color: var(--gold); display: block; font-weight: bold; }
 
         .score-item { 
             display:flex; justify-content:space-between; align-items:center;
@@ -30,12 +28,8 @@
         .plus-badge { background: var(--green); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-left: 8px; animation: pop 0.5s ease-out; }
         @keyframes pop { 0% {transform: scale(0);} 80% {transform: scale(1.3);} 100% {transform: scale(1);} }
 
-        #liveScore { margin-top: 20px; padding-top: 10px; border-top: 1px dashed #555; text-align: left; }
         .vote-btn { background:#222; color:white; border:1px solid var(--gold); margin:5px 0; padding:12px; text-align:left; width: 100%; border-radius: 10px; }
-        
         #eventOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; }
-        .beer-spin { font-size:5rem; animation:spin 2s infinite linear; }
-        @keyframes spin {100% {transform:rotate(360deg);}}
     </style>
 </head>
 <body>
@@ -52,17 +46,17 @@
     <div id="gameSection" style="display:none">
         <div id="hostControls" style="display:none">
             <button id="btnNext">Nächste Frage</button>
-            <button id="btnVote">Voting / Auswerten</button>
-            <button id="btnScore" class="btn-score">🏆 Rangliste</button>
-            <button id="btnEvent" style="background:#9b59b6; color:white;">🎲 TRINK-EVENT</button>
-            <button id="btnReset" class="btn-danger">Spiel Reset</button>
+            <button id="btnEvaluate" style="background:var(--blue); color:white;">Auswerten (0 Stimmen)</button>
+            <button id="btnScore" class="btn-score">🏆 Gesamtrangliste</button>
+            <button id="btnReset" style="background:var(--red); color:white; font-size:10px;">Reset</button>
         </div>
 
         <div id="qDisplay">Warten...</div>
         <div id="waitMsg"></div>
 
+        <!-- Runden-Feedback Banner -->
         <div id="resBanner">
-            <small style="opacity:0.7">Das Ergebnis dieser Runde:</small>
+            <small>Gewinner-Antwort:</small>
             <span id="winName" class="win-text">?</span>
             <div id="personalFeedback" style="font-weight:bold; margin-top:8px;"></div>
         </div>
@@ -71,67 +65,43 @@
             <div id="dynamicInput"></div>
             <button id="btnSend">Senden</button>
         </div>
+
         <div id="voteArea" style="display:none"></div>
         <div id="bigScoreArea" style="display:none"></div>
-
-        <div id="liveScore"><div id="liveScoreList"></div></div>
+        <div id="liveScoreList" style="margin-top:20px; font-size:0.8rem; opacity:0.6;"></div>
     </div>
 </div>
 
-<div id="eventOverlay">
-    <div class="beer-spin">🍻</div>
-    <div id="eventText" style="font-size:2rem; color:var(--gold); font-weight:bold; margin:20px; text-align:center;"></div>
-</div>
+<div id="eventOverlay"><div id="eventText"></div></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSy...", 
-    authDomain: "bierkultur-d2fea.firebaseapp.com",
-    databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
-    projectId: "bierkultur-d2fea"
-};
-
+const firebaseConfig = { databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/" };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const baseQuestions = [
-    "Wer eskaliert heute als Erster?", "Neue Funktion bei WhatsApp:", "Wer bringt am meisten Chaos auf Partys?",
-    "Wer wird neuer Präsident?", "Was steht auf deinem Grabstein?", "Wer vergisst ständig Geburtstage?",
-    "Wer hat die schönste Frau?", "Wer hat die peinlichsten Fotos?", "Neuer Tinder Premium Vorteil:",
-    "Was passiert nach der GV wirklich?", "Wer macht die Finanzkontrolle?", "Wofür steht IKEA?",
-    "Was sagt man nach richtig schlechtem Sex?", "Definiere: Bier-Notfall", "Welches Mitglied hat die schwächste Blase?",
-    "Wer würde im Urlaub am meisten übertreiben?", "Wer kann am schlechtesten lügen?", "Wer wird als Nächstes heiraten?",
-    "Was ist der wahre Grund deiner Teilnahme?", "Wer hat keinen Rollkoffer?", "Wer hat den tollsten Schnauzer?",
-    "Ein Dampfschiff ist weniger schwer als:", "Bierkultur Zofingen wird in 10 Jahren:", "Wer wird am ehesten Grosspapa?",
-    "Wer würde im Notfall am schnellsten wegrennen?", "Wer wird als Nächstes Millionär?", "Wer verschläft am häufigsten?",
-    "Wer hat die schlimmsten Jugendsünden?","Wer von uns hilt am meisten im Verein mit?","Wer von uns hat am meisten von unserem Bier gekauft?"
-];
-
+const drinkRules = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!","ELITEN-TRINKEN! 👑 Die Top 3 der Rangliste trinken","PROST PRÄSIDENT! Der Präsi trinkt","PROST PRÄSIDENT! Alle trinken auf den Präsi"];
 const sounds = {
     send: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"),
     event: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
+    next: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3"),
     score: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-animated-small-group-applause-523.mp3")
 };
 
-let user, room, isH = false, lastEventTs = 0, timerInt = null, joinTime = Date.now(), currentPlayers = [];
+
+let user, room, isH = false, currentPlayers = [];
 
 async function start(hostMode) {
     user = nameInp.value.trim();
     room = roomInp.value.trim().toUpperCase();
-    if(!user || room !== "GV26") return alert("Name/Code falsch!");
-    
+    if(!user || room !== "GV26") return alert("Falsch!");
     if(hostMode) {
         isH = true;
-        await set(ref(db, `rooms/${room}/state`), { host: user, phase: "lobby", qIdx: -1, gameQs: baseQuestions.sort(() => Math.random() - 0.5) });
+        await update(ref(db, `rooms/${room}/state`), { host: user, phase: "lobby", qIdx: -1, gameQs: baseQuestions.sort(() => Math.random() - 0.5) });
     }
-    
-    const pRef = ref(db, `rooms/${room}/players/${user}`);
-    const snap = await get(pRef);
-    if(!snap.exists()) await set(pRef, 0);
-
+    await set(ref(db, `rooms/${room}/players/${user}`), 0);
     loginSection.style.display = "none";
     gameSection.style.display = "block";
     if(isH) hostControls.style.display = "block";
@@ -141,98 +111,84 @@ async function start(hostMode) {
 function sync() {
     onValue(ref(db, `rooms/${room}/state`), async snap => {
         const d = snap.val(); if(!d) return;
-        
-        inputArea.style.display = "none";
-        voteArea.style.display = "none";
-        bigScoreArea.style.display = "none";
+        inputArea.style.display = "none"; voteArea.style.display = "none"; bigScoreArea.style.display = "none";
         resBanner.style.display = (d.phase === "score" && d.lastResult) ? "block" : "none";
 
-        if(d.phase === "lobby") qDisplay.innerText = "Warten auf Host...";
-        else if(d.phase === "answer") {
+        if(d.phase === "answer") {
             qDisplay.innerText = d.gameQs[d.qIdx];
-            if (!waitMsg.innerText.includes("✅")) { setupInput(d.gameQs[d.qIdx]); inputArea.style.display = "block"; }
-        } 
-        else if(d.phase === "vote") { qDisplay.innerText = "Abstimmen!"; voteArea.style.display = "block"; loadVotes(); }
-        else if(d.phase === "score") {
-            qDisplay.innerText = "🏆 Ergebnisse";
+            if(!waitMsg.innerText.includes("✅")) { setupInput(d.gameQs[d.qIdx]); inputArea.style.display = "block"; }
+        } else if(d.phase === "vote") {
+            qDisplay.innerText = "Abstimmen!";
+            voteArea.style.display = "block";
+            loadVotes();
+        } else if(d.phase === "score") {
+            qDisplay.innerText = "Rundenergebnis";
             bigScoreArea.style.display = "block";
-            waitMsg.innerText = "";
-            renderFinalScores(d.lastResult);
+            showRoundFeedback(d.lastResult);
         }
+    });
 
-        if(timerInt) clearInterval(timerInt);
-        if(d.phase === "answer" && d.endTime) {
-            timerInt = setInterval(async () => {
-                const diff = Math.ceil((d.endTime - Date.now()) / 1000);
-                if(diff <= 0) { 
-                    clearInterval(timerInt); waitMsg.innerText = "⏱️ Zeit um!"; 
-                    if(isH) autoHandlePhase(d);
-                } else { waitMsg.innerText = "⏳ " + diff + "s"; }
-            }, 1000);
-        }
-
-        if(d.event && d.event.ts > joinTime && d.event.ts !== lastEventTs) {
-            lastEventTs = d.event.ts; eventText.innerText = d.event.text;
-            eventOverlay.style.display = "flex"; sounds.event.play().catch(()=>{});
-            setTimeout(() => { eventOverlay.style.display = "none"; }, 5000);
+    onValue(ref(db, `rooms/${room}/votes`), snap => {
+        if(isH) {
+            const votes = snap.val() || {};
+            btnEvaluate.innerText = `Auswerten (${Object.keys(votes).length} Stimmen)`;
         }
     });
 
     onValue(ref(db, `rooms/${room}/players`), snap => {
         const p = snap.val() || {}; currentPlayers = Object.keys(p);
-        const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
-        liveScoreList.innerHTML = "Live: " + sorted.map(([n, s]) => `${n} (${s})`).join(", ");
+        liveScoreList.innerText = "Dabei: " + currentPlayers.join(", ");
     });
 }
 
-function setupInput(q) {
+async function setupInput(q) {
     const area = document.getElementById("dynamicInput");
-    if(q.trim().toLowerCase().startsWith("wer")) {
-        let opts = currentPlayers.map(p => `<option value="${p}">${p}</option>`).join("");
-        area.innerHTML = `<select id="ansInp"><option value="">-- Wähle jemanden --</option>${opts}</select>`;
+    if(q.toLowerCase().startsWith("wer")) {
+        area.innerHTML = `<select id="ansInp">${currentPlayers.map(p=>`<option value="${p}">${p}</option>`).join("")}</select>`;
     } else { area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`; }
 }
 
-async function autoHandlePhase(d) {
-    const q = d.gameQs[d.qIdx];
-    if(q.trim().toLowerCase().startsWith("wer")) {
-        await processEvaluation(true);
-        setTimeout(() => update(ref(db, `rooms/${room}/state`), { phase: "score" }), 1000);
-    } else {
-        update(ref(db, `rooms/${room}/state`), { phase: "vote" });
-    }
-}
-
-async function processEvaluation(isAuto, manualWinTxt = null) {
+async function loadVotes() {
     const ansSnap = await get(ref(db, `rooms/${room}/answers`));
     const answers = ansSnap.val() || {};
-    let winners = [];
+    const unique = [...new Set(Object.values(answers))];
+    voteArea.innerHTML = "";
+    unique.forEach(txt => {
+        const b = document.createElement("button");
+        b.className = "vote-btn"; b.innerText = txt;
+        b.onclick = async () => {
+            await set(ref(db, `rooms/${room}/votes/${user}`), txt);
+            voteArea.innerHTML = "<p>Stimme abgegeben! Warten auf Host...</p>";
+        };
+        voteArea.appendChild(b);
+    });
+}
 
-    if(isAuto) {
-        const counts = {};
-        Object.values(answers).forEach(v => counts[v] = (counts[v] || 0) + 1);
-        const max = Math.max(...Object.values(counts));
-        winners = Object.keys(counts).filter(k => counts[k] === max);
-    } else {
-        winners = [manualWinTxt];
-    }
+async function evaluateRound() {
+    const ansSnap = await get(ref(db, `rooms/${room}/answers`));
+    const voteSnap = await get(ref(db, `rooms/${room}/votes`));
+    const answers = ansSnap.val() || {};
+    const votes = voteSnap.val() || {};
+    
+    let counts = {};
+    Object.values(votes).forEach(v => counts[v] = (counts[v] || 0) + 1);
+    const max = Math.max(...Object.values(counts), 0);
+    const winners = Object.keys(counts).filter(k => counts[k] === max);
 
     const pSnap = await get(ref(db, `rooms/${room}/players`));
     let players = pSnap.val() || {};
     let scorers = [];
 
-    Object.keys(answers).forEach(pName => {
-        if(winners.includes(answers[pName])) {
-            players[pName] += 1;
-            scorers.push(pName);
-        }
+    Object.entries(answers).forEach(([name, ans]) => {
+        if(winners.includes(ans)) { players[name] += 1; scorers.push(name); }
     });
 
     await set(ref(db, `rooms/${room}/players`), players);
-    await update(ref(db, `rooms/${room}/state`), { lastResult: { winners, scorers } });
+    await set(ref(db, `rooms/${room}/votes`), {});
+    update(ref(db, `rooms/${room}/state`), { phase: "score", lastResult: { winners, scorers } });
 }
 
-function renderFinalScores(res) {
+function showRoundFeedback(res) {
     if(!res) return;
     winName.innerText = res.winners.join(", ");
     const gotP = res.scorers.includes(user);
@@ -242,54 +198,35 @@ function renderFinalScores(res) {
     get(ref(db, `rooms/${room}/players`)).then(snap => {
         const p = snap.val() || {};
         const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
-        bigScoreArea.innerHTML = sorted.map(([n, s], i) => `
-            <div class="score-item ${i === 0 ? 'rank-1' : ''}">
-                <span>${i+1}. ${n} ${res.scorers.includes(n) ? '<span class="plus-badge">+1</span>' : ''}</span>
+        bigScoreArea.innerHTML = sorted.map(([n, s]) => `
+            <div class="score-item">
+                <span>${n} ${res.scorers.includes(n) ? '<span class="plus-badge">+1</span>' : ''}</span>
                 <strong>${s} Pkt.</strong>
             </div>`).join("");
     });
 }
 
-async function loadVotes() {
-    const snap = await get(ref(db, `rooms/${room}/answers`));
-    const ans = snap.val() || {};
-    voteArea.innerHTML = "<p>Wähle die beste Antwort:</p>";
-    [...new Set(Object.values(ans))].forEach(txt => {
-        const b = document.createElement("button");
-        b.className = "vote-btn"; b.innerText = txt;
-        b.onclick = async () => {
-            await processEvaluation(false, txt);
-            update(ref(db, `rooms/${room}/state`), { phase: "score" });
-        };
-        voteArea.appendChild(b);
-    });
-}
-
-btnNext.onclick = async () => {
-    const s = (await get(ref(db, `rooms/${room}/state`))).val();
-    await set(ref(db, `rooms/${room}/answers`), {});
+btnNext.onclick = () => {
+    set(ref(db, `rooms/${room}/answers`), {});
     waitMsg.innerText = "";
-    update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: (s.qIdx || 0) + 1, endTime: Date.now() + 21000, lastResult: null });
+    get(ref(db, `rooms/${room}/state`)).then(snap => {
+        const s = snap.val();
+        update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: s.qIdx + 1, lastResult: null });
+    });
 };
-
-btnVote.onclick = async () => {
-    const s = (await get(ref(db, `rooms/${room}/state`))).val();
-    autoHandlePhase(s);
+btnEvaluate.onclick = () => {
+    get(ref(db, `rooms/${room}/state`)).then(snap => {
+        if(snap.val().phase === "answer") update(ref(db, `rooms/${room}/state`), { phase: "vote" });
+        else evaluateRound();
+    });
 };
-
-btnScore.onclick = () => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); sounds.score.play().catch(()=>{}); };
-btnEvent.onclick = () => {
-    const r = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!", "Top 3 trinken! 👑"];
-    update(ref(db, `rooms/${room}/state/event`), { text: r[Math.floor(Math.random()*r.length)], ts: Date.now() });
-};
-btnReset.onclick = () => { if(confirm("Spiel wirklich löschen?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
 btnSend.onclick = () => {
     const v = document.getElementById("ansInp").value;
-    if(!v) return;
-    set(ref(db, `rooms/${room}/answers/${user}`), v.trim());
+    set(ref(db, `rooms/${room}/answers/${user}`), v);
     inputArea.style.display = "none"; waitMsg.innerText = "✅ Gesendet!";
-    sounds.send.play().catch(()=>{});
 };
+btnScore.onclick = () => update(ref(db, `rooms/${room}/state`), { phase: "score" });
+btnReset.onclick = () => remove(ref(db, `rooms/${room}`)).then(()=>location.reload());
 btnPlayer.onclick = () => start(false);
 btnHost.onclick = () => start(true);
 </script>
