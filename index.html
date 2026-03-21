@@ -5,64 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bierkultur GV 2026</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 15px; }
-        .card { max-width: 400px; margin: auto; background: #333; padding: 20px; border-radius: 15px; border: 2px solid #ffcc00; }
+        :root { --gold: #ffcc00; --dark: #1a1a1a; --grey: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--dark); color: white; text-align: center; margin: 0; padding: 15px; }
+        .card { max-width: 420px; margin: auto; background: var(--grey); padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
         
-        /* CSS BIERGLAS (Funktioniert garantiert auf jedem Handy) */
-        .beer-icon { width: 40px; height: 50px; background: #ffcc00; margin: 0 auto 10px; border-radius: 0 0 5px 5px; position: relative; border: 3px solid white; }
-        .beer-foam { width: 46px; height: 15px; background: white; border-radius: 10px; position: absolute; top: -10px; left: -3px; }
-        .beer-handle { width: 15px; height: 25px; border: 3px solid white; border-left: none; position: absolute; right: -18px; top: 10px; border-radius: 0 10px 10px 0; }
+        /* Stylisches CSS Bierglas */
+        .beer-icon { width: 35px; height: 45px; background: var(--gold); margin: 0 auto 15px; border-radius: 0 0 5px 5px; position: relative; border: 3px solid white; }
+        .beer-foam { width: 42px; height: 12px; background: white; border-radius: 10px; position: absolute; top: -8px; left: -4px; }
+        .beer-handle { width: 12px; height: 22px; border: 3px solid white; border-left: none; position: absolute; right: -15px; top: 8px; border-radius: 0 10px 10px 0; }
 
-        .hidden { display: none !important; }
-        input, button, select { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; -webkit-appearance: none; }
-        button { background: #ffcc00; color: black; font-weight: bold; cursor: pointer; }
-        .host-btn { background: #3498db; color: white; }
-        #qDisplay { font-size: 1.4rem; color: #ffcc00; margin: 20px 0; font-weight: bold; min-height: 1.5em; }
-        .score-list { text-align: left; font-size: 0.9rem; background: #222; padding: 10px; margin-top: 20px; border-radius: 5px; }
+        h2 { color: var(--gold); margin: 0 0 5px 0; font-size: 1.2rem; letter-spacing: 2px; }
+        .sub { font-size: 0.7rem; opacity: 0.6; margin-bottom: 20px; text-transform: uppercase; }
+
+        input, button, select { width: 100%; padding: 16px; margin: 10px 0; border-radius: 12px; border: none; font-size: 16px; outline: none; transition: 0.2s; }
+        input { background: #444; color: white; border: 1px solid #555; }
+        input::placeholder { color: #888; }
+        
+        button { background: var(--gold); color: black; font-weight: bold; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        button:active { transform: scale(0.96); opacity: 0.9; }
+        
+        .btn-host { background: #3498db; color: white; margin-top: 20px; }
+        .btn-danger { background: #e74c3c; color: white; font-size: 0.8rem; padding: 10px; }
+        
+        #qDisplay { font-size: 1.5rem; color: var(--gold); margin: 25px 0; font-weight: 800; line-height: 1.3; min-height: 2em; }
+        
+        .score-list { text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-top: 30px; }
+        .score-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #444; }
+        .score-item:last-child { border: none; }
+
+        .vote-btn { background: #222; color: white; border: 1px solid var(--gold); margin-bottom: 10px; text-align: left; padding: 12px; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div class="beer-icon"><div class="beer-foam"></div><div class="beer-handle"></div></div>
-    <div style="color:#ffcc00; font-weight: bold; letter-spacing: 1px;">BIERKULTUR BRITTNAU</div>
+    <h2>BIERKULTUR</h2>
+    <div class="sub">GV Brittnau • 21.03.2026</div>
 
-    <!-- LOGIN -->
     <div id="sectionLogin">
         <input type="text" id="nameInp" placeholder="Dein Name">
-        <input type="text" id="roomInp" placeholder="Raum Code">
+        <input type="text" id="roomInp" placeholder="Raum Code (GV26)">
         <select id="modeSel">
             <option value="game1">Smalltalk-Fail</option>
             <option value="game2">Wer würde eher?</option>
+            <option value="game3">Bier-Lexikon</option>
         </select>
-        <button id="btnHost" class="host-btn">ALS HOST STARTEN</button>
-        <button id="btnPlayer">SPIELER BEITRETEN</button>
+        <button id="btnPlayer">BEITRETEN</button>
+        <button id="btnHost" class="btn-host">ALS HOST STARTEN</button>
     </div>
 
-    <!-- GAME -->
-    <div id="sectionGame" class="hidden">
-        <div id="hostControls" class="hidden" style="background: #444; padding: 10px; border-radius: 10px;">
+    <div id="sectionGame" style="display:none">
+        <div id="hostControls" style="display:none; background: #222; padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #444;">
             <button id="btnNext">NÄCHSTE FRAGE</button>
             <button id="btnVote" style="background: white;">VOTING STARTEN</button>
+            <button id="btnReset" class="btn-danger">SPIEL ZURÜCKSETZEN</button>
         </div>
 
-        <div id="qDisplay">Warte auf Start...</div>
+        <div id="qDisplay">Warte auf Host...</div>
 
-        <!-- EINGABE -->
         <div id="inputArea">
             <input type="text" id="ansInp" placeholder="Deine Antwort...">
-            <button id="btnSend">ANTWORT ABSCHICKEN</button>
+            <button id="btnSend">ABSENDEN</button>
         </div>
-        
-        <div id="waitMsg" class="hidden" style="color: #ffcc00; padding: 20px;">✅ Antwort gesendet!</div>
+        <div id="waitMsg" style="display:none; color: var(--gold); padding: 20px; font-weight: bold;">
+            ✅ Antwort gesendet!
+        </div>
 
-        <!-- VOTING -->
-        <div id="voteArea" class="hidden">
+        <div id="voteArea" style="display:none">
             <div id="voteList"></div>
         </div>
 
         <div class="score-list">
-            <strong>Rangliste:</strong>
+            <div style="font-weight: bold; color: var(--gold); margin-bottom: 10px; font-size: 0.8rem;">RANGLISTE</div>
             <div id="scoreDisplay"></div>
         </div>
     </div>
@@ -70,7 +85,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
@@ -83,51 +98,64 @@
     const db = getDatabase(app);
 
     const quiz = {
-        game1: ["Meistgeklautes Hotel-Objekt?", "Dümmste Büro-Ausrede?", "Bier-Fail Story?"],
-        game2: ["Wer trinkt am schnellsten?", "Wer vergisst immer seinen Geldbeutel?"]
+        game1: ["Meistgeklautes Hotel-Objekt?", "Dümmste Büro-Ausrede?", "Bier-Fail Story?", "Schlimmster Anmachspruch?"],
+        game2: ["Wer trinkt am schnellsten?", "Wer vergisst immer seinen Geldbeutel?", "Wer landet zuerst im Brunnen?", "Wer ruft nachts den Ex an?"],
+        game3: ["Was bedeutet IPA wirklich?", "Zutat für Brittnauer Spezialbier?", "Bier-Mischgetränk des Grauens?"]
     };
 
     let user, room, isH = false, lastIdx = -1;
 
     async function start(h) {
         user = document.getElementById('nameInp').value.trim();
-        room = document.getElementById('roomInp').value.trim().toUpperCase();
-        if(!user || !room) return alert("Bitte Name und Raum ausfüllen!");
+        const rInput = document.getElementById('roomInp').value.trim().toUpperCase();
+        
+        if(!user) return alert("Wie heißt du?");
+        if(rInput !== "GV26") return alert("Falscher Raum-Code!");
+        room = rInput;
 
-        isH = h;
-        if(isH) {
-            await set(ref(db, `rooms/${room}/state`), { 
-                host: user, mode: document.getElementById('modeSel').value, phase: 'answer', qIdx: 0 
-            });
+        const stateRef = ref(db, `rooms/${room}/state`);
+        const snap = await get(stateRef);
+
+        if(h) {
+            if(snap.exists() && snap.val().host && snap.val().host !== user) {
+                return alert("Es gibt bereits einen aktiven Host!");
+            }
+            await update(stateRef, { host: user, mode: document.getElementById('modeSel').value, phase: 'answer', qIdx: 0 });
+            isH = true;
         }
         
         await update(ref(db, `rooms/${room}/players`), { [user]: 0 });
         document.getElementById('sectionLogin').style.display = 'none';
-        document.getElementById('sectionGame').classList.remove('hidden');
-        if(isH) document.getElementById('hostControls').classList.remove('hidden');
+        document.getElementById('sectionGame').style.display = 'block';
+        if(isH) document.getElementById('hostControls').style.display = 'block';
 
-        // FORCIERTER SYNC
+        initSync();
+    }
+
+    function initSync() {
         onValue(ref(db, `rooms/${room}/state`), snap => {
             const d = snap.val();
-            if(!d) return;
+            if(!d) {
+                // Wenn der Host löscht, alle zurück zum Login
+                location.reload();
+                return;
+            }
 
-            // Update Frage
             document.getElementById('qDisplay').innerText = quiz[d.mode][d.qIdx % quiz[d.mode].length];
 
-            // Prüfen auf Rundenwechsel
             if(d.qIdx !== lastIdx) {
                 lastIdx = d.qIdx;
                 document.getElementById('inputArea').style.display = 'block';
-                document.getElementById('waitMsg').classList.add('hidden');
-                document.getElementById('voteArea').classList.add('hidden');
+                document.getElementById('waitMsg').style.display = 'none';
+                document.getElementById('voteArea').style.display = 'none';
                 document.getElementById('ansInp').value = "";
                 document.getElementById('voteList').innerHTML = "";
             }
 
             if(d.phase === 'vote') {
                 document.getElementById('inputArea').style.display = 'none';
-                document.getElementById('waitMsg').classList.add('hidden');
-                document.getElementById('voteArea').classList.remove('hidden');
+                document.getElementById('waitMsg').style.display = 'none';
+                document.getElementById('voteArea').style.display = 'block';
                 loadVotes();
             }
         });
@@ -135,10 +163,11 @@
         onValue(ref(db, `rooms/${room}/players`), snap => {
             const p = snap.val() || {};
             document.getElementById('scoreDisplay').innerHTML = Object.entries(p)
-                .sort((a,b)=>b[1]-a[1]).map(([n,s])=>`<div>${n}: ${s} Pkt</div>`).join("");
+                .sort((a,b)=>b[1]-a[1]).map(([n,s])=>`<div class="score-item"><span>${n}</span><span>${s} Pkt</span></div>`).join("");
         });
     }
 
+    // BUTTON EVENTS
     document.getElementById('btnHost').onclick = () => start(true);
     document.getElementById('btnPlayer').onclick = () => start(false);
 
@@ -147,7 +176,7 @@
         if(!txt) return;
         set(ref(db, `rooms/${room}/answers/${user}`), txt);
         document.getElementById('inputArea').style.display = 'none';
-        document.getElementById('waitMsg').classList.remove('hidden');
+        document.getElementById('waitMsg').style.display = 'block';
     };
 
     document.getElementById('btnNext').onclick = async () => {
@@ -161,6 +190,13 @@
         update(ref(db, `rooms/${room}/state`), { phase: 'vote' });
     };
 
+    document.getElementById('btnReset').onclick = async () => {
+        if(confirm("Wirklich alles löschen und neu starten?")) {
+            await remove(ref(db, `rooms/${room}`));
+            location.reload();
+        }
+    };
+
     async function loadVotes() {
         const list = document.getElementById('voteList');
         if(list.innerHTML !== "") return;
@@ -169,16 +205,17 @@
         Object.entries(ans).forEach(([name, text]) => {
             if(name === user) return;
             const b = document.createElement('button');
+            b.className = "vote-btn";
             b.innerText = text;
-            b.style.marginBottom = "8px";
             b.onclick = async () => {
-                list.innerHTML = "<p>✅ Stimme gezählt!</p>";
+                list.innerHTML = "<p style='color:var(--gold)'>✅ Stimme gezählt!</p>";
                 const pRef = ref(db, `rooms/${room}/players/${name}`);
                 const pSnap = await get(pRef);
                 update(ref(db, `rooms/${room}/players`), { [name]: (pSnap.val() || 0) + 1 });
             };
             list.appendChild(b);
         });
+        if(list.innerHTML === "") list.innerHTML = "Keine Antworten vorhanden.";
     }
 </script>
 </body>
