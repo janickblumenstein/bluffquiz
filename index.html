@@ -98,26 +98,52 @@ const questions = {
 };
 
 // --- JOIN ---
-document.getElementById('joinBtn').addEventListener('click', joinGame);
-    myName=document.getElementById('userName').value.trim();
-    myRoom=document.getElementById('roomCode').value.trim();
-    iAmHost=document.getElementById('isHost').checked;
-    if(!myName || !myRoom) return alert("Name & Raum eingeben!");
+document.getElementById('joinBtn').addEventListener('click', () => {
+    myName = document.getElementById('userName').value.trim();
+    myRoom = document.getElementById('roomCode').value.trim();
+    iAmHost = document.getElementById('isHost').checked;
+
+    if (!myName || !myRoom) {
+        alert("Name & Raum eingeben!");
+        return;
+    }
 
     document.getElementById('login').classList.add('hidden');
     document.getElementById('gameArea').classList.remove('hidden');
-    if(iAmHost) document.getElementById('hostPanel').classList.remove('hidden');
 
-    // Register Player
+    if (iAmHost) {
+        document.getElementById('hostPanel').classList.remove('hidden');
+    }
+
+    // Spieler registrieren
     set(ref(db, `rooms/${myRoom}/players/${myName}`), 0);
 
-    if(iAmHost){
-        update(ref(db, `rooms/${myRoom}/state`), {
-            mode: document.getElementById('gameSelect').value,
-            phase:'lobby',
-            qIdx:-1
-        });
-    }
+    // 🧠 WICHTIG: Host wird NUR EINMAL gesetzt
+    const stateRef = ref(db, `rooms/${myRoom}/state`);
+
+    get(stateRef).then(snap => {
+        const data = snap.val();
+
+        if (!data) {
+            // Raum existiert noch → dieser User wird Host
+            update(stateRef, {
+                host: myName,
+                mode: document.getElementById('gameSelect').value,
+                phase: 'lobby',
+                qIdx: -1
+            });
+            iAmHost = true;
+            document.getElementById('hostPanel').classList.remove('hidden');
+        } else {
+            // Raum existiert → Host bleibt bestehen
+            if (data.host === myName) {
+                iAmHost = true;
+                document.getElementById('hostPanel').classList.remove('hidden');
+            } else {
+                iAmHost = false;
+            }
+        }
+    });
 
     startSync();
 });
@@ -130,10 +156,20 @@ function startSync(){
         if(!data) return;
         document.getElementById('gameTitle').innerText=data.mode.toUpperCase();
 
-        if(data.qIdx>=0){
-            document.getElementById('questionDisplay').innerText=questions[data.mode][data.qIdx];
-            currentQ=data.qIdx;
-        }
+        if (data.qIdx >= 0) {
+    const qList = questions[data.mode] || [];
+
+    if (qList.length === 0) {
+        document.getElementById('questionDisplay').innerText = "Keine Fragen vorhanden";
+        return;
+    }
+
+    const safeIndex = data.qIdx % qList.length;
+    document.getElementById('questionDisplay').innerText = qList[safeIndex];
+
+    currentQ = safeIndex;
+}
+        
 
         document.getElementById('answerSection').classList.toggle('hidden', data.phase!=='answer');
         document.getElementById('voteSection').classList.toggle('hidden', data.phase!=='vote');
@@ -151,15 +187,25 @@ function startSync(){
 }
 
 // --- HOST BUTTONS ---
-document.getElementById('nextBtn').addEventListener('click',()=> {
-    if(!iAmHost) return alert("Nur Host darf nächste Frage starten!");
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+    if (!iAmHost) return;
+
     currentQ++;
-    update(ref(db, `rooms/${myRoom}/state`), { phase:'answer', qIdx:currentQ });
-    set(ref(db, `rooms/${myRoom}/answers`), {}); // reset answers
+    update(ref(db, `rooms/${myRoom}/state`), {
+        phase: 'answer',
+        qIdx: currentQ
+    });
+
+    set(ref(db, `rooms/${myRoom}/answers`), {});
 });
-document.getElementById('voteBtn').addEventListener('click',()=> {
-    if(!iAmHost) return alert("Nur Host darf Voting starten!");
-    update(ref(db, `rooms/${myRoom}/state`), { phase:'vote' });
+
+document.getElementById('voteBtn').addEventListener('click', () => {
+    if (!iAmHost) return;
+
+    update(ref(db, `rooms/${myRoom}/state`), {
+        phase: 'vote'
+    });
 });
 
 // --- ANSWER ---
