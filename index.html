@@ -98,7 +98,7 @@ const questions = {
 };
 
 // --- JOIN ---
-document.getElementById('joinBtn').addEventListener('click',()=> {
+document.getElementById('joinBtn').addEventListener('click', joinGame);
     myName=document.getElementById('userName').value.trim();
     myRoom=document.getElementById('roomCode').value.trim();
     iAmHost=document.getElementById('isHost').checked;
