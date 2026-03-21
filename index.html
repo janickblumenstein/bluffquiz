@@ -49,7 +49,7 @@
     <div id="gameSection" style="display:none">
         <div id="hostControls" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
             <button id="btnNext">Nächste Zufallsfrage</button>
-            <button id="btnVote">Voting (nur bei Freitext!)</button>
+            <button id="btnVote">Voting / Auswerten</button>
             <button id="btnScore" class="btn-score">🏆 Rangliste</button>
             <button id="btnEvent" class="btn-event">🎲 TRINK-EVENT</button>
             <button id="btnReset" class="btn-danger">Reset</button>
@@ -162,8 +162,8 @@ function sync() {
                     if(isH) {
                         const q = d.gameQs[d.qIdx];
                         if(q.toLowerCase().startsWith("wer")) {
-                            await evaluateAutoVote(); // Erst Punkte, dann Phase
-                            update(ref(db, `rooms/${room}/state`), { phase: "score" });
+                            await evaluateAutoVote();
+                            setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1000);
                         } else {
                             update(ref(db, `rooms/${room}/state`), { phase: "vote" });
                         }
@@ -194,18 +194,33 @@ function setupInput(q) {
 }
 
 async function evaluateAutoVote() {
-    const snap = await get(ref(db, `rooms/${room}/answers`));
-    const ans = snap.val() || {};
+    // 1. Antworten holen
+    const ansSnap = await get(ref(db, `rooms/${room}/answers`));
+    const ans = ansSnap.val() || {};
+    
+    // 2. Stimmen zählen
     const votes = {};
-    Object.values(ans).forEach(v => { if(v) votes[v] = (votes[v] || 0) + 1; });
+    Object.values(ans).forEach(v => { if(v && v !== "") votes[v] = (votes[v] || 0) + 1; });
+    
     const entries = Object.entries(votes);
     if(entries.length === 0) return;
+
+    // 3. Gewinner ermitteln
     const maxV = Math.max(...entries.map(e => e[1]));
     const winners = entries.filter(e => e[1] === maxV).map(e => e[0]);
+
+    // 4. Aktuelle Spielerliste laden und Punkte vergeben
     const pSnap = await get(ref(db, `rooms/${room}/players`));
-    const players = pSnap.val() || {};
-    winners.forEach(w => { if(players[w] !== undefined) players[w] += 1; });
-    await set(ref(db, `rooms/${room}/players`), players); // Direktes Setzen für Sync-Sicherheit
+    let players = pSnap.val() || {};
+    
+    winners.forEach(w => {
+        if(players[w] !== undefined) {
+            players[w] = (players[w] || 0) + 1;
+        }
+    });
+
+    // 5. In Firebase speichern
+    await set(ref(db, `rooms/${room}/players`), players);
 }
 
 async function loadBigScores() {
@@ -223,14 +238,14 @@ async function loadVotes() {
     const snap = await get(ref(db, `rooms/${room}/answers`));
     const ans = snap.val() || {};
     const counts = {};
-    Object.values(ans).forEach(v => counts[v] = (counts[v] || 0) + 1);
+    Object.values(ans).forEach(v => { if(v) counts[v] = (counts[v] || 0) + 1; });
     Object.entries(counts).forEach(([text, count]) => {
         const b = document.createElement("button");
         b.className = "vote-btn"; b.innerText = `${text} (${count}x)`; 
         b.onclick = async () => {
             const playersToReward = Object.keys(ans).filter(p => ans[p] === text);
             const pSnap = await get(ref(db, `rooms/${room}/players`));
-            const players = pSnap.val() || {};
+            let players = pSnap.val() || {};
             playersToReward.forEach(pName => { if(players[pName] !== undefined) players[pName] += 1; });
             await set(ref(db, `rooms/${room}/players`), players);
             voteArea.innerHTML = "✅ Stimme gezählt!";
@@ -253,10 +268,9 @@ btnVote.onclick = async () => {
     const sSnap = await get(ref(db, `rooms/${room}/state`));
     const s = sSnap.val();
     const q = s.gameQs[s.qIdx];
-    // Manuelles Voting bei "Wer"-Fragen verhindern
     if(q.toLowerCase().startsWith("wer")) {
         await evaluateAutoVote();
-        update(ref(db, `rooms/${room}/state`), { phase: "score" });
+        setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 500);
     } else {
         update(ref(db, `rooms/${room}/state`), { phase: "vote" });
     }
