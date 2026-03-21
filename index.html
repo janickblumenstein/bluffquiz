@@ -8,8 +8,9 @@
         :root { --gold:#ffcc00; --dark:#1a1a1a; --grey:#333; --blue: #3498db; }
         body { font-family:sans-serif; background:var(--dark); color:white; text-align:center; margin:0; padding:10px; }
         .card { max-width:420px; margin:auto; background:var(--grey); padding:20px; border-radius:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
-        input, button { width:100%; padding:15px; margin:8px 0; border-radius:10px; border:none; font-size:16px; box-sizing: border-box; }
+        input, button, select { width:100%; padding:15px; margin:8px 0; border-radius:10px; border:none; font-size:16px; box-sizing: border-box; }
         button { background:var(--gold); font-weight:bold; cursor:pointer; }
+        select { background: white; color: black; }
         .btn-host { background:var(--blue); color:white; }
         .btn-score { background:#2ecc71; color:white; }
         .btn-event { background:#9b59b6; color:white; }
@@ -62,7 +63,8 @@
         <div id="waitMsg"></div>
 
         <div id="inputArea" style="display:none">
-            <input id="ansInp" placeholder="Deine Antwort...">
+            <!-- Wird dynamisch befüllt (Text oder Dropdown) -->
+            <div id="dynamicInput"></div>
             <button id="btnSend">Senden</button>
         </div>
         <div id="voteArea" style="display:none"></div>
@@ -85,7 +87,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSy...", // DEIN KEY
+    apiKey: "AIzaSy...", 
     authDomain: "bierkultur-d2fea.firebaseapp.com",
     databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
     projectId: "bierkultur-d2fea"
@@ -115,7 +117,7 @@ const sounds = {
     score: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-animated-small-group-applause-523.mp3")
 };
 
-let user, room, isH = false, lastEventTs = 0, timerInt = null, joinTime = Date.now();
+let user, room, isH = false, lastEventTs = 0, timerInt = null, joinTime = Date.now(), currentPlayers = [];
 
 function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
 
@@ -149,7 +151,7 @@ async function start(hostMode) {
 }
 
 function sync() {
-    onValue(ref(db, `rooms/${room}/state`), snap => {
+    onValue(ref(db, `rooms/${room}/state`), async snap => {
         const d = snap.val(); if(!d) return;
 
         inputArea.style.display = "none";
@@ -159,8 +161,13 @@ function sync() {
 
         if(d.phase === "lobby") { qDisplay.innerText = "Warten auf Host..."; } 
         else if(d.phase === "answer") {
-            qDisplay.innerText = d.gameQs ? d.gameQs[d.qIdx] : "Keine Fragen mehr!";
-            if (!waitMsg.innerText.includes("✅")) inputArea.style.display = "block";
+            const currentQ = d.gameQs ? d.gameQs[d.qIdx] : "Keine Fragen mehr!";
+            qDisplay.innerText = currentQ;
+            
+            if (!waitMsg.innerText.includes("✅")) {
+                setupInput(currentQ);
+                inputArea.style.display = "block";
+            }
         } 
         else if(d.phase === "vote") {
             qDisplay.innerText = "Abstimmen!";
@@ -175,6 +182,7 @@ function sync() {
             loadBigScores();
         }
 
+        // TIMER & AUTO-VOTE
         if(timerInt) clearInterval(timerInt);
         if(d.phase === "answer" && d.endTime) {
             timerInt = setInterval(() => {
@@ -183,6 +191,8 @@ function sync() {
                     clearInterval(timerInt); 
                     waitMsg.innerText = "⏱️ Zeit um!"; 
                     inputArea.style.display = "none";
+                    // AUTO-VOTE: Nur der Host löst den Phasenwechsel aus
+                    if(isH) update(ref(db, `rooms/${room}/state`), { phase: "vote" });
                 } else { waitMsg.innerText = "⏳ " + diff + "s"; }
             }, 1000);
         }
@@ -198,9 +208,21 @@ function sync() {
 
     onValue(ref(db, `rooms/${room}/players`), snap => {
         const p = snap.val() || {};
+        currentPlayers = Object.keys(p);
         const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
         liveScoreList.innerHTML = sorted.map(([n, s]) => `<div class="live-item"><span>${n}</span><span>${s} Pkt.</span></div>`).join("");
     });
+}
+
+// Erstellt entweder ein Textfeld oder ein Dropdown
+function setupInput(question) {
+    const area = document.getElementById("dynamicInput");
+    if(question.toLowerCase().startsWith("wer")) {
+        let options = currentPlayers.map(p => `<option value="${p}">${p}</option>`).join("");
+        area.innerHTML = `<select id="ansInp"><option value="">-- Wähle jemanden --</option>${options}</select>`;
+    } else {
+        area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`;
+    }
 }
 
 async function loadBigScores() {
@@ -219,14 +241,35 @@ async function loadVotes() {
     voteArea.innerHTML = "";
     const snap = await get(ref(db, `rooms/${room}/answers`));
     const ans = snap.val() || {};
-    Object.entries(ans).forEach(([n, t]) => {
-        if(n === user) return;
+    
+    // Wir zählen, wie oft welche Antwort gegeben wurde
+    const counts = {};
+    Object.values(ans).forEach(v => counts[v] = (counts[v] || 0) + 1);
+
+    Object.entries(counts).forEach(([text, count]) => {
         const b = document.createElement("button");
         b.className = "vote-btn";
-        b.innerText = t;
+        // Zeige bei Dropdown-Fragen den Namen, sonst den Text
+        b.innerText = `${text} (${count} Stimmen)`; 
+        
         b.onclick = async () => {
-            const pRef = ref(db, `rooms/${room}/players/${n}`);
-            update(ref(db, `rooms/${room}/players`), { [n]: ((await get(pRef)).val() || 0) + 1 });
+            // Logik: Wenn die Antwort ein existierender Spielername ist, kriegt DIESER die Punkte
+            // Falls es Freitext ist, kriegt (wie vorher) jeder die Punkte, der das geschrieben hat
+            const playersToReward = Object.keys(ans).filter(player => ans[player] === text);
+            
+            // Falls die Antwort ein Name aus der Spielerliste ist, kriegt nur DIESER Spieler den Punkt
+            if(currentPlayers.includes(text)) {
+                const pRef = ref(db, `rooms/${room}/players/${text}`);
+                const curVal = (await get(pRef)).val() || 0;
+                update(ref(db, `rooms/${room}/players`), { [text]: curVal + 1 });
+            } else {
+                // Klassisch: Alle die das getippt haben kriegen Punkte
+                for(let pName of playersToReward) {
+                    const pRef = ref(db, `rooms/${room}/players/${pName}`);
+                    const curVal = (await get(pRef)).val() || 0;
+                    update(ref(db, `rooms/${room}/players`), { [pName]: curVal + 1 });
+                }
+            }
             voteArea.innerHTML = "✅ Stimme gezählt!";
         };
         voteArea.appendChild(b);
@@ -243,7 +286,7 @@ btnNext.onclick = async () => {
     update(ref(db, `rooms/${room}/state`), { 
         phase: "answer", 
         qIdx: nextIdx, 
-        endTime: Date.now() + 21000 // 20 Sek + 1 Sek Puffer
+        endTime: Date.now() + 21000 
     });
     sounds.next.play().catch(() => {});
 };
@@ -255,14 +298,16 @@ btnEvent.onclick = () => {
     update(ref(db, `rooms/${room}/state/event`), { text: r, ts: Date.now() });
 };
 btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
+
 btnSend.onclick = () => {
-    if(!ansInp.value.trim()) return;
-    set(ref(db, `rooms/${room}/answers/${user}`), ansInp.value);
+    const val = document.getElementById("ansInp").value.trim();
+    if(!val) return;
+    set(ref(db, `rooms/${room}/answers/${user}`), val);
     inputArea.style.display = "none";
     waitMsg.innerText = "✅ Gesendet!";
     sounds.send.play().catch(() => {});
-    ansInp.value = "";
 };
+
 btnPlayer.onclick = () => start(false);
 btnHost.onclick = () => start(true);
 </script>
