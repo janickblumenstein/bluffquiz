@@ -1,242 +1,144 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BluffQuiz Mobile V6 📱</title>
-<style>
-:root { --bg:#0f172a; --card:#1e293b; --primary:#f43f5e; --secondary:#38bdf8; --text:#f8fafc; }
-body { font-family:sans-serif; background:var(--bg); color:var(--text); margin:0; padding:15px; display:flex; flex-direction:column; align-items:center; font-size:18px; line-height:1.5; }
-.card { background:var(--card); border-radius:20px; padding:20px; width:100%; max-width:400px; box-sizing:border-box; margin-bottom:15px; box-shadow:0 10px 20px rgba(0,0,0,0.3);}
-input, select { width:100%; padding:15px; margin-bottom:10px; border-radius:10px; border:1px solid #334155; background:#0f172a; color:white; font-size:16px; box-sizing:border-box;}
-button { width:100%; padding:18px; border-radius:10px; border:none; font-size:18px; font-weight:bold; cursor:pointer; margin-bottom:10px; transition:0.2s;}
-.btn-primary { background:var(--primary); color:white;}
-.btn-host { background:#10b981; color:white;}
-.btn-vote { background:var(--secondary); color:#0f172a;}
-.hidden { display:none !important;}
-.host-only { border:2px solid #10b981; padding:15px; border-radius:15px; margin-top:10px;}
-#scoreList div { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #334155;}
-#voteButtons { display:flex; flex-direction:column; gap:10px; }
-</style>
-</head>
-<body>
-
-<h1>🔥 BluffQuiz</h1>
-
-<!-- LOGIN SCREEN -->
-<div id="login" class="card">
-    <input id="userName" type="text" placeholder="Dein Name" autocomplete="off">
-    <input id="roomCode" type="text" placeholder="Raum-Code (z.B. 0819)" autocomplete="off">
-    
-    <div id="hostOptions" class="hidden">
-        <p style="color:#10b981;margin:5px 0;">Spielmodus wählen (Nur Host):</p>
-        <select id="gameSelect">
-            <option value="game1">Fake oder Fakt</option>
-            <option value="game2">Wer von uns...?</option>
-            <option value="game3">Dümmste Antwort</option>
-        </select>
-    </div>
-
-    <div style="margin:10px 0;">
-        <input type="checkbox" id="isHost" style="width:auto;" onchange="document.getElementById('hostOptions').classList.toggle('hidden', !this.checked)"> Ich bin Host 👑
-    </div>
-    <button class="btn-primary" id="joinBtn">BEITRETEN</button>
-</div>
-
-<!-- GAME SCREEN -->
-<div id="gameArea" class="hidden">
-    <div class="card">
-        <div id="gameTitle" style="color:var(--secondary); font-size:0.8rem; font-weight:bold;">WARTE AUF START...</div>
-        <h2 id="questionDisplay">Der Host startet gleich das Spiel...</h2>
-
-        <div id="answerSection" class="hidden">
-            <input id="answerInput" type="text" placeholder="Deine Antwort...">
-            <button class="btn-primary" id="sendAnswerBtn">ANTWORT ABSCHICKEN</button>
-        </div>
-
-        <div id="voteSection" class="hidden">
-            <p>Wähle deinen Favoriten:</p>
-            <div id="voteButtons"></div>
-        </div>
-    </div>
-
-    <!-- HOST PANEL -->
-    <div id="hostPanel" class="card host-only hidden">
-        <p>🛠 HOST KONTROLLE</p>
-        <button class="btn-host" id="nextBtn">NÄCHSTE FRAGE</button>
-        <button style="background:#f59e0b;color:white;" id="voteBtn">VOTING STARTEN</button>
-    </div>
-
-    <!-- SCORES -->
-    <div class="card">
-        <h4>🏆 PUNKTE</h4>
-        <div id="scoreList">Noch keine Punkte</div>
-    </div>
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// 🔥 Firebase Config
 const firebaseConfig = {
-     apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
-    authDomain: "://firebaseapp.com",
-    databaseURL: "https://firebasedatabase.app",
-    projectId: "bierkultur-d2fea",
+  apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
+  authDomain: "bierkultur-d2fea.firebaseapp.com",
+  databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
+  projectId: "bierkultur-d2fea",
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Variables
-let myName, myRoom, iAmHost, currentQ=-1;
+let myName, myRoom, iAmHost=false, currentQ=-1;
+
 const questions = {
-    game1:["Meistgeklautes Hotel-Objekt?","Dümmste Büro-Ausrede?","Tinder-Fail Story?"],
-    game2:["Wer ruft betrunken den Chef an?","Wer hat die peinlichste Jugendsünde?","Wer lügt am besten?"],
-    game3:["Was bedeutet IKEA wirklich?","Neue Tinder-Funktion:","Männer-Chat Name:"]
+ game1:["Meistgeklautes Hotel-Objekt?","Dümmste Büro-Ausrede?","Tinder-Fail Story?"],
+ game2:["Wer ruft betrunken den Chef an?","Wer hat die peinlichste Jugendsünde?","Wer lügt am besten?"],
+ game3:["Was bedeutet IKEA wirklich?","Neue Tinder-Funktion:","Männer-Chat Name:"]
 };
 
-// --- JOIN ---
-document.getElementById('joinBtn').addEventListener('click', () => {
-    myName = document.getElementById('userName').value.trim();
-    myRoom = document.getElementById('roomCode').value.trim();
-    iAmHost = document.getElementById('isHost').checked;
+// JOIN
+document.getElementById('joinBtn').addEventListener('click', async () => {
 
-    if (!myName || !myRoom) {
-        alert("Name & Raum eingeben!");
-        return;
-    }
+  myName = userName.value.trim();
+  myRoom = roomCode.value.trim();
+  if(!myName || !myRoom) return alert("Name & Raum!");
 
-    document.getElementById('login').classList.add('hidden');
-    document.getElementById('gameArea').classList.remove('hidden');
+  login.classList.add('hidden');
+  gameArea.classList.remove('hidden');
 
-    if (iAmHost) {
-        document.getElementById('hostPanel').classList.remove('hidden');
-    }
+  await set(ref(db, `rooms/${myRoom}/players/${myName}`), 0);
 
-    // Spieler registrieren
-    set(ref(db, `rooms/${myRoom}/players/${myName}`), 0);
+  const stateRef = ref(db, `rooms/${myRoom}/state`);
+  const snap = await get(stateRef);
 
-    // 🧠 WICHTIG: Host wird NUR EINMAL gesetzt
-    const stateRef = ref(db, `rooms/${myRoom}/state`);
-
-    get(stateRef).then(snap => {
-        const data = snap.val();
-
-        if (!data) {
-            // Raum existiert noch → dieser User wird Host
-            update(stateRef, {
-                host: myName,
-                mode: document.getElementById('gameSelect').value,
-                phase: 'lobby',
-                qIdx: -1
-            });
-            iAmHost = true;
-            document.getElementById('hostPanel').classList.remove('hidden');
-        } else {
-            // Raum existiert → Host bleibt bestehen
-            if (data.host === myName) {
-                iAmHost = true;
-                document.getElementById('hostPanel').classList.remove('hidden');
-            } else {
-                iAmHost = false;
-            }
-        }
+  if(!snap.exists()){
+    await set(stateRef,{
+      host: myName,
+      mode: gameSelect.value,
+      phase:'lobby',
+      qIdx:-1
     });
+    iAmHost = true;
+    hostPanel.classList.remove('hidden');
+  } else {
+    if(snap.val().host === myName){
+      iAmHost = true;
+      hostPanel.classList.remove('hidden');
+    }
+  }
 
-    startSync();
+  startSync();
 });
 
-// --- SYNC ---
+// SYNC
 function startSync(){
-    // State
-    onValue(ref(db, `rooms/${myRoom}/state`), snap=>{
-        const data=snap.val();
-        if(!data) return;
-        document.getElementById('gameTitle').innerText=data.mode.toUpperCase();
+  onValue(ref(db, `rooms/${myRoom}/state`), snap=>{
+    const data=snap.val();
+    if(!data) return;
 
-        if (data.qIdx >= 0) {
-    const qList = questions[data.mode] || [];
+    gameTitle.innerText = data.mode.toUpperCase();
 
-    if (qList.length === 0) {
-        document.getElementById('questionDisplay').innerText = "Keine Fragen vorhanden";
-        return;
+    if(data.qIdx>=0){
+      const qList = questions[data.mode] || [];
+      const safeIndex = data.qIdx % qList.length;
+      questionDisplay.innerText = qList[safeIndex];
+      currentQ = data.qIdx;
     }
 
-    const safeIndex = data.qIdx % qList.length;
-    document.getElementById('questionDisplay').innerText = qList[safeIndex];
+    answerSection.classList.toggle('hidden', data.phase!=='answer');
+    voteSection.classList.toggle('hidden', data.phase!=='vote');
 
-    currentQ = safeIndex;
-}
-        
+    if(data.phase==='vote') renderVotes();
+  });
 
-        document.getElementById('answerSection').classList.toggle('hidden', data.phase!=='answer');
-        document.getElementById('voteSection').classList.toggle('hidden', data.phase!=='vote');
-
-        if(data.phase==='vote') renderVotes();
-    });
-
-    // Scores
-    onValue(ref(db, `rooms/${myRoom}/players`), snap=>{
-        const players=snap.val()||{};
-        let html="";
-        Object.entries(players).sort((a,b)=>b[1]-a[1]).forEach(([n,s])=>html+=`<div><span>${n}</span><span>${s} Pkt</span></div>`);
-        document.getElementById('scoreList').innerHTML=html;
-    });
+  onValue(ref(db, `rooms/${myRoom}/players`), snap=>{
+    const players=snap.val()||{};
+    scoreList.innerHTML = Object.entries(players)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([n,s])=>`<div>${n} ${s}</div>`).join("");
+  });
 }
 
-// --- HOST BUTTONS ---
+// HOST
+nextBtn.onclick = ()=>{
+  if(!iAmHost) return;
 
-document.getElementById('nextBtn').addEventListener('click', () => {
-    if (!iAmHost) return;
+  currentQ++;
+  update(ref(db, `rooms/${myRoom}/state`), {
+    phase:'answer',
+    qIdx:currentQ
+  });
 
-    currentQ++;
-    update(ref(db, `rooms/${myRoom}/state`), {
-        phase: 'answer',
-        qIdx: currentQ
-    });
+  set(ref(db, `rooms/${myRoom}/answers`), {});
+  set(ref(db, `rooms/${myRoom}/votes`), {});
+};
 
-    set(ref(db, `rooms/${myRoom}/answers`), {});
-});
+voteBtn.onclick = ()=>{
+  if(!iAmHost) return;
+  update(ref(db, `rooms/${myRoom}/state`), { phase:'vote' });
+};
 
-document.getElementById('voteBtn').addEventListener('click', () => {
-    if (!iAmHost) return;
+// ANSWER
+sendAnswerBtn.onclick = ()=>{
+  const val = answerInput.value.trim();
+  if(!val) return;
 
-    update(ref(db, `rooms/${myRoom}/state`), {
-        phase: 'vote'
-    });
-});
+  set(ref(db, `rooms/${myRoom}/answers/${myName}`), val);
+  answerInput.value="";
+};
 
-// --- ANSWER ---
-document.getElementById('sendAnswerBtn').addEventListener('click',()=>{
-    const val=document.getElementById('answerInput').value.trim();
-    if(!val) return;
-    set(ref(db, `rooms/${myRoom}/answers/${myName}`), val);
-    document.getElementById('answerSection').innerHTML="✅ Gesendet!";
-});
-
-// --- VOTES ---
+// VOTE
 function renderVotes(){
-    get(ref(db, `rooms/${myRoom}/answers`)).then(snap=>{
-        const div=document.getElementById('voteButtons');
-        div.innerHTML="";
-        const answers=snap.val()||{};
-        Object.entries(answers).forEach(([name,text])=>{
-            if(name===myName) return; // nicht für sich selbst
-            const btn=document.createElement('button');
-            btn.className="btn-vote";
-            btn.innerText=text;
-            btn.onclick=()=>{
-                const pRef=ref(db, `rooms/${myRoom}/players/${name}`);
-                get(pRef).then(s=>update(ref(db, `rooms/${myRoom}/players`), {[name]:(s.val()||0)+1}));
-                div.innerHTML="Voted! ⭐";
-            };
-            div.appendChild(btn);
+  get(ref(db, `rooms/${myRoom}/answers`)).then(snap=>{
+    const answers = snap.val()||{};
+    voteButtons.innerHTML="";
+
+    Object.entries(answers).forEach(([name,text])=>{
+      if(name===myName) return;
+
+      const btn=document.createElement('button');
+      btn.innerText=text;
+      btn.className="btn-vote";
+
+      btn.onclick=()=>{
+        set(ref(db, `rooms/${myRoom}/votes/${myName}`), name);
+
+        const pRef = ref(db, `rooms/${myRoom}/players/${name}`);
+        get(pRef).then(s=>{
+          update(ref(db, `rooms/${myRoom}/players`), {
+            [name]: (s.val()||0)+1
+          });
         });
+
+        voteButtons.innerHTML="Gewählt ✅";
+      };
+
+      voteButtons.appendChild(btn);
     });
+  });
 }
 </script>
-
-</body>
-</html>
