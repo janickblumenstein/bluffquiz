@@ -36,7 +36,7 @@
         #eventOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; padding: 20px; }
         .beer-spin { font-size:5rem; animation:spin 2s infinite linear; }
         @keyframes spin {100% {transform:rotate(360deg);}}
-        #roundResultInfo { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--gold); text-align: left; font-size: 0.9rem; }
+        #roundResultInfo { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--gold); }
     </style>
 </head>
 <body>
@@ -85,7 +85,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// ACHTUNG: Hier musst du deinen ECHTEN Key einfügen, sonst startet die App nicht!
 const firebaseConfig = {
     apiKey: "AIzaSy...", 
     authDomain: "bierkultur-d2fea.firebaseapp.com",
@@ -167,6 +166,7 @@ function sync() {
                         const q = d.gameQs[d.qIdx];
                         if(q.trim().toLowerCase().startsWith("wer")) {
                             await evaluateAutoVote();
+                            setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1500);
                         } else { update(ref(db, `rooms/${room}/state`), { phase: "vote" }); }
                     }
                 } else { waitMsg.innerText = "⏳ " + diff + "s"; }
@@ -194,13 +194,11 @@ function setupInput(q) {
     } else { area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`; }
 }
 
-// LOGIK GEÄNDERT: Wer die meistgewählte Antwort getippt hat, bekommt den Punkt
 async function evaluateAutoVote() {
     const ansSnap = await get(ref(db, `rooms/${room}/answers`));
     const allAnswers = ansSnap.val() || {}; 
     const voteCounts = {};
     Object.values(allAnswers).forEach(v => { if(v) { const cleanV = v.trim(); voteCounts[cleanV] = (voteCounts[cleanV] || 0) + 1; } });
-    
     const entries = Object.entries(voteCounts);
     if(entries.length === 0) return;
     const maxVotes = Math.max(...entries.map(e => e[1]));
@@ -209,17 +207,14 @@ async function evaluateAutoVote() {
     const pSnap = await get(ref(db, `rooms/${room}/players`));
     let currentScores = pSnap.val() || {};
     let scorers = [];
-
-    // Alle Spieler erhalten einen Punkt, die eine der Gewinner-Antworten gewählt haben
     Object.keys(allAnswers).forEach(voter => {
         if(winningChoices.includes(allAnswers[voter].trim())) {
             currentScores[voter] = (currentScores[voter] || 0) + 1;
             scorers.push(voter);
         }
     });
-
     await set(ref(db, `rooms/${room}/players`), currentScores);
-    await update(ref(db, `rooms/${room}/state`), { phase: "score", lastWin: winningChoices.join(", "), scorers: scorers });
+    await update(ref(db, `rooms/${room}/state`), { lastWin: winningChoices.join(", "), scorers: scorers });
 }
 
 async function loadBigScores(winnerTxt, scorers) {
@@ -227,12 +222,7 @@ async function loadBigScores(winnerTxt, scorers) {
     const p = snap.val() || {};
     const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
     let html = "";
-    if(winnerTxt) {
-        html += `<div id="roundResultInfo">
-                    <strong>Gewonnen:</strong> ${winnerTxt}<br>
-                    <strong>Punkt für:</strong> ${scorers.length > 0 ? scorers.join(", ") : "Niemanden"}
-                 </div>`;
-    }
+    if(winnerTxt) html += `<div id="roundResultInfo"><small>Runden-Sieg:</small><br><strong>${winnerTxt}</strong></div>`;
     html += sorted.map(([n, s], i) => `
         <div class="score-item ${i === 0 ? 'rank-1' : ''}" style="animation-delay: ${i * 0.1}s">
             <span>${i === 0 ? '👑' : i + 1 + '.'} ${n}${scorers.includes(n) ? '<span class="plus-one">+1</span>' : ''}</span>
@@ -247,12 +237,10 @@ async function loadVotes() {
     const ans = snap.val() || {};
     const counts = {};
     Object.values(ans).forEach(v => { if(v) counts[v] = (counts[v] || 0) + 1; });
-    
     Object.entries(counts).forEach(([text, count]) => {
         const b = document.createElement("button");
         b.className = "vote-btn"; b.innerText = `${text} (${count}x)`; 
         b.onclick = async () => {
-            // Wer diese Antwort geschrieben (oder gewählt) hat, bekommt den Punkt
             const winners = Object.keys(ans).filter(p => ans[p].trim() === text.trim());
             const pSnap = await get(ref(db, `rooms/${room}/players`));
             let players = pSnap.val() || {};
