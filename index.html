@@ -27,7 +27,7 @@
 <body>
 
 <div class="container">
-    <div class="logo-fallback">B</div>
+    <img src="https://bierkultur.beer/wp-content/uploads/2025/11/BK_Logo_Round_Thick.svg" class="logo">
     <div style="color:var(--gold); font-size: 0.8rem; margin-bottom: 20px;">BIERKULTUR BRITTNAU</div>
 
     <!-- LOGIN -->
@@ -133,8 +133,17 @@
             }
 
             if(data.phase === 'answer') {
-                document.getElementById('questionDisplay').innerText = questions[data.mode][data.qIdx % questions[data.mode].length];
-                document.getElementById('divVote').classList.add('hidden');
+    document.getElementById('questionDisplay').innerText = questions[data.mode][data.qIdx % questions[data.mode].length];
+
+    // WICHTIG: UI sauber zurücksetzen für ALLE
+    document.getElementById('divInput').classList.remove('hidden');
+    document.getElementById('divWait').classList.add('hidden');
+    document.getElementById('divVote').classList.add('hidden');
+
+    document.getElementById('inpAns').value = "";
+    document.getElementById('voteList').innerHTML = "";
+}
+
             } else if(data.phase === 'vote') {
                 document.getElementById('divInput').classList.add('hidden');
                 document.getElementById('divWait').classList.add('hidden');
