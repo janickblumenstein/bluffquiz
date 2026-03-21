@@ -48,14 +48,14 @@
 
     <div id="gameSection" style="display:none">
         <div id="hostControls" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
-            <button id="btnNext">Nächste Zufallsfrage</button>
+            <button id="btnNext">Nächste Frage</button>
             <button id="btnVote">Voting / Auswerten</button>
             <button id="btnScore" class="btn-score">🏆 Rangliste</button>
             <button id="btnEvent" class="btn-event">🎲 TRINK-EVENT</button>
             <button id="btnReset" class="btn-danger">Reset</button>
         </div>
 
-        <div id="qDisplay">Warten auf Host...</div>
+        <div id="qDisplay">Warten...</div>
         <div id="waitMsg"></div>
 
         <div id="inputArea" style="display:none">
@@ -161,9 +161,9 @@ function sync() {
                     inputArea.style.display = "none";
                     if(isH) {
                         const q = d.gameQs[d.qIdx];
-                        if(q.toLowerCase().startsWith("wer")) {
+                        if(q.trim().toLowerCase().startsWith("wer")) {
                             await evaluateAutoVote();
-                            setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1200);
+                            setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1500);
                         } else {
                             update(ref(db, `rooms/${room}/state`), { phase: "vote" });
                         }
@@ -187,42 +187,48 @@ function sync() {
 
 function setupInput(q) {
     const area = document.getElementById("dynamicInput");
-    if(q.toLowerCase().startsWith("wer")) {
-        let opts = currentPlayers.map(p => `<option value="${p}">${p}</option>`).join("");
+    if(q.trim().toLowerCase().startsWith("wer")) {
+        let opts = currentPlayers.map(p => `<option value="${p.trim()}">${p.trim()}</option>`).join("");
         area.innerHTML = `<select id="ansInp"><option value="">-- Wähle jemanden --</option>${opts}</select>`;
     } else { area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`; }
 }
 
 async function evaluateAutoVote() {
-    // 1. Alle Antworten holen (Wer hat für wen gestimmt?)
+    console.log("Starte Auswertung...");
     const ansSnap = await get(ref(db, `rooms/${room}/answers`));
-    const allAnswers = ansSnap.val() || {}; // Format: { "SpielerA": "GewählterName", "SpielerB": "GewählterName" }
+    const allAnswers = ansSnap.val() || {}; 
     
-    // 2. Stimmen zählen, um den Gewinner-Namen zu finden
     const voteCounts = {};
-    Object.values(allAnswers).forEach(v => { if(v) voteCounts[v] = (voteCounts[v] || 0) + 1; });
+    Object.values(allAnswers).forEach(v => { 
+        if(v) {
+            const cleanV = v.trim();
+            voteCounts[cleanV] = (voteCounts[cleanV] || 0) + 1; 
+        }
+    });
     
     const entries = Object.entries(voteCounts);
-    if(entries.length === 0) return;
+    if(entries.length === 0) { console.log("Keine Antworten gefunden."); return; }
 
-    // 3. Den oder die Namen mit den meisten Stimmen finden
     const maxVotes = Math.max(...entries.map(e => e[1]));
     const winningNames = entries.filter(e => e[1] === maxVotes).map(e => e[0]);
+    console.log("Gewinner-Namen:", winningNames);
 
-    // 4. Spielerliste laden
     const pSnap = await get(ref(db, `rooms/${room}/players`));
     let currentScores = pSnap.val() || {};
     
-    // 5. JEDER Spieler, der einen der winningNames gewählt hat, bekommt einen Punkt
+    let pointsAwarded = false;
     Object.keys(allAnswers).forEach(voterName => {
-        const choice = allAnswers[voterName];
+        const choice = allAnswers[voterName].trim();
         if(winningNames.includes(choice)) {
             currentScores[voterName] = (currentScores[voterName] || 0) + 1;
+            pointsAwarded = true;
+            console.log(`Punkt für ${voterName} (hat für ${choice} gestimmt)`);
         }
     });
 
-    // 6. Zurückschreiben
-    await set(ref(db, `rooms/${room}/players`), currentScores);
+    if(pointsAwarded) {
+        await set(ref(db, `rooms/${room}/players`), currentScores);
+    }
 }
 
 async function loadBigScores() {
@@ -245,7 +251,7 @@ async function loadVotes() {
         const b = document.createElement("button");
         b.className = "vote-btn"; b.innerText = `${text} (${count}x)`; 
         b.onclick = async () => {
-            const playersToReward = Object.keys(ans).filter(p => ans[p] === text);
+            const playersToReward = Object.keys(ans).filter(p => ans[p].trim() === text.trim());
             const pSnap = await get(ref(db, `rooms/${room}/players`));
             let players = pSnap.val() || {};
             playersToReward.forEach(pName => { if(players[pName] !== undefined) players[pName] += 1; });
@@ -270,7 +276,7 @@ btnVote.onclick = async () => {
     const sSnap = await get(ref(db, `rooms/${room}/state`));
     const s = sSnap.val();
     const q = s.gameQs[s.qIdx];
-    if(q.toLowerCase().startsWith("wer")) {
+    if(q.trim().toLowerCase().startsWith("wer")) {
         await evaluateAutoVote();
         setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 500);
     } else {
@@ -287,7 +293,7 @@ btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)
 btnSend.onclick = () => {
     const v = document.getElementById("ansInp").value;
     if(!v || v === "") return;
-    set(ref(db, `rooms/${room}/answers/${user}`), v);
+    set(ref(db, `rooms/${room}/answers/${user}`), v.trim());
     inputArea.style.display = "none"; waitMsg.innerText = "✅ Gesendet!";
     sounds.send.play().catch(()=>{});
 };
