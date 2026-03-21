@@ -8,33 +8,46 @@
         :root { --gold: #ffcc00; --dark: #1a1a1a; --grey: #333; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: white; text-align: center; padding: 10px; margin: 0; }
         .container { max-width: 500px; margin: 10px auto; background: var(--grey); padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .logo-area img { width: 120px; height: 120px; margin-bottom: 5px; object-fit: contain; }
-        .gv-info { font-size: 0.75em; color: var(--gold); margin-bottom: 15px; font-weight: bold; }
+        
+        /* Logo Fix */
+        .logo-container { width: 120px; height: 120px; margin: 0 auto 15px; display: block; }
+        .logo-container img { width: 100%; height: 100%; object-fit: contain; }
+
+        .gv-info { font-size: 0.75em; color: var(--gold); margin-bottom: 15px; font-weight: bold; text-transform: uppercase; }
         .hidden { display: none !important; }
-        input, select, button { width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px; border: none; font-size: 1rem; box-sizing: border-box; }
-        button { background: var(--gold); color: black; font-weight: bold; cursor: pointer; }
-        .btn-host { background: #3498db; color: white; }
-        .btn-vote { background: #444; color: white; border: 2px solid var(--gold); }
-        .score-list { background: #222; padding: 10px; border-radius: 10px; margin-top: 20px; text-align: left; }
-        .score-entry { display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding: 5px 0; }
-        #questionDisplay { font-size: 1.4rem; margin: 20px 0; color: var(--gold); min-height: 50px; font-weight: bold; }
+        
+        input, select, button { width: 100%; padding: 15px; margin: 8px 0; border-radius: 10px; border: none; font-size: 1rem; box-sizing: border-box; }
+        button { background: var(--gold); color: black; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:active { opacity: 0.8; transform: scale(0.98); }
+        
+        .btn-host { background: #3498db; color: white; margin-bottom: 20px; }
+        .btn-vote { background: #444; color: white; border: 2px solid var(--gold); margin-bottom: 10px; font-size: 0.9rem; }
+        
+        .score-list { background: #222; padding: 15px; border-radius: 10px; margin-top: 25px; text-align: left; border: 1px solid #444; }
+        .score-entry { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 8px 0; }
+        
+        #questionDisplay { font-size: 1.5rem; margin: 25px 0; color: var(--gold); font-weight: bold; min-height: 60px; line-height: 1.2; }
+        .host-area { background: #444; padding: 15px; border-radius: 12px; border: 2px dashed var(--gold); margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="logo-area">
-        <a href="https://bierkultur.beer/" target="_blank">
-            <!-- Neues Logo-Link eingebaut -->
-            <img src="https://bierkultur.beer/wp-content/uploads/2025/11/BK_Logo_Round_Thick.svg" alt="Bierkultur Logo" onerror="this.src='https://bierkultur.beer/wp-content/uploads/2021/10/logo-bierkultur-1.png'">
+        <a href="https://bierkultur.beer/" target="_blank" class="logo-container">
+            <!-- Logo mit Fallback-Kette -->
+            <img src="https://bierkultur.beer/wp-content/uploads/2021/10/logo-bierkultur-1.png" 
+                 id="mainLogo" 
+                 alt="Bierkultur Logo">
         </a>
         <div class="gv-info">GV Brittnau • 21.03.2026</div>
     </div>
 
+    <!-- LOGIN -->
     <div id="login">
         <input type="text" id="userName" placeholder="Dein Name">
         <input type="text" id="roomCode" placeholder="Raum Code">
-        <div id="hostSection">
+        <div id="hostChoice">
             <select id="gameSelect">
                 <option value="game1">Smalltalk-Fail</option>
                 <option value="game2">Wer würde eher?</option>
@@ -45,27 +58,35 @@
         <button id="joinPlayerBtn">Als SPIELER beitreten</button>
     </div>
 
+    <!-- GAME AREA -->
     <div id="gameArea" class="hidden">
-        <div id="hostControls" class="hidden" style="background: #444; padding: 10px; border-radius: 10px; border: 1px solid #666;">
-            <button id="nextBtn">NÄCHSTE FRAGE</button>
+        <div id="hostPanel" class="hidden host-area">
+            <small>HOST-MENÜ</small>
+            <button id="nextBtn">NÄCHSTE RUNDE</button>
             <button id="voteBtn" style="background: #fff;">VOTING STARTEN</button>
         </div>
 
-        <div id="questionDisplay">Warte auf Host...</div>
+        <div id="questionDisplay">Warte auf den Start...</div>
 
+        <!-- ANTWORT -->
         <div id="answerSection" class="hidden">
-            <div id="inputUI">
+            <div id="inputBox">
                 <input type="text" id="answerInput" placeholder="Deine Antwort...">
                 <button id="sendBtn">ANTWORT SENDEN</button>
             </div>
-            <p id="waitMsg" class="hidden">✅ Gesendet! Warte auf die anderen...</p>
+            <div id="waitMsg" class="hidden">
+                <p>✅ Antwort gesendet!</p>
+                <p style="font-size: 0.8em; opacity: 0.7;">Warte bis der Host das Voting startet.</p>
+            </div>
         </div>
 
+        <!-- VOTING -->
         <div id="voteSection" class="hidden">
-            <p>Wer hat am besten geantwortet?</p>
+            <p>Wähle den besten Beitrag:</p>
             <div id="voteButtons"></div>
         </div>
 
+        <!-- RANGLISTE -->
         <div class="score-list">
             <strong style="color: var(--gold);">Rangliste:</strong>
             <div id="scoreDisplay"></div>
@@ -93,18 +114,19 @@
         game3: ["Was bedeutet IKEA wirklich?", "Neue Tinder-Funktion:", "Männer-Chat Name:"]
     };
 
-    let myName, myRoom, iAmHost = false;
+    let myName, myRoom, iAmHost = false, lastQIdx = -2;
 
-    async function join(isHost) {
+    // Login
+    async function start(asHost) {
         myName = document.getElementById('userName').value.trim();
         myRoom = document.getElementById('roomCode').value.trim().toUpperCase();
-        if(!myName || !myRoom) return alert("Name & Raum eingeben!");
+        if(!myName || !myRoom) return alert("Bitte alles ausfüllen!");
 
         const stateRef = ref(db, `rooms/${myRoom}/state`);
         const snap = await get(stateRef);
 
-        if(isHost) {
-            if(snap.exists() && snap.val().host) return alert("Host existiert schon!");
+        if(asHost) {
+            if(snap.exists() && snap.val().host) return alert("Es gibt schon einen Host!");
             await set(stateRef, { host: myName, mode: document.getElementById('gameSelect').value, phase: 'lobby', qIdx: -1 });
             iAmHost = true;
         } else {
@@ -114,47 +136,41 @@
         await update(ref(db, `rooms/${myRoom}/players`), { [myName]: 0 });
         document.getElementById('login').classList.add('hidden');
         document.getElementById('gameArea').classList.remove('hidden');
-        if(iAmHost) document.getElementById('hostControls').classList.remove('hidden');
+        if(iAmHost) document.getElementById('hostPanel').classList.remove('hidden');
 
-        startSync();
+        sync();
     }
 
-    document.getElementById('joinHostBtn').onclick = () => join(true);
-    document.getElementById('joinPlayerBtn').onclick = () => join(false);
+    document.getElementById('joinHostBtn').onclick = () => start(true);
+    document.getElementById('joinPlayerBtn').onclick = () => start(false);
 
-    function startSync() {
+    // Sync
+    function sync() {
         onValue(ref(db, `rooms/${myRoom}/state`), snap => {
             const data = snap.val();
             if(!data) return;
 
-            // ABSOLUTER RESET BEI PHASENWECHSEL
-            if(data.phase === 'answer') {
-                document.getElementById('voteSection').classList.add('hidden');
-                document.getElementById('answerSection').classList.remove('hidden');
-                
-                // Frage anzeigen
-                const qList = questions[data.mode] || [];
-                document.getElementById('questionDisplay').innerText = qList[data.qIdx % qList.length];
+            // RUNDEN-LOGIK
+            if(data.qIdx !== lastQIdx) {
+                lastQIdx = data.qIdx;
+                // VOLLER RESET DER LOKALEN UI
+                document.getElementById('inputBox').classList.remove('hidden');
+                document.getElementById('waitMsg').classList.add('hidden');
+                document.getElementById('answerInput').value = "";
+                document.getElementById('voteButtons').innerHTML = "";
+            }
 
-                // WICHTIG: Prüfen ob wir für diese spezifische Frage schon geantwortet haben
-                get(ref(db, `rooms/${myRoom}/answers/${myName}`)).then(ansSnap => {
-                    if(!ansSnap.exists()) {
-                        document.getElementById('inputUI').classList.remove('hidden');
-                        document.getElementById('waitMsg').classList.add('hidden');
-                        document.getElementById('answerInput').value = "";
-                    } else {
-                        document.getElementById('inputUI').classList.add('hidden');
-                        document.getElementById('waitMsg').classList.remove('hidden');
-                    }
-                });
+            // PHASEN-LOGIK
+            if(data.phase === 'answer') {
+                const qList = questions[data.mode] || [];
+                document.getElementById('questionDisplay').innerText = qList[data.qIdx % qList.length] || "Warte...";
+                document.getElementById('answerSection').classList.remove('hidden');
+                document.getElementById('voteSection').classList.add('hidden');
             } 
             else if(data.phase === 'vote') {
                 document.getElementById('answerSection').classList.add('hidden');
                 document.getElementById('voteSection').classList.remove('hidden');
-                renderVoting();
-            } else {
-                document.getElementById('answerSection').classList.add('hidden');
-                document.getElementById('voteSection').classList.add('hidden');
+                renderVotes();
             }
         });
 
@@ -166,52 +182,60 @@
         });
     }
 
-    // HOST
+    // Host Buttons
     document.getElementById('nextBtn').onclick = async () => {
-        const snap = await get(ref(db, `rooms/${myRoom}/state`));
-        const nextIdx = (snap.val().qIdx || 0) + 1;
-        
-        // Erst Phase auf lobby (reset impuls), dann neue Frage
-        await update(ref(db, `rooms/${myRoom}/state`), { phase: 'lobby' });
+        const stateRef = ref(db, `rooms/${myRoom}/state`);
+        const snap = await get(stateRef);
+        const next = (snap.val().qIdx || 0) + 1;
         await set(ref(db, `rooms/${myRoom}/answers`), {});
-        await update(ref(db, `rooms/${myRoom}/state`), { phase: 'answer', qIdx: nextIdx });
+        await update(stateRef, { phase: 'answer', qIdx: next });
     };
 
     document.getElementById('voteBtn').onclick = () => {
         update(ref(db, `rooms/${myRoom}/state`), { phase: 'vote' });
     };
 
-    // SPIELER
+    // Spieler Buttons
     document.getElementById('sendBtn').onclick = () => {
-        const val = document.getElementById('answerInput').value.trim();
-        if(!val) return;
-        set(ref(db, `rooms/${myRoom}/answers/${myName}`), val);
-        // UI lokal sofort umschalten
-        document.getElementById('inputUI').classList.add('hidden');
+        const text = document.getElementById('answerInput').value.trim();
+        if(!text) return;
+        set(ref(db, `rooms/${myRoom}/answers/${myName}`), text);
+        document.getElementById('inputBox').classList.add('hidden');
         document.getElementById('waitMsg').classList.remove('hidden');
     };
 
-    function renderVoting() {
+    function renderVotes() {
         const container = document.getElementById('voteButtons');
-        container.innerHTML = "";
+        if(container.innerHTML !== "") return;
+
         get(ref(db, `rooms/${myRoom}/answers`)).then(snap => {
-            const answers = snap.val() || {};
-            Object.entries(answers).forEach(([name, text]) => {
+            const ans = snap.val() || {};
+            Object.entries(ans).forEach(([name, text]) => {
                 if(name === myName) return;
-                const btn = document.createElement('button');
-                btn.className = "btn-vote";
-                btn.innerText = text;
-                btn.onclick = async () => {
-                    container.innerHTML = "Stimme gezählt!";
+                const b = document.createElement('button');
+                b.className = "btn-vote";
+                b.innerText = text;
+                b.onclick = async () => {
+                    container.innerHTML = "Stimme abgegeben! ✅";
                     const pRef = ref(db, `rooms/${myRoom}/players/${name}`);
                     const pSnap = await get(pRef);
                     update(ref(db, `rooms/${myRoom}/players`), { [name]: (pSnap.val() || 0) + 1 });
                 };
-                container.appendChild(btn);
+                container.appendChild(b);
             });
-            if(container.innerHTML === "") container.innerHTML = "Keine Antworten da.";
+            if(container.innerHTML==="") container.innerHTML = "Keine Antworten zum Voten.";
         });
     }
+
+    // Logo-Versuch für das neue Logo (SVG Fix)
+    const logoImg = document.getElementById('mainLogo');
+    const newLogoUrl = "https://bierkultur.beer/wp-content/uploads/2025/11/BK_Logo_Round_Thick.svg";
+    
+    // Wir versuchen das neue Logo zu laden, wenn es scheitert, bleibt das alte
+    const tester = new Image();
+    tester.onload = () => logoImg.src = newLogoUrl;
+    tester.src = newLogoUrl;
+
 </script>
 </body>
 </html>
