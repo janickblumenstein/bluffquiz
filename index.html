@@ -14,7 +14,7 @@
         .btn-event { background:#9b59b6; color:white; }
         .btn-danger { background:#e74c3c; color:white; font-size: 0.8rem; }
         #qDisplay { font-size:1.5rem; color:var(--gold); margin:20px 0; font-weight:bold; min-height: 50px; }
-        #waitMsg { color: var(--gold); font-weight: bold; margin: 10px 0; font-size: 1.2rem; }
+        #waitMsg { color: var(--gold); font-weight: bold; margin: 10px 0; font-size: 1.4rem; }
         .score-item { display:flex; justify-content:space-between; border-bottom:1px solid #444; padding:8px 0; }
         .vote-btn { background:#222; color:white; border:1px solid var(--gold); margin:5px 0; padding:12px; text-align:left; width: 100%; }
         #eventOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; padding: 20px; }
@@ -39,7 +39,7 @@
             <button id="btnNext">Nächste Frage / Start</button>
             <button id="btnVote">Voting starten</button>
             <button id="btnEvent" class="btn-event">🎲 TRINK-EVENT</button>
-            <button id="btnReset" class="btn-danger">Reset</button>
+            <button id="btnReset" class="btn-danger">Spiel beenden (Reset)</button>
         </div>
 
         <div id="qDisplay">Warten auf den Host...</div>
@@ -68,7 +68,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase, ref, set, onValue, update, get, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSy...", // DEIN KEY
+    apiKey: "AIzaSy...", // DEIN KEY HIER
     authDomain: "bierkultur-d2fea.firebaseapp.com",
     databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
     projectId: "bierkultur-d2fea"
@@ -84,9 +84,8 @@ const sounds = {
     next: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3")
 };
 
-let user, room, isH = false, lastEventTs = 0;
+let user, room, isH = false, lastEventTs = 0, timerInt = null, joinTime = Date.now();
 
-// WICHTIG: Schaltet Sounds für Mobile frei
 function unlockAudio() {
     Object.values(sounds).forEach(s => {
         s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {});
@@ -99,10 +98,18 @@ async function start(hostMode) {
     if(!user || room !== "GV26") return alert("Name/Code falsch!");
 
     unlockAudio();
+    joinTime = Date.now(); // Zeitpunkt des Beitritts merken
 
     if(hostMode) {
         isH = true;
-        await update(ref(db, `rooms/${room}/state`), { host: user, phase: "lobby", qIdx: -1 });
+        // WICHTIG: Raum beim Start komplett säubern
+        await remove(ref(db, `rooms/${room}`));
+        await update(ref(db, `rooms/${room}/state`), { 
+            host: user, 
+            phase: "lobby", 
+            qIdx: -1,
+            serverStartTime: serverTimestamp() 
+        });
     }
 
     const pRef = ref(db, `rooms/${room}/players/${user}`);
@@ -121,7 +128,6 @@ function sync() {
         const d = snap.val();
         if(!d) return;
 
-        // Fragen-Handling (Erst anzeigen wenn qIdx >= 0)
         const questions = [
             "Was ist der wahre Grund deiner Teilnahme?",
             "Wer eskaliert heute als Erster?",
@@ -129,46 +135,47 @@ function sync() {
             "Wer hat die peinlichsten Fotos?"
         ];
 
+        // Phase Management
         if(d.phase === "lobby") {
             qDisplay.innerText = "Warten auf den Host...";
             inputArea.style.display = "none";
+            waitMsg.innerText = "";
         } else if(d.phase === "answer") {
             qDisplay.innerText = questions[d.qIdx % questions.length];
-            inputArea.style.display = "block";
-        } else {
+            // Zeige Input nur, wenn User noch nicht gesendet hat (lokal)
+            if (waitMsg.innerText.indexOf("✅") === -1) {
+                inputArea.style.display = "block";
+            }
+        } else if(d.phase === "vote") {
+            qDisplay.innerText = "Voting!";
             inputArea.style.display = "none";
+            voteArea.style.display = "block";
+            loadVotes();
         }
 
-        // Timer-Logik via Server-Differenz
+        // TIMER LOGIK
+        if(timerInt) clearInterval(timerInt);
         if(d.phase === "answer" && d.endTime) {
-            const timerObj = setInterval(() => {
-                const diff = Math.ceil((d.endTime - Date.now()) / 1000);
+            timerInt = setInterval(() => {
+                const now = Date.now();
+                const diff = Math.ceil((d.endTime - now) / 1000);
                 if(diff <= 0) {
-                    clearInterval(timerObj);
+                    clearInterval(timerInt);
                     waitMsg.innerText = "⏱️ Zeit abgelaufen!";
                     inputArea.style.display = "none";
                 } else {
                     waitMsg.innerText = "⏳ " + diff + "s";
                 }
             }, 1000);
-            return () => clearInterval(timerObj);
         }
 
-        // Event-Sync
-        if(d.event && d.event.ts !== lastEventTs) {
+        // EVENT SYNC (Nur Events zeigen, die NACH dem Beitritt kommen)
+        if(d.event && d.event.ts > joinTime && d.event.ts !== lastEventTs) {
             lastEventTs = d.event.ts;
             eventText.innerText = d.event.text;
             eventOverlay.style.display = "flex";
             sounds.event.play().catch(() => {});
             setTimeout(() => { eventOverlay.style.display = "none"; }, 6000);
-        }
-        
-        if(d.phase === "vote") {
-            qDisplay.innerText = "Abstimmen!";
-            voteArea.style.display = "block";
-            loadVotes();
-        } else {
-            voteArea.style.display = "none";
         }
     });
 
@@ -182,35 +189,47 @@ btnPlayer.onclick = () => start(false);
 btnHost.onclick = () => start(true);
 
 btnSend.onclick = () => {
-    set(ref(db, `rooms/${room}/answers/${user}`), ansInp.value);
+    const val = ansInp.value.trim();
+    if(!val) return;
+    set(ref(db, `rooms/${room}/answers/${user}`), val);
     inputArea.style.display = "none";
     waitMsg.innerText = "✅ Gesendet!";
     sounds.send.play().catch(() => {});
+    ansInp.value = "";
 };
 
 btnNext.onclick = async () => {
     const sSnap = await get(ref(db, `rooms/${room}/state`));
-    const curIdx = sSnap.val().qIdx || 0;
+    const curIdx = sSnap.val().qIdx !== undefined ? sSnap.val().qIdx : -1;
+    
+    // Alles für die neue Runde vorbereiten
     await set(ref(db, `rooms/${room}/answers`), {});
     update(ref(db, `rooms/${room}/state`), {
         phase: "answer",
         qIdx: curIdx + 1,
-        endTime: Date.now() + 26000
+        endTime: Date.now() + 31000 // 30 Sekunden + kleiner Puffer
     });
     sounds.next.play().catch(() => {});
 };
 
-btnVote.onclick = () => update(ref(db, `rooms/${room}/state`), { phase: "vote" });
+btnVote.onclick = () => {
+    update(ref(db, `rooms/${room}/state`), { phase: "vote" });
+};
 
 btnEvent.onclick = () => {
     const r = drinkRules[Math.floor(Math.random()*drinkRules.length)];
     update(ref(db, `rooms/${room}/state/event`), { text: r, ts: Date.now() });
 };
 
-btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
+btnReset.onclick = () => { 
+    if(confirm("Spiel wirklich beenden?")) {
+        remove(ref(db, `rooms/${room}`)).then(() => location.reload()); 
+    }
+};
 
 async function loadVotes() {
-    voteList.innerHTML = "";
+    const list = document.getElementById('voteList');
+    list.innerHTML = "";
     const snap = await get(ref(db, `rooms/${room}/answers`));
     const ans = snap.val() || {};
     Object.entries(ans).forEach(([n, t]) => {
@@ -220,11 +239,11 @@ async function loadVotes() {
         b.innerText = t;
         b.onclick = async () => {
             const pRef = ref(db, `rooms/${room}/players/${n}`);
-            const pVal = (await get(pRef)).val() || 0;
-            update(ref(db, `rooms/${room}/players`), { [n]: pVal + 1 });
-            voteList.innerHTML = "✅ Stimme gezählt!";
+            const pSnap = await get(pRef);
+            update(ref(db, `rooms/${room}/players`), { [n]: (pSnap.val() || 0) + 1 });
+            list.innerHTML = "✅ Stimme für " + n + " gezählt!";
         };
-        voteList.appendChild(b);
+        list.appendChild(b);
     });
 }
 </script>
