@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- ANTI CACHE TAGS -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Bierkultur GV 2026</title>
     <style>
         :root { --gold: #ffcc00; --dark: #1a1a1a; --grey: #333; }
         body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; text-align: center; margin: 0; padding: 15px; }
         .card { max-width: 420px; margin: auto; background: var(--grey); padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444; }
         
-        /* CSS Bierglas */
         .beer-icon { width: 35px; height: 45px; background: var(--gold); margin: 0 auto 15px; border-radius: 0 0 5px 5px; position: relative; border: 3px solid white; }
         .beer-foam { width: 42px; height: 12px; background: white; border-radius: 10px; position: absolute; top: -8px; left: -4px; }
         .beer-handle { width: 12px; height: 22px; border: 3px solid white; border-left: none; position: absolute; right: -15px; top: 8px; border-radius: 0 10px 10px 0; }
@@ -27,6 +30,7 @@
         
         .btn-host { background: #3498db; color: white; margin-top: 10px; }
         .btn-danger { background: #e74c3c; color: white; font-size: 0.8rem; padding: 10px; }
+        .btn-event { background: #9b59b6; color: white; border: 2px solid #8e44ad; }
         
         #qDisplay { font-size: 1.4rem; color: var(--gold); margin: 20px 0; font-weight: 800; line-height: 1.2; }
         
@@ -34,16 +38,28 @@
         .score-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #444; font-size: 0.9rem; }
 
         .vote-btn { background: #222; color: white; border: 1px solid var(--gold); margin-bottom: 8px; text-align: left; }
+
+        /* EVENT OVERLAY (TRINK-REGEL) */
+        #eventOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; text-align: center; }
+        #eventText { font-size: 2rem; color: var(--gold); font-weight: bold; margin-top: 20px; line-height: 1.3; }
+        .beer-spin { font-size: 4rem; animation: spin 2s infinite linear; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+<!-- TRINK-REGEL OVERLAY -->
+<div id="eventOverlay" style="display:none">
+    <div class="beer-spin">🍻</div>
+    <div id="eventText">Alle trinken!</div>
+    <div style="margin-top: 30px; color: white; opacity: 0.5; font-size: 0.8rem;">Verschwindet gleich...</div>
+</div>
 
 <div class="card">
     <div class="beer-icon"><div class="beer-foam"></div><div class="beer-handle"></div></div>
     <h2>BIERKULTUR</h2>
     <div class="sub">GV Brittnau • 21.03.2026</div>
 
-    <!-- LOGIN -->
     <div id="sectionLogin">
         <input type="text" id="nameInp" placeholder="Dein Name">
         <input type="text" id="roomInp" placeholder="Raum Code (GV26)">
@@ -59,15 +75,17 @@
             </select>
             <button id="btnHost" class="btn-host">ALS HOST STARTEN</button>
         </div>
+        
+        <button id="btnForceReset" style="background:none; color: #888; font-size: 0.7rem; margin-top: 20px; text-decoration: underline;">Spiel hängt? Raum erzwingen & löschen</button>
     </div>
 
-    <!-- GAME AREA -->
     <div id="sectionGame" style="display:none">
         <div id="gameRule" class="info-box"></div>
 
         <div id="hostControls" style="display:none; background: #222; padding: 15px; border-radius: 15px; margin-bottom: 20px;">
             <button id="btnNext">NÄCHSTE FRAGE</button>
             <button id="btnVote" style="background: white;">VOTING STARTEN</button>
+            <button id="btnEvent" class="btn-event">🎲 TRINK-REGEL ZIEHEN</button>
             <button id="btnReset" class="btn-danger">SPIEL ZURÜCKSETZEN</button>
         </div>
 
@@ -110,43 +128,30 @@
     const content = {
         game1: {
             instr: "Schreibe die witzigste Antwort. Alle stimmen danach ab!",
-            qs: [
-                "Die dümmste Ausrede für Verspätung an der GV?",
-                "Was hat der Präsident heimlich in seinem Bierglas?",
-                "Der schlechteste Ort für ein erstes Date in Brittnau?",
-                "Meistgeklautes Objekt aus einem Hotelzimmer?",
-                "Was steht auf dem Grabstein eines passionierten Biertrinkers?",
-                "Eine neue olympische Disziplin für Brittnau?",
-                "Warum ist das Bier heute so lecker?"
-            ]
+            qs: ["Die dümmste Ausrede für Verspätung an der GV?", "Was hat der Präsident heimlich in seinem Bierglas?", "Der schlechteste Ort für ein erstes Date in Brittnau?", "Meistgeklautes Objekt aus einem Hotelzimmer?", "Was steht auf dem Grabstein eines passionierten Biertrinkers?"]
         },
         game2: {
             instr: "Schreibe den Namen der Person aus der Runde, auf die es am besten passt!",
-            qs: [
-                "Wer ruft betrunken den Chef an?",
-                "Wer vergisst nach zwei Bier seinen eigenen Namen?",
-                "Wer landet heute Abend als Erster im Dorfbrunnen?",
-                "Wer hat die peinlichsten Fotos auf dem Handy?",
-                "Wer würde versuchen, Pfandflaschen im Restaurant zurückzugeben?",
-                "Wer ist der größte heimliche Weintrinker hier?",
-                "Wer gewinnt eine Schlägerei gegen einen Kaugummi-Automaten?"
-            ]
+            qs: ["Wer ruft betrunken den Chef an?", "Wer vergisst nach zwei Bier seinen eigenen Namen?", "Wer landet heute Abend als Erster im Dorfbrunnen?", "Wer hat die peinlichsten Fotos auf dem Handy?", "Wer würde versuchen, Pfandflaschen im Restaurant zurückzugeben?"]
         },
         game3: {
             instr: "Erfinde eine glaubwürdige (oder extrem lustige) Definition für diesen Begriff!",
-            qs: [
-                "Was bedeutet 'Stammwürze' wirklich?",
-                "Was ist ein 'Hopfen-Smoothie'?",
-                "Definiere: 'Bier-Yoga'",
-                "Was ist die 'Brittnauer Kater-Kur'?",
-                "Was versteht man unter 'visueller Alkoholkontrolle'?",
-                "Erkläre den Begriff 'Druckbetankung' einem Alien.",
-                "Was ist ein 'Schaumschläger' im Brauwesen?"
-            ]
+            qs: ["Was bedeutet 'Stammwürze' wirklich?", "Was ist ein 'Hopfen-Smoothie'?", "Definiere: 'Bier-Yoga'", "Was ist die 'Brittnauer Kater-Kur'?", "Erkläre den Begriff 'Druckbetankung' einem Alien."]
         }
     };
 
-    let user, room, isH = false, lastIdx = -1;
+    const drinkRules = [
+        "Wer in dieser Runde 0 Punkte gemacht hat, trinkt 2 Schlucke!",
+        "Alle Brillen-Träger trinken!",
+        "Der aktuell Führende darf 3 Schlucke verteilen!",
+        "Alle, die heute schon Bier verschüttet haben: Trinken!",
+        "Jeder, dessen Vorname mit A, M oder S beginnt, trinkt!",
+        "Handys weg! Wer seins in der Hand hat: Trinken!",
+        "Der Host trinkt einen großen Schluck!",
+        "Alle trinken auf die Bierkultur Brittnau! Prost! 🍻"
+    ];
+
+    let user, room, isH = false, lastIdx = -1, lastEventTs = 0;
 
     async function start(h) {
         user = document.getElementById('nameInp').value.trim();
@@ -159,12 +164,18 @@
         const snap = await get(stateRef);
 
         if(h) {
-            if(snap.exists() && snap.val().host && snap.val().host !== user) return alert("Es gibt schon einen Host!");
+            // HOST ÜBERNAHME LOGIK (Kein Lockout mehr)
+            if(snap.exists() && snap.val().host && snap.val().host !== user) {
+                if(!confirm("Es gibt anscheinend schon einen Host. Willst du das Spiel zwingend übernehmen?")) return;
+            }
             await update(stateRef, { host: user, mode: document.getElementById('modeSel').value, phase: 'answer', qIdx: 0 });
             isH = true;
         }
         
-        await update(ref(db, `rooms/${room}/players`), { [user]: 0 });
+        const pRef = ref(db, `rooms/${room}/players/${user}`);
+        const pSnap = await get(pRef);
+        if(!pSnap.exists()) await set(pRef, 0); // Punkte nur setzen, wenn noch keine da sind
+
         document.getElementById('sectionLogin').style.display = 'none';
         document.getElementById('sectionGame').style.display = 'block';
         if(isH) document.getElementById('hostControls').style.display = 'block';
@@ -180,6 +191,12 @@
             const game = content[d.mode];
             document.getElementById('gameRule').innerText = "💡 " + game.instr;
             document.getElementById('qDisplay').innerText = game.qs[d.qIdx % game.qs.length];
+
+            // TRINK-REGEL EVENT CHECK
+            if(d.event && d.event.ts !== lastEventTs) {
+                lastEventTs = d.event.ts;
+                showEvent(d.event.text);
+            }
 
             if(d.qIdx !== lastIdx) {
                 lastIdx = d.qIdx;
@@ -205,6 +222,12 @@
         });
     }
 
+    function showEvent(text) {
+        document.getElementById('eventText').innerText = text;
+        document.getElementById('eventOverlay').style.display = 'flex';
+        setTimeout(() => { document.getElementById('eventOverlay').style.display = 'none'; }, 7000); // Fenster schließt nach 7 Sekunden
+    }
+
     document.getElementById('btnHost').onclick = () => start(true);
     document.getElementById('btnPlayer').onclick = () => start(false);
 
@@ -225,10 +248,24 @@
 
     document.getElementById('btnVote').onclick = () => update(ref(db, `rooms/${room}/state`), { phase: 'vote' });
 
+    // EVENT BUTTON (Host)
+    document.getElementById('btnEvent').onclick = () => {
+        const randomRule = drinkRules[Math.floor(Math.random() * drinkRules.length)];
+        update(ref(db, `rooms/${room}/state/event`), { text: randomRule, ts: Date.now() });
+    };
+
     document.getElementById('btnReset').onclick = async () => {
         if(confirm("Spiel wirklich für alle beenden?")) {
             await remove(ref(db, `rooms/${room}`));
             location.reload();
+        }
+    };
+
+    // NOTFALL RESET (Startbildschirm)
+    document.getElementById('btnForceReset').onclick = async () => {
+        if(confirm("Ganzen Raum löschen? Nur machen, wenn gar nichts mehr geht!")) {
+            await remove(ref(db, `rooms/GV26`));
+            alert("Raum GV26 wurde geleert.");
         }
     };
 
