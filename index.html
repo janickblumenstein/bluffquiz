@@ -27,12 +27,16 @@
         }
         @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .rank-1 { border: 2px solid var(--gold); background: rgba(255, 204, 0, 0.15); }
+        .plus-one { color: #2ecc71; font-weight: bold; margin-left: 8px; animation: pop 0.5s ease-out; }
+        @keyframes pop { 0% {transform: scale(0);} 80% {transform: scale(1.3);} 100% {transform: scale(1);} }
+
         #liveScore { margin-top: 30px; padding-top: 15px; border-top: 1px dashed #555; text-align: left; font-size: 0.9rem; }
         .live-item { display: flex; justify-content: space-between; padding: 4px 0; opacity: 0.8; }
         .vote-btn { background:#222; color:white; border:1px solid var(--gold); margin:5px 0; padding:12px; text-align:left; width: 100%; }
         #eventOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; padding: 20px; }
         .beer-spin { font-size:5rem; animation:spin 2s infinite linear; }
         @keyframes spin {100% {transform:rotate(360deg);}}
+        #roundResultInfo { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--gold); }
     </style>
 </head>
 <body>
@@ -91,13 +95,23 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-c
+const baseQuestions = [
+    "Wer eskaliert heute als Erster?", "Neue Funktion bei WhatsApp:", "Wer bringt am meisten Chaos auf Partys?",
+    "Wer wird neuer Präsident?", "Was steht auf deinem Grabstein?", "Wer vergisst ständig Geburtstage?",
+    "Wer hat die schönste Frau?", "Wer hat die peinlichsten Fotos?", "Neuer Tinder Premium Vorteil:",
+    "Was passiert nach der GV wirklich?", "Wer macht die Finanzkontrolle?", "Wofür steht IKEA?",
+    "Was sagt man nach richtig schlechtem Sex?", "Definiere: Bier-Notfall", "Welches Mitglied hat die schwächste Blase?",
+    "Wer würde im Urlaub am meisten übertreiben?", "Wer kann am schlechtesten lügen?", "Wer wird als Nächstes heiraten?",
+    "Was ist der wahre Grund deiner Teilnahme?", "Wer hat keinen Rollkoffer?", "Wer hat den tollsten Schnauzer?",
+    "Ein Dampfschiff ist weniger schwer als:", "Bierkultur Zofingen wird in 10 Jahren:", "Wer wird am ehesten Grosspapa?",
+    "Wer würde im Notfall am schnellsten wegrennen?", "Wer wird als Nächstes Millionär?", "Wer verschläft am häufigsten?",
+    "Wer hat die schlimmsten Jugendsünden?","Wer von uns hilft am meisten im Verein mit?","Wer von uns hat am meisten von unserem Bier gekauft?"
+];
 
 const drinkRules = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!","ELITEN-TRINKEN! 👑 Die Top 3 der Rangliste trinken","PROST PRÄSIDENT! Der Präsi trinkt","PROST PRÄSIDENT! Alle trinken auf den Präsi"];
 const sounds = {
     send: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"),
     event: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
-    next: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3"),
     score: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-animated-small-group-applause-523.mp3")
 };
 
@@ -113,7 +127,7 @@ async function start(hostMode) {
     if(hostMode) {
         isH = true;
         await remove(ref(db, `rooms/${room}`));
-        await update(ref(db, `rooms/${room}/state`), { host: user, phase: "lobby", qIdx: -1, gameQs: shuffle([...baseQuestions]) });
+        await update(ref(db, `rooms/${room}/state`), { host: user, phase: "lobby", qIdx: -1, gameQs: shuffle([...baseQuestions]), lastWin: "", scorers: [] });
     }
     const pRef = ref(db, `rooms/${room}/players/${user}`);
     if(!(await get(pRef)).exists()) await set(pRef, 0);
@@ -138,7 +152,7 @@ function sync() {
             if (!waitMsg.innerText.includes("✅")) { setupInput(q); inputArea.style.display = "block"; }
         } 
         else if(d.phase === "vote") { qDisplay.innerText = "Abstimmen!"; voteArea.style.display = "block"; loadVotes(); }
-        else if(d.phase === "score") { qDisplay.innerText = "🏆 Zwischenstand"; bigScoreArea.style.display = "block"; waitMsg.innerText = ""; loadBigScores(); }
+        else if(d.phase === "score") { qDisplay.innerText = "🏆 Rangliste"; bigScoreArea.style.display = "block"; waitMsg.innerText = ""; loadBigScores(d.lastWin, d.scorers || []); }
 
         if(timerInt) clearInterval(timerInt);
         if(d.phase === "answer" && d.endTime) {
@@ -153,9 +167,7 @@ function sync() {
                         if(q.trim().toLowerCase().startsWith("wer")) {
                             await evaluateAutoVote();
                             setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1500);
-                        } else {
-                            update(ref(db, `rooms/${room}/state`), { phase: "vote" });
-                        }
+                        } else { update(ref(db, `rooms/${room}/state`), { phase: "vote" }); }
                     }
                 } else { waitMsg.innerText = "⏳ " + diff + "s"; }
             }, 1000);
@@ -183,51 +195,40 @@ function setupInput(q) {
 }
 
 async function evaluateAutoVote() {
-    console.log("Starte Auswertung...");
     const ansSnap = await get(ref(db, `rooms/${room}/answers`));
     const allAnswers = ansSnap.val() || {}; 
-    
     const voteCounts = {};
-    Object.values(allAnswers).forEach(v => { 
-        if(v) {
-            const cleanV = v.trim();
-            voteCounts[cleanV] = (voteCounts[cleanV] || 0) + 1; 
-        }
-    });
-    
+    Object.values(allAnswers).forEach(v => { if(v) { const cleanV = v.trim(); voteCounts[cleanV] = (voteCounts[cleanV] || 0) + 1; } });
     const entries = Object.entries(voteCounts);
-    if(entries.length === 0) { console.log("Keine Antworten gefunden."); return; }
-
+    if(entries.length === 0) return;
     const maxVotes = Math.max(...entries.map(e => e[1]));
-    const winningNames = entries.filter(e => e[1] === maxVotes).map(e => e[0]);
-    console.log("Gewinner-Namen:", winningNames);
+    const winningChoices = entries.filter(e => e[1] === maxVotes).map(e => e[0]);
 
     const pSnap = await get(ref(db, `rooms/${room}/players`));
     let currentScores = pSnap.val() || {};
-    
-    let pointsAwarded = false;
-    Object.keys(allAnswers).forEach(voterName => {
-        const choice = allAnswers[voterName].trim();
-        if(winningNames.includes(choice)) {
-            currentScores[voterName] = (currentScores[voterName] || 0) + 1;
-            pointsAwarded = true;
-            console.log(`Punkt für ${voterName} (hat für ${choice} gestimmt)`);
+    let scorers = [];
+    Object.keys(allAnswers).forEach(voter => {
+        if(winningChoices.includes(allAnswers[voter].trim())) {
+            currentScores[voter] = (currentScores[voter] || 0) + 1;
+            scorers.push(voter);
         }
     });
-
-    if(pointsAwarded) {
-        await set(ref(db, `rooms/${room}/players`), currentScores);
-    }
+    await set(ref(db, `rooms/${room}/players`), currentScores);
+    await update(ref(db, `rooms/${room}/state`), { lastWin: winningChoices.join(", "), scorers: scorers });
 }
 
-async function loadBigScores() {
+async function loadBigScores(winnerTxt, scorers) {
     const snap = await get(ref(db, `rooms/${room}/players`));
     const p = snap.val() || {};
     const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
-    bigScoreArea.innerHTML = sorted.map(([n, s], i) => `
+    let html = "";
+    if(winnerTxt) html += `<div id="roundResultInfo"><small>Runden-Sieg:</small><br><strong>${winnerTxt}</strong></div>`;
+    html += sorted.map(([n, s], i) => `
         <div class="score-item ${i === 0 ? 'rank-1' : ''}" style="animation-delay: ${i * 0.1}s">
-            <span>${i === 0 ? '👑' : i + 1 + '.'} ${n}</span><strong>${s} Pkt.</strong>
+            <span>${i === 0 ? '👑' : i + 1 + '.'} ${n}${scorers.includes(n) ? '<span class="plus-one">+1</span>' : ''}</span>
+            <strong>${s} Pkt.</strong>
         </div>`).join("");
+    bigScoreArea.innerHTML = html;
 }
 
 async function loadVotes() {
@@ -240,12 +241,12 @@ async function loadVotes() {
         const b = document.createElement("button");
         b.className = "vote-btn"; b.innerText = `${text} (${count}x)`; 
         b.onclick = async () => {
-            const playersToReward = Object.keys(ans).filter(p => ans[p].trim() === text.trim());
+            const winners = Object.keys(ans).filter(p => ans[p].trim() === text.trim());
             const pSnap = await get(ref(db, `rooms/${room}/players`));
             let players = pSnap.val() || {};
-            playersToReward.forEach(pName => { if(players[pName] !== undefined) players[pName] += 1; });
+            winners.forEach(w => { if(players[w] !== undefined) players[w] += 1; });
             await set(ref(db, `rooms/${room}/players`), players);
-            voteArea.innerHTML = "✅ Stimme gezählt!";
+            await update(ref(db, `rooms/${room}/state`), { phase: "score", lastWin: text, scorers: winners });
         };
         voteArea.appendChild(b);
     });
@@ -258,7 +259,7 @@ btnNext.onclick = async () => {
     if(s.gameQs && nIdx >= s.gameQs.length) return alert("Ende!");
     await set(ref(db, `rooms/${room}/answers`), {});
     waitMsg.innerText = "";
-    update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: nIdx, endTime: Date.now() + 21000 });
+    update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: nIdx, endTime: Date.now() + 21000, lastWin: "", scorers: [] });
 };
 
 btnVote.onclick = async () => {
@@ -268,9 +269,7 @@ btnVote.onclick = async () => {
     if(q.trim().toLowerCase().startsWith("wer")) {
         await evaluateAutoVote();
         setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 500);
-    } else {
-        update(ref(db, `rooms/${room}/state`), { phase: "vote" });
-    }
+    } else { update(ref(db, `rooms/${room}/state`), { phase: "vote" }); }
 };
 
 btnScore.onclick = () => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); sounds.score.play().catch(()=>{}); };
