@@ -3,57 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bierkultur Game</title>
+    <title>Bierkultur - GV 2026</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: #333; padding: 20px; border-radius: 15px; }
+        :root { --gold: #ffcc00; --dark: #1a1a1a; --grey: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--dark); color: white; text-align: center; padding: 10px; }
+        .container { max-width: 600px; margin: 20px auto; background: var(--grey); padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .logo-area { margin-bottom: 20px; }
+        .logo-area img { max-width: 120px; filter: drop-shadow(0 0 5px rgba(255,204,0,0.5)); }
+        .gv-info { font-size: 0.8em; color: var(--gold); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        
         .hidden { display: none; }
-        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
-        button { background: #ffcc00; color: black; font-weight: bold; cursor: pointer; }
-        button:hover { background: #e6b800; }
-        .score-list { background: #444; padding: 10px; border-radius: 8px; margin-top: 20px; }
-        .btn-vote { background: #4a90e2; color: white; margin: 5px 0; }
+        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; box-sizing: border-box; font-size: 1rem; }
+        
+        button { background: var(--gold); color: black; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        .btn-host { background: #4a90e2; color: white; margin-top: 5px; }
+        .btn-vote { background: #444; color: white; border: 1px solid var(--gold); }
+        
+        .score-list { background: #222; padding: 15px; border-radius: 12px; margin-top: 25px; border: 1px solid #444; }
+        .score-entry { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; }
+        
+        a { color: var(--gold); text-decoration: none; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- LOGIN BEREICH -->
-    <div id="login">
-        <h1>Bierkultur 🍻</h1>
-        <input type="text" id="userName" placeholder="Dein Name">
-        <input type="text" id="roomCode" placeholder="Raum Code (z.B. BIER1)">
-        <select id="gameSelect">
-            <option value="game1">Smalltalk-Fail</option>
-            <option value="game2">Wer würde eher?</option>
-            <option value="game3">Quatsch-Lexikon</option>
-        </select>
-        <button id="joinBtn">Spiel Beitreten / Erstellen</button>
+    <div class="logo-area">
+        <a href="https://bierkultur.beer/" target="_blank">
+            <img src="https://bierkultur.beer/wp-content/uploads/2021/10/logo-bierkultur-1.png" alt="Bierkultur Logo">
+        </a>
+        <div class="gv-info">Generalversammlung • Brittnau • 21.03.2026</div>
     </div>
 
-    <!-- SPIEL BEREICH -->
+    <div id="login">
+        <input type="text" id="userName" placeholder="Dein Name">
+        <input type="text" id="roomCode" placeholder="Raum Code (z.B. GV26)">
+        
+        <div id="hostSelectionArea">
+            <p style="font-size: 0.9em;">Möchtest du das Spiel leiten?</p>
+            <select id="gameSelect">
+                <option value="game1">Smalltalk-Fail</option>
+                <option value="game2">Wer würde eher?</option>
+                <option value="game3">Quatsch-Lexikon</option>
+            </select>
+            <button id="joinHostBtn" class="btn-host">Als HOST beitreten</button>
+            <hr style="border: 0.5px solid #555; margin: 15px 0;">
+        </div>
+        
+        <button id="joinPlayerBtn">Als SPIELER beitreten</button>
+    </div>
+
     <div id="gameArea" class="hidden">
-        <h2 id="gameTitle">Lade...</h2>
+        <h2 id="gameTitle">Warte auf Start...</h2>
+        
         <div id="hostPanel" class="hidden">
-            <button id="nextBtn">Nächste Frage</button>
-            <button id="voteBtn">Voting starten</button>
+            <div style="background: #444; padding: 10px; border-radius: 10px; margin-bottom: 15px;">
+                <span style="font-size: 0.8em; color: #aaa;">HOST-STEUERUNG</span>
+                <button id="nextBtn">Nächste Frage</button>
+                <button id="voteBtn">Voting-Phase starten</button>
+            </div>
         </div>
 
-        <hr>
-        <h3 id="questionDisplay">Warte auf den Host...</h3>
+        <h3 id="questionDisplay">Der Host wählt gerade die Frage...</h3>
 
         <div id="answerSection" class="hidden">
-            <input type="text" id="answerInput" placeholder="Deine Antwort...">
+            <input type="text" id="answerInput" placeholder="Deine kreative Antwort...">
             <button id="sendAnswerBtn">Antwort abschicken</button>
         </div>
 
         <div id="voteSection" class="hidden">
-            <h4>Wähle die beste Antwort:</h4>
+            <h4>Wähle deinen Favoriten:</h4>
             <div id="voteButtons"></div>
         </div>
 
         <div class="score-list">
-            <strong>Punktestand:</strong>
+            <strong>Rangliste</strong>
             <div id="scoreList"></div>
         </div>
     </div>
@@ -73,129 +99,133 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // DOM Elemente
-    const login = document.getElementById('login');
-    const gameArea = document.getElementById('gameArea');
-    const userName = document.getElementById('userName');
-    const roomCode = document.getElementById('roomCode');
-    const gameSelect = document.getElementById('gameSelect');
-    const gameTitle = document.getElementById('gameTitle');
-    const hostPanel = document.getElementById('hostPanel');
-    const questionDisplay = document.getElementById('questionDisplay');
-    const answerSection = document.getElementById('answerSection');
-    const answerInput = document.getElementById('answerInput');
-    const voteSection = document.getElementById('voteSection');
-    const voteButtons = document.getElementById('voteButtons');
-    const scoreList = document.getElementById('scoreList');
-
-    let myName, myRoom, iAmHost = false, currentQ = -1;
-
     const questions = {
         game1: ["Meistgeklautes Hotel-Objekt?", "Dümmste Büro-Ausrede?", "Tinder-Fail Story?"],
         game2: ["Wer ruft betrunken den Chef an?", "Wer hat die peinlichste Jugendsünde?", "Wer lügt am besten?"],
         game3: ["Was bedeutet IKEA wirklich?", "Neue Tinder-Funktion:", "Männer-Chat Name:"]
     };
 
-    // JOIN LOGIK
-    document.getElementById('joinBtn').onclick = async () => {
-        myName = userName.value.trim();
-        myRoom = roomCode.value.trim().toUpperCase();
-        if (!myName || !myRoom) return alert("Name & Raum eingeben!");
+    let myName, myRoom, iAmHost = false, currentQ = -1;
 
-        login.classList.add('hidden');
-        gameArea.classList.remove('hidden');
+    // DOM ELemente
+    const ui = {
+        login: document.getElementById('login'),
+        gameArea: document.getElementById('gameArea'),
+        hostSelection: document.getElementById('hostSelectionArea'),
+        scoreList: document.getElementById('scoreList'),
+        question: document.getElementById('questionDisplay'),
+        answerSec: document.getElementById('answerSection'),
+        voteSec: document.getElementById('voteSection'),
+        voteBtns: document.getElementById('voteButtons'),
+        hostPanel: document.getElementById('hostPanel')
+    };
+
+    // Prüfen, ob schon ein Host im Raum ist (beim Tippen des Raumcodes)
+    document.getElementById('roomCode').addEventListener('input', async (e) => {
+        const code = e.target.value.trim().toUpperCase();
+        if(code.length > 2) {
+            const snap = await get(ref(db, `rooms/${code}/state/host`));
+            if(snap.exists()) ui.hostSelection.classList.add('hidden');
+            else ui.hostSelection.classList.remove('hidden');
+        }
+    });
+
+    async function join(asHost) {
+        myName = document.getElementById('userName').value.trim();
+        myRoom = document.getElementById('roomCode').value.trim().toUpperCase();
+        if (!myName || !myRoom) return alert("Name und Raumcode fehlen!");
 
         const stateRef = ref(db, `rooms/${myRoom}/state`);
         const snap = await get(stateRef);
 
-        // Spieler in die Liste eintragen (Punkte auf 0 lassen falls schon da, oder neu setzen)
-        await set(ref(db, `rooms/${myRoom}/players/${myName}`), 0);
-
-        if (!snap.exists()) {
+        if (asHost) {
+            if (snap.exists() && snap.val().host) return alert("Es gibt bereits einen Host!");
             await set(stateRef, {
                 host: myName,
-                mode: gameSelect.value,
+                mode: document.getElementById('gameSelect').value,
                 phase: 'lobby',
                 qIdx: -1
             });
             iAmHost = true;
         } else {
-            if (snap.val().host === myName) iAmHost = true;
+            iAmHost = (snap.exists() && snap.val().host === myName);
         }
 
-        if (iAmHost) hostPanel.classList.remove('hidden');
-        startSync();
-    };
+        await set(ref(db, `rooms/${myRoom}/players/${myName}`), 0);
+        
+        ui.login.classList.add('hidden');
+        ui.gameArea.classList.remove('hidden');
+        if (iAmHost) ui.hostPanel.classList.remove('hidden');
 
-    // SYNC LOGIK
+        startSync();
+    }
+
+    document.getElementById('joinHostBtn').onclick = () => join(true);
+    document.getElementById('joinPlayerBtn').onclick = () => join(false);
+
     function startSync() {
         onValue(ref(db, `rooms/${myRoom}/state`), snap => {
             const data = snap.val();
             if (!data) return;
 
-            gameTitle.innerText = "Modus: " + data.mode.toUpperCase();
-
+            document.getElementById('gameTitle').innerText = "Spiel: " + data.mode.replace('game', 'Modus ');
+            
             if (data.qIdx >= 0) {
                 const qList = questions[data.mode] || [];
-                questionDisplay.innerText = qList[data.qIdx % qList.length];
+                ui.question.innerText = qList[data.qIdx % qList.length];
                 currentQ = data.qIdx;
             }
 
-            answerSection.classList.toggle('hidden', data.phase !== 'answer');
-            voteSection.classList.toggle('hidden', data.phase !== 'vote');
+            ui.answerSec.classList.toggle('hidden', data.phase !== 'answer');
+            ui.voteSec.classList.toggle('hidden', data.phase !== 'vote');
 
             if (data.phase === 'vote') renderVotes();
         });
 
         onValue(ref(db, `rooms/${myRoom}/players`), snap => {
             const players = snap.val() || {};
-            scoreList.innerHTML = Object.entries(players)
+            ui.scoreList.innerHTML = Object.entries(players)
                 .sort((a, b) => b[1] - a[1])
-                .map(([n, s]) => `<div><strong>${n}:</strong> ${s} Pkt</div>`).join("");
+                .map(([n, s]) => `<div class="score-entry"><span>${n}</span><span>${s} Pkt</span></div>`).join("");
         });
     }
 
-    // HOST AKTIONEN
+    // HOST STEUERUNG
     document.getElementById('nextBtn').onclick = () => {
-        if (!iAmHost) return;
         currentQ++;
         update(ref(db, `rooms/${myRoom}/state`), { phase: 'answer', qIdx: currentQ });
         set(ref(db, `rooms/${myRoom}/answers`), {});
     };
 
     document.getElementById('voteBtn').onclick = () => {
-        if (!iAmHost) return;
         update(ref(db, `rooms/${myRoom}/state`), { phase: 'vote' });
     };
 
     // SPIELER AKTIONEN
     document.getElementById('sendAnswerBtn').onclick = () => {
-        const val = answerInput.value.trim();
+        const val = document.getElementById('answerInput').value.trim();
         if (!val) return;
         set(ref(db, `rooms/${myRoom}/answers/${myName}`), val);
-        answerInput.value = "";
-        answerSection.innerHTML = "Warte auf die anderen...";
+        document.getElementById('answerInput').value = "";
+        ui.answerSec.innerHTML = "<p>Antwort gesendet! Warte auf die anderen...</p>";
     };
 
     function renderVotes() {
         get(ref(db, `rooms/${myRoom}/answers`)).then(snap => {
             const answers = snap.val() || {};
-            voteButtons.innerHTML = "";
+            ui.voteBtns.innerHTML = "";
             Object.entries(answers).forEach(([name, text]) => {
-                if (name === myName) return; // Nicht für sich selbst voten
-
+                if (name === myName) return;
                 const btn = document.createElement('button');
                 btn.innerText = text;
                 btn.className = "btn-vote";
                 btn.onclick = async () => {
-                    voteButtons.innerHTML = "Gewählt ✅";
-                    const playerRef = ref(db, `rooms/${myRoom}/players/${name}`);
-                    const pSnap = await get(playerRef);
-                    update(ref(db, `rooms/${myRoom}/players`), {
-                        [name]: (pSnap.val() || 0) + 1
-                    });
+                    ui.voteBtns.innerHTML = "Stimme abgegeben! ✅";
+                    const pRef = ref(db, `rooms/${myRoom}/players/${name}`);
+                    const pSnap = await get(pRef);
+                    update(ref(db, `rooms/${myRoom}/players`), { [name]: (pSnap.val() || 0) + 1 });
                 };
-                voteButtons.appendChild(btn);
+                ui.voteBtns.appendChild(btn);
             });
         });
     }
