@@ -5,69 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bierkultur GV 2026</title>
     <style>
-        :root { --gold: #ffcc00; --dark: #1a1a1a; }
-        body { font-family: sans-serif; background: var(--dark); color: white; text-align: center; padding: 10px; margin: 0; }
-        .container { max-width: 400px; margin: auto; background: #333; padding: 20px; border-radius: 15px; }
-        
-        /* CSS Logo als Ersatz für das fehlerhafte Bild */
-        .logo-fallback { 
-            width: 80px; height: 80px; background: var(--gold); color: black; 
-            border-radius: 50%; margin: 0 auto 10px; display: flex; 
-            align-items: center; justify-content: center; font-weight: bold; font-size: 2rem;
-        }
-
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 20px; }
+        .card { max-width: 400px; margin: auto; background: #333; padding: 20px; border-radius: 15px; border: 2px solid #ffcc00; }
+        .logo { font-size: 50px; margin-bottom: 10px; }
         .hidden { display: none !important; }
-        input, select, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1rem; }
-        button { background: var(--gold); font-weight: bold; cursor: pointer; }
-        .btn-host { background: #3498db; color: white; }
-        #questionDisplay { font-size: 1.4rem; color: var(--gold); margin: 20px 0; font-weight: bold; }
-        .score-box { background: #222; padding: 10px; margin-top: 20px; text-align: left; font-size: 0.9rem; }
+        input, button, select { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1rem; box-sizing: border-box; }
+        button { background: #ffcc00; color: black; font-weight: bold; cursor: pointer; }
+        .host-btn { background: #3498db; color: white; }
+        #qDisplay { font-size: 1.5rem; color: #ffcc00; margin: 20px 0; font-weight: bold; }
+        .score-list { text-align: left; font-size: 0.9rem; background: #222; padding: 10px; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <img src="https://bierkultur.beer/wp-content/uploads/2025/11/BK_Logo_Round_Thick.svg" class="logo">
-    <div style="color:var(--gold); font-size: 0.8rem; margin-bottom: 20px;">BIERKULTUR BRITTNAU</div>
+<div class="card">
+    <div class="logo">🍺</div>
+    <div style="color:#ffcc00; font-weight: bold;">BIERKULTUR BRITTNAU</div>
+    <hr style="border: 0; border-top: 1px solid #555; margin: 20px 0;">
 
     <!-- LOGIN -->
-    <div id="divLogin">
-        <input type="text" id="inpName" placeholder="Dein Name">
-        <input type="text" id="inpRoom" placeholder="Raum Code">
-        <select id="selMode">
+    <div id="sectionLogin">
+        <input type="text" id="nameInp" placeholder="Dein Name">
+        <input type="text" id="roomInp" placeholder="Raum Code (z.B. GV26)">
+        <select id="modeSel">
             <option value="game1">Smalltalk-Fail</option>
             <option value="game2">Wer würde eher?</option>
         </select>
-        <button id="btnJoinHost" class="btn-host">HOST STARTEN</button>
-        <button id="btnJoinPlayer">BEITRETEN</button>
+        <button id="btnHost" class="host-btn">ALS HOST STARTEN</button>
+        <button id="btnPlayer">BEITRETEN</button>
     </div>
 
     <!-- GAME -->
-    <div id="divGame" class="hidden">
-        <div id="divHostControls" class="hidden">
-            <button id="btnNextQ">NÄCHSTE FRAGE</button>
-            <button id="btnShowVote" style="background:white">VOTING STARTEN</button>
+    <div id="sectionGame" class="hidden">
+        <div id="hostControls" class="hidden" style="background: #444; padding: 10px; margin-bottom: 15px;">
+            <button id="btnNext">NÄCHSTE FRAGE</button>
+            <button id="btnVote" style="background: white;">VOTING STARTEN</button>
         </div>
 
-        <div id="questionDisplay">Warte...</div>
+        <div id="qDisplay">Warte auf Start...</div>
 
-        <!-- DAS EINGABEFELD -->
-        <div id="divInput">
-            <input type="text" id="inpAns" placeholder="Deine Antwort...">
-            <button id="btnSendAns">ABSENDEN</button>
+        <!-- INPUT FÜR SPIELER -->
+        <div id="inputArea">
+            <input type="text" id="ansInp" placeholder="Deine Antwort...">
+            <button id="btnSend">ANTWORT ABSCHICKEN</button>
         </div>
-
-        <div id="divWait" class="hidden">✅ Gesendet! Warten...</div>
+        
+        <div id="waitMsg" class="hidden">✅ Gesendet! Warten auf Host...</div>
 
         <!-- VOTING -->
-        <div id="divVote" class="hidden">
-            <p>Wähle den besten Text:</p>
+        <div id="voteArea" class="hidden">
+            <p>Wähle den Favoriten:</p>
             <div id="voteList"></div>
         </div>
 
-        <div class="score-box">
-            <strong>Punkte:</strong>
-            <div id="divScores"></div>
+        <div class="score-list">
+            <strong>Rangliste:</strong>
+            <div id="scoreDisplay"></div>
         </div>
     </div>
 </div>
@@ -86,116 +79,100 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const questions = {
-        game1: ["Bier-Fail des Jahres?", "Büro-Ausrede?", "Hotel-Diebstahl?"],
-        game2: ["Wer trinkt am meisten?", "Wer singt am schlechtesten?"]
+    const quiz = {
+        game1: ["Meistgeklautes Hotel-Objekt?", "Dümmste Büro-Ausrede?", "Bier-Fail Story?"],
+        game2: ["Wer trinkt am schnellsten?", "Wer vergisst immer seinen Geldbeutel?"]
     };
 
-    let uName, uRoom, isHost = false, currentQ = -1;
+    let user, room, isH = false, lastIdx = -1;
 
-    // JOIN
-    async function join(h) {
-        uName = document.getElementById('inpName').value.trim();
-        uRoom = document.getElementById('inpRoom').value.trim().toUpperCase();
-        if(!uName || !uRoom) return alert("Name/Raum?");
+    async function start(h) {
+        user = document.getElementById('nameInp').value.trim();
+        room = document.getElementById('roomInp').value.trim().toUpperCase();
+        if(!user || !room) return alert("Bitte Name und Raum ausfüllen!");
 
-        isHost = h;
-        if(isHost) {
-            await set(ref(db, `rooms/${uRoom}/state`), { 
-                host: uName, mode: document.getElementById('selMode').value, phase: 'answer', qIdx: 0 
+        isH = h;
+        if(isH) {
+            await set(ref(db, `rooms/${room}/state`), { 
+                host: user, mode: document.getElementById('modeSel').value, phase: 'answer', qIdx: 0 
             });
         }
         
-        await update(ref(db, `rooms/${uRoom}/players`), { [uName]: 0 });
-        document.getElementById('divLogin').classList.add('hidden');
-        document.getElementById('divGame').classList.remove('hidden');
-        if(isHost) document.getElementById('divHostControls').classList.remove('hidden');
+        await update(ref(db, `rooms/${room}/players`), { [user]: 0 });
+        document.getElementById('sectionLogin').classList.add('hidden');
+        document.getElementById('sectionGame').classList.remove('hidden');
+        if(isH) document.getElementById('hostControls').classList.remove('hidden');
 
-        sync();
-    }
+        // SYNC START
+        onValue(ref(db, `rooms/${room}/state`), snap => {
+            const d = snap.val();
+            if(!d) return;
 
-    document.getElementById('btnJoinHost').onclick = () => join(true);
-    document.getElementById('btnJoinPlayer').onclick = () => join(false);
-
-    // SYNC
-    function sync() {
-        onValue(ref(db, `rooms/${uRoom}/state`), snap => {
-            const data = snap.val();
-            if(!data) return;
-
-            // Neue Frage -> Eingabe zeigen
-            if(data.qIdx !== currentQ) {
-                currentQ = data.qIdx;
-                document.getElementById('divInput').classList.remove('hidden');
-                document.getElementById('divWait').classList.add('hidden');
-                document.getElementById('inpAns').value = "";
+            // ERZWUNGENER RESET BEI JEDEM WECHSEL DER FRAGEN-NUMMER
+            if(d.qIdx !== lastIdx) {
+                lastIdx = d.qIdx;
+                document.getElementById('inputArea').classList.remove('hidden');
+                document.getElementById('waitMsg').classList.add('hidden');
+                document.getElementById('voteArea').classList.add('hidden');
+                document.getElementById('ansInp').value = "";
                 document.getElementById('voteList').innerHTML = "";
             }
 
-            if(data.phase === 'answer') {
-    document.getElementById('questionDisplay').innerText = questions[data.mode][data.qIdx % questions[data.mode].length];
-
-    // WICHTIG: UI sauber zurücksetzen für ALLE
-    document.getElementById('divInput').classList.remove('hidden');
-    document.getElementById('divWait').classList.add('hidden');
-    document.getElementById('divVote').classList.add('hidden');
-
-    document.getElementById('inpAns').value = "";
-    document.getElementById('voteList').innerHTML = "";
-}
-
-            } else if(data.phase === 'vote') {
-                document.getElementById('divInput').classList.add('hidden');
-                document.getElementById('divWait').classList.add('hidden');
-                document.getElementById('divVote').classList.remove('hidden');
-                showVotes();
+            if(d.phase === 'answer') {
+                document.getElementById('qDisplay').innerText = quiz[d.mode][d.qIdx % quiz[d.mode].length];
+            } else if(d.phase === 'vote') {
+                document.getElementById('inputArea').classList.add('hidden');
+                document.getElementById('waitMsg').classList.add('hidden');
+                document.getElementById('voteArea').classList.remove('hidden');
+                loadVotes();
             }
         });
 
-        onValue(ref(db, `rooms/${uRoom}/players`), snap => {
+        onValue(ref(db, `rooms/${room}/players`), snap => {
             const p = snap.val() || {};
-            document.getElementById('divScores').innerHTML = Object.entries(p)
-                .map(([n,s]) => `<div>${n}: ${s}</div>`).join("");
+            document.getElementById('scoreDisplay').innerHTML = Object.entries(p)
+                .sort((a,b)=>b[1]-a[1]).map(([n,s])=>`<div>${n}: ${s} Pkt</div>`).join("");
         });
     }
 
-    // ACTIONS
-    document.getElementById('btnSendAns').onclick = () => {
-        const val = document.getElementById('inpAns').value.trim();
-        if(!val) return;
-        set(ref(db, `rooms/${uRoom}/answers/${uName}`), val);
-        document.getElementById('divInput').classList.add('hidden');
-        document.getElementById('divWait').classList.remove('hidden');
+    document.getElementById('btnHost').onclick = () => start(true);
+    document.getElementById('btnPlayer').onclick = () => start(false);
+
+    document.getElementById('btnSend').onclick = () => {
+        const txt = document.getElementById('ansInp').value.trim();
+        if(!txt) return;
+        set(ref(db, `rooms/${room}/answers/${user}`), txt);
+        document.getElementById('inputArea').classList.add('hidden');
+        document.getElementById('waitMsg').classList.remove('hidden');
     };
 
-    document.getElementById('btnNextQ').onclick = async () => {
-        const snap = await get(ref(db, `rooms/${uRoom}/state`));
-        const next = (snap.val().qIdx || 0) + 1;
-        await set(ref(db, `rooms/${uRoom}/answers`), {});
-        await update(ref(db, `rooms/${uRoom}/state`), { phase: 'answer', qIdx: next });
+    document.getElementById('btnNext').onclick = async () => {
+        const s = await get(ref(db, `rooms/${room}/state`));
+        const n = (s.val().qIdx || 0) + 1;
+        await set(ref(db, `rooms/${room}/answers`), {});
+        await update(ref(db, `rooms/${room}/state`), { phase: 'answer', qIdx: n });
     };
 
-    document.getElementById('btnShowVote').onclick = () => {
-        update(ref(db, `rooms/${uRoom}/state`), { phase: 'vote' });
+    document.getElementById('btnVote').onclick = () => {
+        update(ref(db, `rooms/${room}/state`), { phase: 'vote' });
     };
 
-    async function showVotes() {
-        const container = document.getElementById('voteList');
-        if(container.innerHTML !== "") return;
-        const snap = await get(ref(db, `rooms/${uRoom}/answers`));
+    async function loadVotes() {
+        const list = document.getElementById('voteList');
+        if(list.innerHTML !== "") return;
+        const snap = await get(ref(db, `rooms/${room}/answers`));
         const ans = snap.val() || {};
         Object.entries(ans).forEach(([name, text]) => {
-            if(name === uName) return;
+            if(name === user) return;
             const b = document.createElement('button');
             b.innerText = text;
-            b.style.marginBottom = "5px";
             b.onclick = async () => {
-                container.innerHTML = "Danke!";
-                const pRef = ref(db, `rooms/${uRoom}/players/${name}`);
+                list.innerHTML = "Stimme gezählt! 🍻";
+                const pRef = ref(db, `rooms/${room}/players/${name}`);
                 const pSnap = await get(pRef);
-                update(ref(db, `rooms/${uRoom}/players`), { [name]: (pSnap.val() || 0) + 1 });
+                update(ref(db, `rooms/${room}/players`), { [name]: (pSnap.val() || 0) + 1 });
             };
-            container.appendChild(b);
+            list.appendChild(b);
         });
     }
 </script>
