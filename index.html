@@ -2,59 +2,62 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bierkultur GV 2026</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 20px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 15px; }
         .card { max-width: 400px; margin: auto; background: #333; padding: 20px; border-radius: 15px; border: 2px solid #ffcc00; }
-        .logo { font-size: 50px; margin-bottom: 10px; }
+        
+        /* CSS BIERGLAS (Funktioniert garantiert auf jedem Handy) */
+        .beer-icon { width: 40px; height: 50px; background: #ffcc00; margin: 0 auto 10px; border-radius: 0 0 5px 5px; position: relative; border: 3px solid white; }
+        .beer-foam { width: 46px; height: 15px; background: white; border-radius: 10px; position: absolute; top: -10px; left: -3px; }
+        .beer-handle { width: 15px; height: 25px; border: 3px solid white; border-left: none; position: absolute; right: -18px; top: 10px; border-radius: 0 10px 10px 0; }
+
         .hidden { display: none !important; }
-        input, button, select { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1rem; box-sizing: border-box; }
+        input, button, select { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; -webkit-appearance: none; }
         button { background: #ffcc00; color: black; font-weight: bold; cursor: pointer; }
         .host-btn { background: #3498db; color: white; }
-        #qDisplay { font-size: 1.5rem; color: #ffcc00; margin: 20px 0; font-weight: bold; }
-        .score-list { text-align: left; font-size: 0.9rem; background: #222; padding: 10px; margin-top: 20px; }
+        #qDisplay { font-size: 1.4rem; color: #ffcc00; margin: 20px 0; font-weight: bold; min-height: 1.5em; }
+        .score-list { text-align: left; font-size: 0.9rem; background: #222; padding: 10px; margin-top: 20px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="logo">🍺</div>
-    <div style="color:#ffcc00; font-weight: bold;">BIERKULTUR BRITTNAU</div>
-    <hr style="border: 0; border-top: 1px solid #555; margin: 20px 0;">
+    <div class="beer-icon"><div class="beer-foam"></div><div class="beer-handle"></div></div>
+    <div style="color:#ffcc00; font-weight: bold; letter-spacing: 1px;">BIERKULTUR BRITTNAU</div>
 
     <!-- LOGIN -->
     <div id="sectionLogin">
         <input type="text" id="nameInp" placeholder="Dein Name">
-        <input type="text" id="roomInp" placeholder="Raum Code (z.B. GV26)">
+        <input type="text" id="roomInp" placeholder="Raum Code">
         <select id="modeSel">
             <option value="game1">Smalltalk-Fail</option>
             <option value="game2">Wer würde eher?</option>
         </select>
         <button id="btnHost" class="host-btn">ALS HOST STARTEN</button>
-        <button id="btnPlayer">BEITRETEN</button>
+        <button id="btnPlayer">SPIELER BEITRETEN</button>
     </div>
 
     <!-- GAME -->
     <div id="sectionGame" class="hidden">
-        <div id="hostControls" class="hidden" style="background: #444; padding: 10px; margin-bottom: 15px;">
+        <div id="hostControls" class="hidden" style="background: #444; padding: 10px; border-radius: 10px;">
             <button id="btnNext">NÄCHSTE FRAGE</button>
             <button id="btnVote" style="background: white;">VOTING STARTEN</button>
         </div>
 
         <div id="qDisplay">Warte auf Start...</div>
 
-        <!-- INPUT FÜR SPIELER -->
+        <!-- EINGABE -->
         <div id="inputArea">
             <input type="text" id="ansInp" placeholder="Deine Antwort...">
             <button id="btnSend">ANTWORT ABSCHICKEN</button>
         </div>
         
-        <div id="waitMsg" class="hidden">✅ Gesendet! Warten auf Host...</div>
+        <div id="waitMsg" class="hidden" style="color: #ffcc00; padding: 20px;">✅ Antwort gesendet!</div>
 
         <!-- VOTING -->
         <div id="voteArea" class="hidden">
-            <p>Wähle den Favoriten:</p>
             <div id="voteList"></div>
         </div>
 
@@ -99,29 +102,30 @@
         }
         
         await update(ref(db, `rooms/${room}/players`), { [user]: 0 });
-        document.getElementById('sectionLogin').classList.add('hidden');
+        document.getElementById('sectionLogin').style.display = 'none';
         document.getElementById('sectionGame').classList.remove('hidden');
         if(isH) document.getElementById('hostControls').classList.remove('hidden');
 
-        // SYNC START
+        // FORCIERTER SYNC
         onValue(ref(db, `rooms/${room}/state`), snap => {
             const d = snap.val();
             if(!d) return;
 
-            // ERZWUNGENER RESET BEI JEDEM WECHSEL DER FRAGEN-NUMMER
+            // Update Frage
+            document.getElementById('qDisplay').innerText = quiz[d.mode][d.qIdx % quiz[d.mode].length];
+
+            // Prüfen auf Rundenwechsel
             if(d.qIdx !== lastIdx) {
                 lastIdx = d.qIdx;
-                document.getElementById('inputArea').classList.remove('hidden');
+                document.getElementById('inputArea').style.display = 'block';
                 document.getElementById('waitMsg').classList.add('hidden');
                 document.getElementById('voteArea').classList.add('hidden');
                 document.getElementById('ansInp').value = "";
                 document.getElementById('voteList').innerHTML = "";
             }
 
-            if(d.phase === 'answer') {
-                document.getElementById('qDisplay').innerText = quiz[d.mode][d.qIdx % quiz[d.mode].length];
-            } else if(d.phase === 'vote') {
-                document.getElementById('inputArea').classList.add('hidden');
+            if(d.phase === 'vote') {
+                document.getElementById('inputArea').style.display = 'none';
                 document.getElementById('waitMsg').classList.add('hidden');
                 document.getElementById('voteArea').classList.remove('hidden');
                 loadVotes();
@@ -142,7 +146,7 @@
         const txt = document.getElementById('ansInp').value.trim();
         if(!txt) return;
         set(ref(db, `rooms/${room}/answers/${user}`), txt);
-        document.getElementById('inputArea').classList.add('hidden');
+        document.getElementById('inputArea').style.display = 'none';
         document.getElementById('waitMsg').classList.remove('hidden');
     };
 
@@ -166,8 +170,9 @@
             if(name === user) return;
             const b = document.createElement('button');
             b.innerText = text;
+            b.style.marginBottom = "8px";
             b.onclick = async () => {
-                list.innerHTML = "Stimme gezählt! 🍻";
+                list.innerHTML = "<p>✅ Stimme gezählt!</p>";
                 const pRef = ref(db, `rooms/${room}/players/${name}`);
                 const pSnap = await get(pRef);
                 update(ref(db, `rooms/${room}/players`), { [name]: (pSnap.val() || 0) + 1 });
