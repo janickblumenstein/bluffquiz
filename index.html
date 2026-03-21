@@ -243,7 +243,7 @@ btnNext.onclick = async () => {
     update(ref(db, `rooms/${room}/state`), { 
         phase: "answer", 
         qIdx: nextIdx, 
-        endTime: Date.now() + 8000 // 7 Sek + 1 Sek Puffer
+        endTime: Date.now() + 21000 // 20 Sek + 1 Sek Puffer
     });
     sounds.next.play().catch(() => {});
 };
