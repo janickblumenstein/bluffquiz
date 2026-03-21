@@ -1,146 +1,204 @@
-document.addEventListener("DOMContentLoaded", () => {
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bierkultur Game</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #333; padding: 20px; border-radius: 15px; }
+        .hidden { display: none; }
+        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; }
+        button { background: #ffcc00; color: black; font-weight: bold; cursor: pointer; }
+        button:hover { background: #e6b800; }
+        .score-list { background: #444; padding: 10px; border-radius: 8px; margin-top: 20px; }
+        .btn-vote { background: #4a90e2; color: white; margin: 5px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- LOGIN BEREICH -->
+    <div id="login">
+        <h1>Bierkultur 🍻</h1>
+        <input type="text" id="userName" placeholder="Dein Name">
+        <input type="text" id="roomCode" placeholder="Raum Code (z.B. BIER1)">
+        <select id="gameSelect">
+            <option value="game1">Smalltalk-Fail</option>
+            <option value="game2">Wer würde eher?</option>
+            <option value="game3">Quatsch-Lexikon</option>
+        </select>
+        <button id="joinBtn">Spiel Beitreten / Erstellen</button>
+    </div>
+
+    <!-- SPIEL BEREICH -->
+    <div id="gameArea" class="hidden">
+        <h2 id="gameTitle">Lade...</h2>
+        <div id="hostPanel" class="hidden">
+            <button id="nextBtn">Nächste Frage</button>
+            <button id="voteBtn">Voting starten</button>
+        </div>
+
+        <hr>
+        <h3 id="questionDisplay">Warte auf den Host...</h3>
+
+        <div id="answerSection" class="hidden">
+            <input type="text" id="answerInput" placeholder="Deine Antwort...">
+            <button id="sendAnswerBtn">Antwort abschicken</button>
+        </div>
+
+        <div id="voteSection" class="hidden">
+            <h4>Wähle die beste Antwort:</h4>
+            <div id="voteButtons"></div>
+        </div>
+
+        <div class="score-list">
+            <strong>Punktestand:</strong>
+            <div id="scoreList"></div>
+        </div>
+    </div>
+</div>
+
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
-  authDomain: "bierkultur-d2fea.firebaseapp.com",
-  databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
-  projectId: "bierkultur-d2fea",
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyCH5KfFTwISrjvXQQiX9GBw9AFhB1Ihos4",
+        authDomain: "bierkultur-d2fea.firebaseapp.com",
+        databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
+        projectId: "bierkultur-d2fea",
+    };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-let myName, myRoom, iAmHost=false, currentQ=-1;
+    // DOM Elemente
+    const login = document.getElementById('login');
+    const gameArea = document.getElementById('gameArea');
+    const userName = document.getElementById('userName');
+    const roomCode = document.getElementById('roomCode');
+    const gameSelect = document.getElementById('gameSelect');
+    const gameTitle = document.getElementById('gameTitle');
+    const hostPanel = document.getElementById('hostPanel');
+    const questionDisplay = document.getElementById('questionDisplay');
+    const answerSection = document.getElementById('answerSection');
+    const answerInput = document.getElementById('answerInput');
+    const voteSection = document.getElementById('voteSection');
+    const voteButtons = document.getElementById('voteButtons');
+    const scoreList = document.getElementById('scoreList');
 
-const questions = {
- game1:["Meistgeklautes Hotel-Objekt?","Dümmste Büro-Ausrede?","Tinder-Fail Story?"],
- game2:["Wer ruft betrunken den Chef an?","Wer hat die peinlichste Jugendsünde?","Wer lügt am besten?"],
- game3:["Was bedeutet IKEA wirklich?","Neue Tinder-Funktion:","Männer-Chat Name:"]
-};
+    let myName, myRoom, iAmHost = false, currentQ = -1;
 
-// JOIN
-document.getElementById('joinBtn').addEventListener('click', async () => {
+    const questions = {
+        game1: ["Meistgeklautes Hotel-Objekt?", "Dümmste Büro-Ausrede?", "Tinder-Fail Story?"],
+        game2: ["Wer ruft betrunken den Chef an?", "Wer hat die peinlichste Jugendsünde?", "Wer lügt am besten?"],
+        game3: ["Was bedeutet IKEA wirklich?", "Neue Tinder-Funktion:", "Männer-Chat Name:"]
+    };
 
-  myName = userName.value.trim();
-  myRoom = roomCode.value.trim();
-  if(!myName || !myRoom) return alert("Name & Raum!");
+    // JOIN LOGIK
+    document.getElementById('joinBtn').onclick = async () => {
+        myName = userName.value.trim();
+        myRoom = roomCode.value.trim().toUpperCase();
+        if (!myName || !myRoom) return alert("Name & Raum eingeben!");
 
-  login.classList.add('hidden');
-  gameArea.classList.remove('hidden');
+        login.classList.add('hidden');
+        gameArea.classList.remove('hidden');
 
-  await set(ref(db, `rooms/${myRoom}/players/${myName}`), 0);
+        const stateRef = ref(db, `rooms/${myRoom}/state`);
+        const snap = await get(stateRef);
 
-  const stateRef = ref(db, `rooms/${myRoom}/state`);
-  const snap = await get(stateRef);
+        // Spieler in die Liste eintragen (Punkte auf 0 lassen falls schon da, oder neu setzen)
+        await set(ref(db, `rooms/${myRoom}/players/${myName}`), 0);
 
-  if(!snap.exists()){
-    await set(stateRef,{
-      host: myName,
-      mode: gameSelect.value,
-      phase:'lobby',
-      qIdx:-1
-    });
-    iAmHost = true;
-    hostPanel.classList.remove('hidden');
-  } else {
-    if(snap.val().host === myName){
-      iAmHost = true;
-      hostPanel.classList.remove('hidden');
-    }
-  }
+        if (!snap.exists()) {
+            await set(stateRef, {
+                host: myName,
+                mode: gameSelect.value,
+                phase: 'lobby',
+                qIdx: -1
+            });
+            iAmHost = true;
+        } else {
+            if (snap.val().host === myName) iAmHost = true;
+        }
 
-  startSync();
-});
+        if (iAmHost) hostPanel.classList.remove('hidden');
+        startSync();
+    };
 
-// SYNC
-function startSync(){
-  onValue(ref(db, `rooms/${myRoom}/state`), snap=>{
-    const data=snap.val();
-    if(!data) return;
+    // SYNC LOGIK
+    function startSync() {
+        onValue(ref(db, `rooms/${myRoom}/state`), snap => {
+            const data = snap.val();
+            if (!data) return;
 
-    gameTitle.innerText = data.mode.toUpperCase();
+            gameTitle.innerText = "Modus: " + data.mode.toUpperCase();
 
-    if(data.qIdx>=0){
-      const qList = questions[data.mode] || [];
-      const safeIndex = data.qIdx % qList.length;
-      questionDisplay.innerText = qList[safeIndex];
-      currentQ = data.qIdx;
-    }
+            if (data.qIdx >= 0) {
+                const qList = questions[data.mode] || [];
+                questionDisplay.innerText = qList[data.qIdx % qList.length];
+                currentQ = data.qIdx;
+            }
 
-    answerSection.classList.toggle('hidden', data.phase!=='answer');
-    voteSection.classList.toggle('hidden', data.phase!=='vote');
+            answerSection.classList.toggle('hidden', data.phase !== 'answer');
+            voteSection.classList.toggle('hidden', data.phase !== 'vote');
 
-    if(data.phase==='vote') renderVotes();
-  });
-
-  onValue(ref(db, `rooms/${myRoom}/players`), snap=>{
-    const players=snap.val()||{};
-    scoreList.innerHTML = Object.entries(players)
-      .sort((a,b)=>b[1]-a[1])
-      .map(([n,s])=>`<div>${n} ${s}</div>`).join("");
-  });
-}
-
-// HOST
-nextBtn.onclick = ()=>{
-  if(!iAmHost) return;
-
-  currentQ++;
-  update(ref(db, `rooms/${myRoom}/state`), {
-    phase:'answer',
-    qIdx:currentQ
-  });
-
-  set(ref(db, `rooms/${myRoom}/answers`), {});
-  set(ref(db, `rooms/${myRoom}/votes`), {});
-};
-
-voteBtn.onclick = ()=>{
-  if(!iAmHost) return;
-  update(ref(db, `rooms/${myRoom}/state`), { phase:'vote' });
-};
-
-// ANSWER
-sendAnswerBtn.onclick = ()=>{
-  const val = answerInput.value.trim();
-  if(!val) return;
-
-  set(ref(db, `rooms/${myRoom}/answers/${myName}`), val);
-  answerInput.value="";
-};
-
-// VOTE
-function renderVotes(){
-  get(ref(db, `rooms/${myRoom}/answers`)).then(snap=>{
-    const answers = snap.val()||{};
-    voteButtons.innerHTML="";
-
-    Object.entries(answers).forEach(([name,text])=>{
-      if(name===myName) return;
-
-      const btn=document.createElement('button');
-      btn.innerText=text;
-      btn.className="btn-vote";
-
-      btn.onclick=()=>{
-        set(ref(db, `rooms/${myRoom}/votes/${myName}`), name);
-
-        const pRef = ref(db, `rooms/${myRoom}/players/${name}`);
-        get(pRef).then(s=>{
-          update(ref(db, `rooms/${myRoom}/players`), {
-            [name]: (s.val()||0)+1
-          });
+            if (data.phase === 'vote') renderVotes();
         });
 
-        voteButtons.innerHTML="Gewählt ✅";
-      };
+        onValue(ref(db, `rooms/${myRoom}/players`), snap => {
+            const players = snap.val() || {};
+            scoreList.innerHTML = Object.entries(players)
+                .sort((a, b) => b[1] - a[1])
+                .map(([n, s]) => `<div><strong>${n}:</strong> ${s} Pkt</div>`).join("");
+        });
+    }
 
-      voteButtons.appendChild(btn);
-    });
-  });
-}
+    // HOST AKTIONEN
+    document.getElementById('nextBtn').onclick = () => {
+        if (!iAmHost) return;
+        currentQ++;
+        update(ref(db, `rooms/${myRoom}/state`), { phase: 'answer', qIdx: currentQ });
+        set(ref(db, `rooms/${myRoom}/answers`), {});
+    };
+
+    document.getElementById('voteBtn').onclick = () => {
+        if (!iAmHost) return;
+        update(ref(db, `rooms/${myRoom}/state`), { phase: 'vote' });
+    };
+
+    // SPIELER AKTIONEN
+    document.getElementById('sendAnswerBtn').onclick = () => {
+        const val = answerInput.value.trim();
+        if (!val) return;
+        set(ref(db, `rooms/${myRoom}/answers/${myName}`), val);
+        answerInput.value = "";
+        answerSection.innerHTML = "Warte auf die anderen...";
+    };
+
+    function renderVotes() {
+        get(ref(db, `rooms/${myRoom}/answers`)).then(snap => {
+            const answers = snap.val() || {};
+            voteButtons.innerHTML = "";
+            Object.entries(answers).forEach(([name, text]) => {
+                if (name === myName) return; // Nicht für sich selbst voten
+
+                const btn = document.createElement('button');
+                btn.innerText = text;
+                btn.className = "btn-vote";
+                btn.onclick = async () => {
+                    voteButtons.innerHTML = "Gewählt ✅";
+                    const playerRef = ref(db, `rooms/${myRoom}/players/${name}`);
+                    const pSnap = await get(playerRef);
+                    update(ref(db, `rooms/${myRoom}/players`), {
+                        [name]: (pSnap.val() || 0) + 1
+                    });
+                };
+                voteButtons.appendChild(btn);
+            });
+        });
+    }
 </script>
-});
+</body>
+</html>
