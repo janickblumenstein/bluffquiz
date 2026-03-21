@@ -163,7 +163,7 @@ function sync() {
                         const q = d.gameQs[d.qIdx];
                         if(q.toLowerCase().startsWith("wer")) {
                             await evaluateAutoVote();
-                            setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1000);
+                            setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1200);
                         } else {
                             update(ref(db, `rooms/${room}/state`), { phase: "vote" });
                         }
@@ -189,38 +189,40 @@ function setupInput(q) {
     const area = document.getElementById("dynamicInput");
     if(q.toLowerCase().startsWith("wer")) {
         let opts = currentPlayers.map(p => `<option value="${p}">${p}</option>`).join("");
-        area.innerHTML = `<select id="ansInp"><option value="">-- Wähle --</option>${opts}</select>`;
+        area.innerHTML = `<select id="ansInp"><option value="">-- Wähle jemanden --</option>${opts}</select>`;
     } else { area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`; }
 }
 
 async function evaluateAutoVote() {
-    // 1. Antworten holen
+    // 1. Alle Antworten holen (Wer hat für wen gestimmt?)
     const ansSnap = await get(ref(db, `rooms/${room}/answers`));
-    const ans = ansSnap.val() || {};
+    const allAnswers = ansSnap.val() || {}; // Format: { "SpielerA": "GewählterName", "SpielerB": "GewählterName" }
     
-    // 2. Stimmen zählen
-    const votes = {};
-    Object.values(ans).forEach(v => { if(v && v !== "") votes[v] = (votes[v] || 0) + 1; });
+    // 2. Stimmen zählen, um den Gewinner-Namen zu finden
+    const voteCounts = {};
+    Object.values(allAnswers).forEach(v => { if(v) voteCounts[v] = (voteCounts[v] || 0) + 1; });
     
-    const entries = Object.entries(votes);
+    const entries = Object.entries(voteCounts);
     if(entries.length === 0) return;
 
-    // 3. Gewinner ermitteln
-    const maxV = Math.max(...entries.map(e => e[1]));
-    const winners = entries.filter(e => e[1] === maxV).map(e => e[0]);
+    // 3. Den oder die Namen mit den meisten Stimmen finden
+    const maxVotes = Math.max(...entries.map(e => e[1]));
+    const winningNames = entries.filter(e => e[1] === maxVotes).map(e => e[0]);
 
-    // 4. Aktuelle Spielerliste laden und Punkte vergeben
+    // 4. Spielerliste laden
     const pSnap = await get(ref(db, `rooms/${room}/players`));
-    let players = pSnap.val() || {};
+    let currentScores = pSnap.val() || {};
     
-    winners.forEach(w => {
-        if(players[w] !== undefined) {
-            players[w] = (players[w] || 0) + 1;
+    // 5. JEDER Spieler, der einen der winningNames gewählt hat, bekommt einen Punkt
+    Object.keys(allAnswers).forEach(voterName => {
+        const choice = allAnswers[voterName];
+        if(winningNames.includes(choice)) {
+            currentScores[voterName] = (currentScores[voterName] || 0) + 1;
         }
     });
 
-    // 5. In Firebase speichern
-    await set(ref(db, `rooms/${room}/players`), players);
+    // 6. Zurückschreiben
+    await set(ref(db, `rooms/${room}/players`), currentScores);
 }
 
 async function loadBigScores() {
@@ -283,8 +285,8 @@ btnEvent.onclick = () => {
 };
 btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
 btnSend.onclick = () => {
-    const v = document.getElementById("ansInp").value.trim();
-    if(!v) return;
+    const v = document.getElementById("ansInp").value;
+    if(!v || v === "") return;
     set(ref(db, `rooms/${room}/answers/${user}`), v);
     inputArea.style.display = "none"; waitMsg.innerText = "✅ Gesendet!";
     sounds.send.play().catch(()=>{});
