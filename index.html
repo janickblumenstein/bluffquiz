@@ -78,7 +78,7 @@
 
 <div id="eventOverlay">
     <div class="beer-spin">🍻</div>
-    <div id="eventText" style="font-size:2rem; color:var(--gold); font-weight:bold; margin:20px; text-align:center;"></div>
+    <div id="eventText" style="font-size:2rem; color:var(--gold); font-weight:bold; margin:20px;"></div>
 </div>
 
 <script type="module">
@@ -100,7 +100,7 @@ const baseQuestions = [
     "Wer wird neuer Präsident?", "Was steht auf deinem Grabstein?", "Wer vergisst ständig Geburtstage?",
     "Wer hat die schönste Frau?", "Wer hat die peinlichsten Fotos?", "Neuer Tinder Premium Vorteil:",
     "Was passiert nach der GV wirklich?", "Wer macht die Finanzkontrolle?", "Wofür steht IKEA?",
-    "Was sagt man nach richtig schlechtem Sex?", "Definiere: Bier-Notfall", "Wer Mitglied hat die schwächste Blase?",
+    "Was sagt man nach richtig schlechtem Sex?", "Definiere: Bier-Notfall", "Wer hat die schwächste Blase?",
     "Wer würde im Urlaub am meisten übertreiben?", "Wer kann am schlechtesten lügen?", "Wer wird als Nächstes heiraten?",
     "Was ist der wahre Grund deiner Teilnahme?", "Wer hat keinen Rollkoffer?", "Wer hat den tollsten Schnauzer?",
     "Ein Dampfschiff ist weniger schwer als:", "Bierkultur Zofingen wird in 10 Jahren:", "Wer wird am ehesten Grosspapa?",
@@ -222,7 +222,7 @@ async function loadBigScores(winnerTxt, scorers) {
     const p = snap.val() || {};
     const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
     let html = "";
-    if(winnerTxt) html += `<div id="roundResultInfo"><small>Meiste Stimmen für:</small><br><strong>${winnerTxt}</strong></div>`;
+    if(winnerTxt) html += `<div id="roundResultInfo"><small>Runden-Sieg:</small><br><strong>${winnerTxt}</strong></div>`;
     html += sorted.map(([n, s], i) => `
         <div class="score-item ${i === 0 ? 'rank-1' : ''}" style="animation-delay: ${i * 0.1}s">
             <span>${i === 0 ? '👑' : i + 1 + '.'} ${n}${scorers.includes(n) ? '<span class="plus-one">+1</span>' : ''}</span>
@@ -235,50 +235,22 @@ async function loadVotes() {
     voteArea.innerHTML = "";
     const snap = await get(ref(db, `rooms/${room}/answers`));
     const ans = snap.val() || {};
-    const uniqueAnswers = [...new Set(Object.values(ans))].filter(v => v && v !== "");
-    
-    uniqueAnswers.forEach(text => {
+    const counts = {};
+    Object.values(ans).forEach(v => { if(v) counts[v] = (counts[v] || 0) + 1; });
+    Object.entries(counts).forEach(([text, count]) => {
         const b = document.createElement("button");
-        b.className = "vote-btn"; b.innerText = `${text}`; 
+        b.className = "vote-btn"; b.innerText = `${text} (${count}x)`; 
         b.onclick = async () => {
-            await set(ref(db, `rooms/${room}/tempVotes/${user}`), text.trim());
-            voteArea.innerHTML = "<p style='color:var(--gold)'>✅ Stimme gezählt! Warten auf Auswertung...</p>";
+            const winners = Object.keys(ans).filter(p => ans[p].trim() === text.trim());
+            const pSnap = await get(ref(db, `rooms/${room}/players`));
+            let players = pSnap.val() || {};
+            winners.forEach(w => { if(players[w] !== undefined) players[w] += 1; });
+            await set(ref(db, `rooms/${room}/players`), players);
+            await update(ref(db, `rooms/${room}/state`), { phase: "score", lastWin: text, scorers: winners });
         };
         voteArea.appendChild(b);
     });
 }
-
-btnVote.onclick = async () => {
-    const sSnap = await get(ref(db, `rooms/${room}/state`));
-    const s = sSnap.val();
-    if(s.phase === "answer") {
-        update(ref(db, `rooms/${room}/state`), { phase: "vote" });
-    } else if(s.phase === "vote") {
-        const ansSnap = await get(ref(db, `rooms/${room}/answers`));
-        const answers = ansSnap.val() || {};
-        const vSnap = await get(ref(db, `rooms/${room}/tempVotes`));
-        const votes = vSnap.val() || {};
-
-        let vCounts = {};
-        Object.values(votes).forEach(v => vCounts[v] = (vCounts[v] || 0) + 1);
-        const max = Math.max(...Object.values(vCounts), 0);
-        const winningChoices = Object.keys(vCounts).filter(k => vCounts[k] === max);
-
-        const pSnap = await get(ref(db, `rooms/${room}/players`));
-        let players = pSnap.val() || {};
-        let roundScorers = [];
-        Object.entries(answers).forEach(([name, text]) => {
-            if(winningChoices.includes(text.trim())) {
-                players[name] = (players[name] || 0) + 1;
-                roundScorers.push(name);
-            }
-        });
-
-        await set(ref(db, `rooms/${room}/players`), players);
-        await remove(ref(db, `rooms/${room}/tempVotes`));
-        await update(ref(db, `rooms/${room}/state`), { phase: "score", lastWin: winningChoices.join(", "), scorers: roundScorers });
-    }
-};
 
 btnNext.onclick = async () => {
     const sSnap = await get(ref(db, `rooms/${room}/state`));
@@ -286,8 +258,18 @@ btnNext.onclick = async () => {
     const nIdx = (s.qIdx !== undefined ? s.qIdx : -1) + 1;
     if(s.gameQs && nIdx >= s.gameQs.length) return alert("Ende!");
     await set(ref(db, `rooms/${room}/answers`), {});
-    await remove(ref(db, `rooms/${room}/tempVotes`));
+    waitMsg.innerText = "";
     update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: nIdx, endTime: Date.now() + 21000, lastWin: "", scorers: [] });
+};
+
+btnVote.onclick = async () => {
+    const sSnap = await get(ref(db, `rooms/${room}/state`));
+    const s = sSnap.val();
+    const q = s.gameQs[s.qIdx];
+    if(q.trim().toLowerCase().startsWith("wer")) {
+        await evaluateAutoVote();
+        setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 500);
+    } else { update(ref(db, `rooms/${room}/state`), { phase: "vote" }); }
 };
 
 btnScore.onclick = () => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); sounds.score.play().catch(()=>{}); };
@@ -298,7 +280,7 @@ btnEvent.onclick = () => {
 btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
 btnSend.onclick = () => {
     const v = document.getElementById("ansInp").value;
-    if(!v) return;
+    if(!v || v === "") return;
     set(ref(db, `rooms/${room}/answers/${user}`), v.trim());
     inputArea.style.display = "none"; waitMsg.innerText = "✅ Gesendet!";
     sounds.send.play().catch(()=>{});
