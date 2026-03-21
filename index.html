@@ -36,7 +36,9 @@
         #eventOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; padding: 20px; }
         .beer-spin { font-size:5rem; animation:spin 2s infinite linear; }
         @keyframes spin {100% {transform:rotate(360deg);}}
-        #roundResultInfo { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--gold); }
+        
+        #roundResultInfo { background: rgba(255,204,0,0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--gold); }
+        .winner-tag { color: #2ecc71; font-weight: bold; display: block; margin-top: 5px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -70,7 +72,7 @@
         <div id="bigScoreArea" style="display:none"></div>
 
         <div id="liveScore">
-            <small style="opacity:0.5">Live-Stand:</small>
+            <small style="opacity:0.5">Teilnehmer & Stand:</small>
             <div id="liveScoreList"></div>
         </div>
     </div>
@@ -95,20 +97,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// Fragen-Pool
 const baseQuestions = [
-    "Wer eskaliert heute als Erster?", "Neue Funktion bei WhatsApp:", "Wer bringt am meisten Chaos auf Partys?",
+    "Wer eskaliert heute als Erster?", "Wer bringt am meisten Chaos auf Partys?",
     "Wer wird neuer Präsident?", "Was steht auf deinem Grabstein?", "Wer vergisst ständig Geburtstage?",
     "Wer hat die schönste Frau?", "Wer hat die peinlichsten Fotos?", "Neuer Tinder Premium Vorteil:",
     "Was passiert nach der GV wirklich?", "Wer macht die Finanzkontrolle?", "Wofür steht IKEA?",
-    "Was sagt man nach richtig schlechtem Sex?", "Definiere: Bier-Notfall", "Wer hat die schwächste Blase?",
-    "Wer würde im Urlaub am meisten übertreiben?", "Wer kann am schlechtesten lügen?", "Wer wird als Nächstes heiraten?",
-    "Was ist der wahre Grund deiner Teilnahme?", "Wer hat keinen Rollkoffer?", "Wer hat den tollsten Schnauzer?",
-    "Ein Dampfschiff ist weniger schwer als:", "Bierkultur Zofingen wird in 10 Jahren:", "Wer wird am ehesten Grosspapa?",
-    "Wer würde im Notfall am schnellsten wegrennen?", "Wer wird als Nächstes Millionär?", "Wer verschläft am häufigsten?",
-    "Wer hat die schlimmsten Jugendsünden?","Wer von uns hilft am meisten im Verein mit?","Wer von uns hat am meisten von unserem Bier gekauft?","Wer hat noch nie von unserem Bier gekauft?","Wer hat die Vereins-Reise noch nicht bezahlt?"
+    "Definiere: Bier-Notfall", "Wer hat die schwächste Blase?",
+    "Wer würde im Urlaub am meisten übertreiben?", "Wer kann am schlechtesten lügen?",
+    "Was ist der wahre Grund deiner Teilnahme?", "Wer hat den tollsten Schnauzer?",
+    "Bierkultur Zofingen wird in 10 Jahren:", "Wer verschläft am häufigsten?",
+    "Wer von uns hilft am meisten im Verein mit?","Wer hat die Vereins-Reise noch nicht bezahlt?"
 ];
 
-const drinkRules = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!","ELITEN-TRINKEN! 👑 Die Top 3 der Rangliste trinken","PROST PRÄSIDENT! Der Präsi trinkt","PROST PRÄSIDENT! Alle trinken auf den Präsi"];
+const drinkRules = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!","ELITEN-TRINKEN! 👑 Die Top 3 der Rangliste trinken","PROST PRÄSIDENT! Der Präsi trinkt"];
 const sounds = {
     send: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"),
     event: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
@@ -152,7 +154,12 @@ function sync() {
             if (!waitMsg.innerText.includes("✅")) { setupInput(q); inputArea.style.display = "block"; }
         } 
         else if(d.phase === "vote") { qDisplay.innerText = "Abstimmen!"; voteArea.style.display = "block"; loadVotes(); }
-        else if(d.phase === "score") { qDisplay.innerText = "🏆 Rangliste"; bigScoreArea.style.display = "block"; waitMsg.innerText = ""; loadBigScores(d.lastWin, d.scorers || []); }
+        else if(d.phase === "score") { 
+            qDisplay.innerText = "🏆 Rangliste"; 
+            bigScoreArea.style.display = "block"; 
+            waitMsg.innerText = ""; 
+            loadBigScores(d.lastWin, d.scorers || []); 
+        }
 
         if(timerInt) clearInterval(timerInt);
         if(d.phase === "answer" && d.endTime) {
@@ -164,10 +171,8 @@ function sync() {
                     inputArea.style.display = "none";
                     if(isH) {
                         const q = d.gameQs[d.qIdx];
-                        if(q.trim().toLowerCase().startsWith("wer")) {
-                            await evaluateAutoVote();
-                            setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 1500);
-                        } else { update(ref(db, `rooms/${room}/state`), { phase: "vote" }); }
+                        if(q.trim().toLowerCase().startsWith("wer")) await evaluateAutoVote();
+                        else update(ref(db, `rooms/${room}/state`), { phase: "vote" });
                     }
                 } else { waitMsg.innerText = "⏳ " + diff + "s"; }
             }, 1000);
@@ -194,27 +199,25 @@ function setupInput(q) {
     } else { area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`; }
 }
 
+// LOGIK: WER HAT DIE MEISTEN STIMMEN ERHALTEN? ALLE DIESE WÄHLER BEKOMMEN EINEN PUNKT.
 async function evaluateAutoVote() {
     const ansSnap = await get(ref(db, `rooms/${room}/answers`));
     const allAnswers = ansSnap.val() || {}; 
     const voteCounts = {};
-    Object.values(allAnswers).forEach(v => { if(v) { const cleanV = v.trim(); voteCounts[cleanV] = (voteCounts[cleanV] || 0) + 1; } });
-    const entries = Object.entries(voteCounts);
-    if(entries.length === 0) return;
-    const maxVotes = Math.max(...entries.map(e => e[1]));
-    const winningChoices = entries.filter(e => e[1] === maxVotes).map(e => e[0]);
+    Object.values(allAnswers).forEach(v => { if(v) { const val = v.trim(); voteCounts[val] = (voteCounts[val] || 0) + 1; } });
+    
+    const entries = Object.entries(voteCounts).sort((a,b) => b[1] - a[1]);
+    if(entries.length === 0) return update(ref(db, `rooms/${room}/state`), { phase: "score", lastWin: "Niemand hat gewählt!", scorers: [] });
 
+    const winningAnswer = entries[0][0];
+    const winners = Object.keys(allAnswers).filter(user => allAnswers[user].trim() === winningAnswer);
+    
     const pSnap = await get(ref(db, `rooms/${room}/players`));
-    let currentScores = pSnap.val() || {};
-    let scorers = [];
-    Object.keys(allAnswers).forEach(voter => {
-        if(winningChoices.includes(allAnswers[voter].trim())) {
-            currentScores[voter] = (currentScores[voter] || 0) + 1;
-            scorers.push(voter);
-        }
-    });
-    await set(ref(db, `rooms/${room}/players`), currentScores);
-    await update(ref(db, `rooms/${room}/state`), { lastWin: winningChoices.join(", "), scorers: scorers });
+    let players = pSnap.val() || {};
+    winners.forEach(w => { if(players[w] !== undefined) players[w] += 1; });
+
+    await set(ref(db, `rooms/${room}/players`), players);
+    await update(ref(db, `rooms/${room}/state`), { phase: "score", lastWin: winningAnswer, scorers: winners });
 }
 
 async function loadBigScores(winnerTxt, scorers) {
@@ -222,7 +225,12 @@ async function loadBigScores(winnerTxt, scorers) {
     const p = snap.val() || {};
     const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
     let html = "";
-    if(winnerTxt) html += `<div id="roundResultInfo"><small>Runden-Sieg:</small><br><strong>${winnerTxt}</strong></div>`;
+    if(winnerTxt) {
+        html += `<div id="roundResultInfo">
+                    <small>Gewinner-Antwort:</small><br><strong>${winnerTxt}</strong>
+                    <span class="winner-tag">Punkt für: ${scorers.length > 0 ? scorers.join(", ") : "Niemanden"}</span>
+                 </div>`;
+    }
     html += sorted.map(([n, s], i) => `
         <div class="score-item ${i === 0 ? 'rank-1' : ''}" style="animation-delay: ${i * 0.1}s">
             <span>${i === 0 ? '👑' : i + 1 + '.'} ${n}${scorers.includes(n) ? '<span class="plus-one">+1</span>' : ''}</span>
@@ -232,61 +240,21 @@ async function loadBigScores(winnerTxt, scorers) {
 }
 
 async function loadVotes() {
-    voteArea.innerHTML = "";
+    voteArea.innerHTML = "<h3>Welche Antwort gewinnt?</h3>";
     const snap = await get(ref(db, `rooms/${room}/answers`));
     const ans = snap.val() || {};
+    
+    // Wir zählen, wie oft jede Antwort vorkommt (falls mehrere das gleiche schrieben)
     const counts = {};
-    Object.values(ans).forEach(v => { if(v) counts[v] = (counts[v] || 0) + 1; });
+    Object.values(ans).forEach(text => { counts[text] = (counts[text] || 0) + 1; });
+
     Object.entries(counts).forEach(([text, count]) => {
         const b = document.createElement("button");
-        b.className = "vote-btn"; b.innerText = `${text} (${count}x)`; 
+        b.className = "vote-btn"; 
+        b.innerText = `${text} (${count}x)`; 
         b.onclick = async () => {
             const winners = Object.keys(ans).filter(p => ans[p].trim() === text.trim());
             const pSnap = await get(ref(db, `rooms/${room}/players`));
             let players = pSnap.val() || {};
-            winners.forEach(w => { if(players[w] !== undefined) players[w] += 1; });
-            await set(ref(db, `rooms/${room}/players`), players);
-            await update(ref(db, `rooms/${room}/state`), { phase: "score", lastWin: text, scorers: winners });
-        };
-        voteArea.appendChild(b);
-    });
-}
-
-btnNext.onclick = async () => {
-    const sSnap = await get(ref(db, `rooms/${room}/state`));
-    const s = sSnap.val();
-    const nIdx = (s.qIdx !== undefined ? s.qIdx : -1) + 1;
-    if(s.gameQs && nIdx >= s.gameQs.length) return alert("Ende!");
-    await set(ref(db, `rooms/${room}/answers`), {});
-    waitMsg.innerText = "";
-    update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: nIdx, endTime: Date.now() + 21000, lastWin: "", scorers: [] });
-};
-
-btnVote.onclick = async () => {
-    const sSnap = await get(ref(db, `rooms/${room}/state`));
-    const s = sSnap.val();
-    const q = s.gameQs[s.qIdx];
-    if(q.trim().toLowerCase().startsWith("wer")) {
-        await evaluateAutoVote();
-        setTimeout(() => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); }, 500);
-    } else { update(ref(db, `rooms/${room}/state`), { phase: "vote" }); }
-};
-
-btnScore.onclick = () => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); sounds.score.play().catch(()=>{}); };
-btnEvent.onclick = () => {
-    const r = drinkRules[Math.floor(Math.random()*drinkRules.length)];
-    update(ref(db, `rooms/${room}/state/event`), { text: r, ts: Date.now() });
-};
-btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
-btnSend.onclick = () => {
-    const v = document.getElementById("ansInp").value;
-    if(!v || v === "") return;
-    set(ref(db, `rooms/${room}/answers/${user}`), v.trim());
-    inputArea.style.display = "none"; waitMsg.innerText = "✅ Gesendet!";
-    sounds.send.play().catch(()=>{});
-};
-btnPlayer.onclick = () => start(false);
-btnHost.onclick = () => start(true);
-</script>
-</body>
-</html>
+            
+            winners.forEach(w => { if(
