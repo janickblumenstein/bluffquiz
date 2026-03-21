@@ -16,9 +16,8 @@
         .btn-danger { background:#e74c3c; color:white; font-size: 0.8rem; }
         
         #qDisplay { font-size:1.5rem; color:var(--gold); margin:20px 0; font-weight:bold; min-height: 50px; line-height: 1.2; }
-        #waitMsg { color: var(--gold); font-weight: bold; margin: 10px 0; font-size: 1.4rem; }
+        #waitMsg { color: #e74c3c; font-weight: bold; margin: 10px 0; font-size: 1.6rem; }
         
-        /* Die große Rangliste (Phase) */
         .score-item { 
             display:flex; justify-content:space-between; 
             background: rgba(255,255,255,0.05);
@@ -29,7 +28,6 @@
         @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .rank-1 { border: 2px solid var(--gold); background: rgba(255, 204, 0, 0.15); }
 
-        /* Die Live-Rangliste (Dauerhaft unten) */
         #liveScore { margin-top: 30px; padding-top: 15px; border-top: 1px dashed #555; text-align: left; font-size: 0.9rem; }
         .live-item { display: flex; justify-content: space-between; padding: 4px 0; opacity: 0.8; }
         
@@ -42,7 +40,7 @@
 <body>
 
 <div class="card">
-    <h2>🍺 BIERKULTUR</h2>
+    <h2>🍺 BIERKULTUR GV26</h2>
     
     <div id="loginSection">
         <input id="nameInp" placeholder="Dein Name">
@@ -53,7 +51,7 @@
 
     <div id="gameSection" style="display:none">
         <div id="hostControls" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
-            <button id="btnNext">Nächste Frage</button>
+            <button id="btnNext">Nächste Zufallsfrage</button>
             <button id="btnVote">Voting starten</button>
             <button id="btnScore" class="btn-score">🏆 Rangliste enthüllen</button>
             <button id="btnEvent" class="btn-event">🎲 TRINK-EVENT</button>
@@ -63,7 +61,6 @@
         <div id="qDisplay">Warten auf Host...</div>
         <div id="waitMsg"></div>
 
-        <!-- Bereiche für die verschiedenen Phasen -->
         <div id="inputArea" style="display:none">
             <input id="ansInp" placeholder="Deine Antwort...">
             <button id="btnSend">Senden</button>
@@ -71,7 +68,6 @@
         <div id="voteArea" style="display:none"></div>
         <div id="bigScoreArea" style="display:none"></div>
 
-        <!-- Die dauerhafte Live-Rangliste -->
         <div id="liveScore">
             <small style="opacity:0.5">Live-Stand:</small>
             <div id="liveScoreList"></div>
@@ -89,7 +85,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSy...", 
+    apiKey: "AIzaSy...", // DEIN KEY
     authDomain: "bierkultur-d2fea.firebaseapp.com",
     databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
     projectId: "bierkultur-d2fea"
@@ -98,38 +94,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const questions = [
-    "Wer eskaliert heute als Erster?",
-    "Neue Funktion bei WhatsApp:",
-    "Wer bringt am meisten Chaos auf Partys?",
-    "Wer wird neuer Präsident?",
-    "Was steht auf deinem Grabstein?",
-    "Wer vergisst ständig Geburtstage?",
-    "Wer hat die schönste Frau?",
-    "Wer hat die peinlichsten Fotos?",
-    "Neuer Tinder Premium Vorteil:",
-    "Was passiert nach der GV wirklich?",
-    "Wer macht die Finanzkontrolle (Revisor)?",
-    "Wofür steht IKEA?",
-    "Was sagt man nach richtig schlechtem Sex?",
-    "Definiere: Bier-Notfall",
-    "Welches Mitglied hat die schwächste Blase?",
-    "Wer würde im Urlaub am meisten übertreiben?",
-    "Wer kann am schlechtesten lügen?",
-    "Wer wird als Nächstes heiraten?",
-    "Was ist der wahre Grund deiner Teilnahme?",
-    "Wer hat keinen Rollkoffer?",
-    "Wer hat den tollsten Schnauzer?",
-    "Ein Dampfschiff ist weniger schwer als:",
-    "Bierkultur Zofingen wird in 10 Jahren:",
-    "Wer wird am ehesten Grosspapa?",
-    "Wer würde im Notfall am schnellsten wegrennen?",
-"Wer wird als Nächstes Millionär?",
-"Wer verschläft am häufigsten?",
-"Wer hat die schlimmsten Jugendsünden?"
+const baseQuestions = [
+    "Wer eskaliert heute als Erster?", "Neue Funktion bei WhatsApp:", "Wer bringt am meisten Chaos auf Partys?",
+    "Wer wird neuer Präsident?", "Was steht auf deinem Grabstein?", "Wer vergisst ständig Geburtstage?",
+    "Wer hat die schönste Frau?", "Wer hat die peinlichsten Fotos?", "Neuer Tinder Premium Vorteil:",
+    "Was passiert nach der GV wirklich?", "Wer macht die Finanzkontrolle?", "Wofür steht IKEA?",
+    "Was sagt man nach richtig schlechtem Sex?", "Definiere: Bier-Notfall", "Welches Mitglied hat die schwächste Blase?",
+    "Wer würde im Urlaub am meisten übertreiben?", "Wer kann am schlechtesten lügen?", "Wer wird als Nächstes heiraten?",
+    "Was ist der wahre Grund deiner Teilnahme?", "Wer hat keinen Rollkoffer?", "Wer hat den tollsten Schnauzer?",
+    "Ein Dampfschiff ist weniger schwer als:", "Bierkultur Zofingen wird in 10 Jahren:", "Wer wird am ehesten Grosspapa?",
+    "Wer würde im Notfall am schnellsten wegrennen?", "Wer wird als Nächstes Millionär?", "Wer verschläft am häufigsten?",
+    "Wer hat die schlimmsten Jugendsünden?","Wer von uns hilt am meisten im Verein mit?","Wer von uns hat am meisten von unserem Bier gekauft?"
 ];
 
-const drinkRules = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!", "Alle tauschen Glas!"];
+const drinkRules = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!","ELITEN-TRINKEN! 👑 Die Top 3 der Rangliste trinken","PROST PRÄSIDENT! Der Präsi trinkt","PROST PRÄSIDENT! Alle trinken auf den Präsi"];
 const sounds = {
     send: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"),
     event: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
@@ -138,6 +116,8 @@ const sounds = {
 };
 
 let user, room, isH = false, lastEventTs = 0, timerInt = null, joinTime = Date.now();
+
+function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
 
 function unlockAudio() {
     Object.values(sounds).forEach(s => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {}); });
@@ -153,7 +133,10 @@ async function start(hostMode) {
     if(hostMode) {
         isH = true;
         await remove(ref(db, `rooms/${room}`));
-        await update(ref(db, `rooms/${room}/state`), { host: user, phase: "lobby", qIdx: -1 });
+        const shuffled = shuffle([...baseQuestions]);
+        await update(ref(db, `rooms/${room}/state`), { 
+            host: user, phase: "lobby", qIdx: -1, gameQs: shuffled 
+        });
     }
 
     const pRef = ref(db, `rooms/${room}/players/${user}`);
@@ -166,18 +149,17 @@ async function start(hostMode) {
 }
 
 function sync() {
-    // 1. Phasen & Timer Sync
     onValue(ref(db, `rooms/${room}/state`), snap => {
         const d = snap.val(); if(!d) return;
 
         inputArea.style.display = "none";
         voteArea.style.display = "none";
         bigScoreArea.style.display = "none";
-        liveScore.style.display = "block"; // Live-Score ist standardmäßig da
+        liveScore.style.display = "block";
 
         if(d.phase === "lobby") { qDisplay.innerText = "Warten auf Host..."; } 
         else if(d.phase === "answer") {
-            qDisplay.innerText = questions[d.qIdx % questions.length];
+            qDisplay.innerText = d.gameQs ? d.gameQs[d.qIdx] : "Keine Fragen mehr!";
             if (!waitMsg.innerText.includes("✅")) inputArea.style.display = "block";
         } 
         else if(d.phase === "vote") {
@@ -188,7 +170,7 @@ function sync() {
         else if(d.phase === "score") {
             qDisplay.innerText = "🏆 Zwischenstand";
             bigScoreArea.style.display = "block";
-            liveScore.style.display = "none"; // Live-Score weg, wenn große Liste da ist
+            liveScore.style.display = "none";
             waitMsg.innerText = "";
             loadBigScores();
         }
@@ -197,8 +179,11 @@ function sync() {
         if(d.phase === "answer" && d.endTime) {
             timerInt = setInterval(() => {
                 const diff = Math.ceil((d.endTime - Date.now()) / 1000);
-                if(diff <= 0) { clearInterval(timerInt); waitMsg.innerText = "⏱️ Zeit um!"; inputArea.style.display = "none"; }
-                else { waitMsg.innerText = "⏳ " + diff + "s"; }
+                if(diff <= 0) { 
+                    clearInterval(timerInt); 
+                    waitMsg.innerText = "⏱️ Zeit um!"; 
+                    inputArea.style.display = "none";
+                } else { waitMsg.innerText = "⏳ " + diff + "s"; }
             }, 1000);
         }
 
@@ -211,13 +196,10 @@ function sync() {
         }
     });
 
-    // 2. Kontinuierlicher Live-Score Sync (unten)
     onValue(ref(db, `rooms/${room}/players`), snap => {
         const p = snap.val() || {};
         const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
-        liveScoreList.innerHTML = sorted.map(([n, s]) => `
-            <div class="live-item"><span>${n}</span><span>${s} Pkt.</span></div>
-        `).join("");
+        liveScoreList.innerHTML = sorted.map(([n, s]) => `<div class="live-item"><span>${n}</span><span>${s} Pkt.</span></div>`).join("");
     });
 }
 
@@ -244,8 +226,7 @@ async function loadVotes() {
         b.innerText = t;
         b.onclick = async () => {
             const pRef = ref(db, `rooms/${room}/players/${n}`);
-            const pVal = (await get(pRef)).val() || 0;
-            update(ref(db, `rooms/${room}/players`), { [n]: pVal + 1 });
+            update(ref(db, `rooms/${room}/players`), { [n]: ((await get(pRef)).val() || 0) + 1 });
             voteArea.innerHTML = "✅ Stimme gezählt!";
         };
         voteArea.appendChild(b);
@@ -254,11 +235,19 @@ async function loadVotes() {
 
 btnNext.onclick = async () => {
     const s = (await get(ref(db, `rooms/${room}/state`))).val();
+    const nextIdx = (s.qIdx !== undefined ? s.qIdx : -1) + 1;
+    if(s.gameQs && nextIdx >= s.gameQs.length) return alert("Alle Fragen durch!");
+    
     await set(ref(db, `rooms/${room}/answers`), {});
     waitMsg.innerText = "";
-    update(ref(db, `rooms/${room}/state`), { phase: "answer", qIdx: (s.qIdx || 0) + 1, endTime: Date.now() + 31000 });
+    update(ref(db, `rooms/${room}/state`), { 
+        phase: "answer", 
+        qIdx: nextIdx, 
+        endTime: Date.now() + 8000 // 7 Sek + 1 Sek Puffer
+    });
     sounds.next.play().catch(() => {});
 };
+
 btnVote.onclick = () => update(ref(db, `rooms/${room}/state`), { phase: "vote" });
 btnScore.onclick = () => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); sounds.score.play().catch(() => {}); };
 btnEvent.onclick = () => {
