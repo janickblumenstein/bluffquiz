@@ -10,16 +10,17 @@
         .card { max-width:420px; margin:auto; background:var(--grey); padding:20px; border-radius:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
         input, button, select { width:100%; padding:15px; margin:8px 0; border-radius:10px; border:none; font-size:16px; box-sizing: border-box; }
         button { background:var(--gold); font-weight:bold; cursor:pointer; }
+        select { background: white; color: black; height: 50px; }
         .btn-host { background:var(--blue); color:white; }
         .btn-score { background:var(--green); color:white; }
+        .btn-danger { background:var(--red); color:white; font-size: 0.8rem; margin-top: 20px; }
         
         #qDisplay { font-size:1.5rem; color:var(--gold); margin:15px 0; font-weight:bold; min-height: 50px; }
-        #waitMsg { color: var(--red); font-weight: bold; font-size: 1.4rem; margin: 10px 0; }
+        #waitMsg { color: var(--red); font-weight: bold; font-size: 1.5rem; margin: 10px 0; }
         
-        /* Neues Feedback-Banner */
+        /* Ergebnis-Banner */
         #resBanner { background: rgba(0,0,0,0.4); border: 2px solid var(--gold); border-radius: 10px; padding: 15px; margin: 10px 0; display: none; }
-        .win-text { font-size: 1.2rem; color: var(--gold); display: block; margin-bottom: 5px; }
-        .win-info { font-size: 0.9rem; opacity: 0.9; }
+        .win-text { font-size: 1.3rem; color: var(--gold); display: block; font-weight: bold; }
 
         .score-item { 
             display:flex; justify-content:space-between; align-items:center;
@@ -31,6 +32,7 @@
 
         #liveScore { margin-top: 20px; padding-top: 10px; border-top: 1px dashed #555; text-align: left; }
         .vote-btn { background:#222; color:white; border:1px solid var(--gold); margin:5px 0; padding:12px; text-align:left; width: 100%; border-radius: 10px; }
+        
         #eventOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; }
         .beer-spin { font-size:5rem; animation:spin 2s infinite linear; }
         @keyframes spin {100% {transform:rotate(360deg);}}
@@ -50,17 +52,17 @@
     <div id="gameSection" style="display:none">
         <div id="hostControls" style="display:none">
             <button id="btnNext">Nächste Frage</button>
-            <button id="btnVote">Auswerten</button>
+            <button id="btnVote">Voting / Auswerten</button>
             <button id="btnScore" class="btn-score">🏆 Rangliste</button>
-            <button id="btnEvent" style="background:#9b59b6; color:white;">🎲 EVENT</button>
+            <button id="btnEvent" style="background:#9b59b6; color:white;">🎲 TRINK-EVENT</button>
+            <button id="btnReset" class="btn-danger">Spiel Reset</button>
         </div>
 
         <div id="qDisplay">Warten...</div>
         <div id="waitMsg"></div>
 
-        <!-- Ergebnis Feedback -->
         <div id="resBanner">
-            <span class="win-info">Das Ergebnis:</span>
+            <small style="opacity:0.7">Das Ergebnis dieser Runde:</small>
             <span id="winName" class="win-text">?</span>
             <div id="personalFeedback" style="font-weight:bold; margin-top:8px;"></div>
         </div>
@@ -108,7 +110,13 @@ const baseQuestions = [
     "Wer hat die schlimmsten Jugendsünden?","Wer von uns hilt am meisten im Verein mit?","Wer von uns hat am meisten von unserem Bier gekauft?"
 ];
 
-let user, room, isH = false, lastEventTs = 0, timerInt = null, joinTime = Date.now();
+const sounds = {
+    send: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"),
+    event: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"),
+    score: new Audio("https://assets.mixkit.co/sfx/preview/mixkit-animated-small-group-applause-523.mp3")
+};
+
+let user, room, isH = false, lastEventTs = 0, timerInt = null, joinTime = Date.now(), currentPlayers = [];
 
 async function start(hostMode) {
     user = nameInp.value.trim();
@@ -118,10 +126,12 @@ async function start(hostMode) {
     if(hostMode) {
         isH = true;
         await set(ref(db, `rooms/${room}/state`), { host: user, phase: "lobby", qIdx: -1, gameQs: baseQuestions.sort(() => Math.random() - 0.5) });
-        await set(ref(db, `rooms/${room}/answers`), {});
     }
     
-    await set(ref(db, `rooms/${room}/players/${user}`), 0);
+    const pRef = ref(db, `rooms/${room}/players/${user}`);
+    const snap = await get(pRef);
+    if(!snap.exists()) await set(pRef, 0);
+
     loginSection.style.display = "none";
     gameSection.style.display = "block";
     if(isH) hostControls.style.display = "block";
@@ -137,7 +147,7 @@ function sync() {
         bigScoreArea.style.display = "none";
         resBanner.style.display = (d.phase === "score" && d.lastResult) ? "block" : "none";
 
-        if(d.phase === "lobby") qDisplay.innerText = "Warten auf Start...";
+        if(d.phase === "lobby") qDisplay.innerText = "Warten auf Host...";
         else if(d.phase === "answer") {
             qDisplay.innerText = d.gameQs[d.qIdx];
             if (!waitMsg.innerText.includes("✅")) { setupInput(d.gameQs[d.qIdx]); inputArea.style.display = "block"; }
@@ -147,7 +157,7 @@ function sync() {
             qDisplay.innerText = "🏆 Ergebnisse";
             bigScoreArea.style.display = "block";
             waitMsg.innerText = "";
-            showResultFeedback(d.lastResult);
+            renderFinalScores(d.lastResult);
         }
 
         if(timerInt) clearInterval(timerInt);
@@ -155,48 +165,45 @@ function sync() {
             timerInt = setInterval(async () => {
                 const diff = Math.ceil((d.endTime - Date.now()) / 1000);
                 if(diff <= 0) { 
-                    clearInterval(timerInt); 
-                    waitMsg.innerText = "⏱️ Zeit um!"; 
-                    if(isH) autoEvaluate(d);
+                    clearInterval(timerInt); waitMsg.innerText = "⏱️ Zeit um!"; 
+                    if(isH) autoHandlePhase(d);
                 } else { waitMsg.innerText = "⏳ " + diff + "s"; }
             }, 1000);
         }
 
         if(d.event && d.event.ts > joinTime && d.event.ts !== lastEventTs) {
             lastEventTs = d.event.ts; eventText.innerText = d.event.text;
-            eventOverlay.style.display = "flex";
+            eventOverlay.style.display = "flex"; sounds.event.play().catch(()=>{});
             setTimeout(() => { eventOverlay.style.display = "none"; }, 5000);
         }
     });
 
     onValue(ref(db, `rooms/${room}/players`), snap => {
-        const p = snap.val() || {};
+        const p = snap.val() || {}; currentPlayers = Object.keys(p);
         const sorted = Object.entries(p).sort((a,b) => b[1] - a[1]);
         liveScoreList.innerHTML = "Live: " + sorted.map(([n, s]) => `${n} (${s})`).join(", ");
     });
 }
 
-async function setupInput(q) {
+function setupInput(q) {
     const area = document.getElementById("dynamicInput");
-    const pSnap = await get(ref(db, `rooms/${room}/players`));
-    const players = Object.keys(pSnap.val() || {});
     if(q.trim().toLowerCase().startsWith("wer")) {
-        let opts = players.map(p => `<option value="${p}">${p}</option>`).join("");
+        let opts = currentPlayers.map(p => `<option value="${p}">${p}</option>`).join("");
         area.innerHTML = `<select id="ansInp"><option value="">-- Wähle jemanden --</option>${opts}</select>`;
-    } else { area.innerHTML = `<input id="ansInp" placeholder="Antwort...">`; }
+    } else { area.innerHTML = `<input id="ansInp" placeholder="Deine Antwort...">`; }
 }
 
-async function autoEvaluate(d) {
+async function autoHandlePhase(d) {
     const q = d.gameQs[d.qIdx];
     if(q.trim().toLowerCase().startsWith("wer")) {
-        await processPoints(true);
+        await processEvaluation(true);
         setTimeout(() => update(ref(db, `rooms/${room}/state`), { phase: "score" }), 1000);
     } else {
         update(ref(db, `rooms/${room}/state`), { phase: "vote" });
     }
 }
 
-async function processPoints(isAuto, manualWinner = null) {
+async function processEvaluation(isAuto, manualWinTxt = null) {
     const ansSnap = await get(ref(db, `rooms/${room}/answers`));
     const answers = ansSnap.val() || {};
     let winners = [];
@@ -207,17 +214,17 @@ async function processPoints(isAuto, manualWinner = null) {
         const max = Math.max(...Object.values(counts));
         winners = Object.keys(counts).filter(k => counts[k] === max);
     } else {
-        winners = [manualWinner];
+        winners = [manualWinTxt];
     }
 
     const pSnap = await get(ref(db, `rooms/${room}/players`));
     let players = pSnap.val() || {};
     let scorers = [];
 
-    Object.keys(answers).forEach(player => {
-        if(winners.includes(answers[player])) {
-            players[player] += 1;
-            scorers.push(player);
+    Object.keys(answers).forEach(pName => {
+        if(winners.includes(answers[pName])) {
+            players[pName] += 1;
+            scorers.push(pName);
         }
     });
 
@@ -225,12 +232,12 @@ async function processPoints(isAuto, manualWinner = null) {
     await update(ref(db, `rooms/${room}/state`), { lastResult: { winners, scorers } });
 }
 
-function showResultFeedback(res) {
+function renderFinalScores(res) {
     if(!res) return;
     winName.innerText = res.winners.join(", ");
-    const gotPoint = res.scorers.includes(user);
-    personalFeedback.innerText = gotPoint ? "🎯 Punkt erhalten!" : "❌ Kein Punkt diesmal.";
-    personalFeedback.style.color = gotPoint ? "var(--green)" : "white";
+    const gotP = res.scorers.includes(user);
+    personalFeedback.innerText = gotP ? "🎯 Punkt für dich!" : "❌ Kein Punkt.";
+    personalFeedback.style.color = gotP ? "var(--green)" : "white";
 
     get(ref(db, `rooms/${room}/players`)).then(snap => {
         const p = snap.val() || {};
@@ -246,13 +253,12 @@ function showResultFeedback(res) {
 async function loadVotes() {
     const snap = await get(ref(db, `rooms/${room}/answers`));
     const ans = snap.val() || {};
-    voteArea.innerHTML = "<p>Wähle den Gewinner:</p>";
+    voteArea.innerHTML = "<p>Wähle die beste Antwort:</p>";
     [...new Set(Object.values(ans))].forEach(txt => {
         const b = document.createElement("button");
-        b.className = "vote-btn";
-        b.innerText = txt;
+        b.className = "vote-btn"; b.innerText = txt;
         b.onclick = async () => {
-            await processPoints(false, txt);
+            await processEvaluation(false, txt);
             update(ref(db, `rooms/${room}/state`), { phase: "score" });
         };
         voteArea.appendChild(b);
@@ -268,20 +274,21 @@ btnNext.onclick = async () => {
 
 btnVote.onclick = async () => {
     const s = (await get(ref(db, `rooms/${room}/state`))).val();
-    autoEvaluate(s);
+    autoHandlePhase(s);
 };
 
-btnScore.onclick = () => update(ref(db, `rooms/${room}/state`), { phase: "score" });
+btnScore.onclick = () => { update(ref(db, `rooms/${room}/state`), { phase: "score" }); sounds.score.play().catch(()=>{}); };
 btnEvent.onclick = () => {
-    const r = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter Platz trinkt!"];
+    const r = ["ALLE TRINKEN! 🍻", "Host verteilt 3 Schlucke!", "Brillenträger trinken!", "Letzter trinkt!", "Top 3 trinken! 👑"];
     update(ref(db, `rooms/${room}/state/event`), { text: r[Math.floor(Math.random()*r.length)], ts: Date.now() });
 };
-btnReset.onclick = () => { if(confirm("Reset?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
+btnReset.onclick = () => { if(confirm("Spiel wirklich löschen?")) remove(ref(db, `rooms/${room}`)).then(()=>location.reload()); };
 btnSend.onclick = () => {
     const v = document.getElementById("ansInp").value;
     if(!v) return;
     set(ref(db, `rooms/${room}/answers/${user}`), v.trim());
     inputArea.style.display = "none"; waitMsg.innerText = "✅ Gesendet!";
+    sounds.send.play().catch(()=>{});
 };
 btnPlayer.onclick = () => start(false);
 btnHost.onclick = () => start(true);
