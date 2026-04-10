@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mallorca 2026 V5</title>
+<title>Mallorca 2026 V6</title>
 <style>
 :root{--gold:#ffcc00;--dark:#0f0f12;--bg:#14141a;--card:#1e1e26;--card2:#2a2a34;--muted:#8a8a95;--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--purple:#9b59b6;--orange:#e67e22;--border:#2e2e38}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -116,7 +116,7 @@ button:disabled{opacity:.4}
 <div id="login" class="wrap">
   <div class="card" style="margin-top:40px;text-align:center">
     <h1 style="color:var(--gold);font-size:1.6rem;margin-bottom:4px">BIERKULTUR</h1>
-    <div class="sub" style="margin-bottom:20px">Mallorca 26 · V5</div>
+    <div class="sub" style="margin-bottom:20px">Mallorca 26 · V6</div>
     <input id="nameInp" placeholder="Dein Name" maxlength="20">
     <input id="roomInp" placeholder="Code" value="MALLE26">
     <button id="btnJoin">Beitreten</button>
@@ -182,7 +182,7 @@ button:disabled{opacity:.4}
   <div id="tabMissions" class="tabPane hidden">
     <div class="card">
       <h2>Missionen</h2>
-      <div class="sub">Solo = erste Person kriegts. Gruppe = alle die mitmachen kriegen Punkte. 2 Bestaetigungen noetig.</div>
+      <div class="sub">Einmalig = nur eine Person. Mehrmalig = jeder kann sie einmal erfuellen. 2 Bestaetigungen noetig.</div>
       <div id="missionsList"></div>
     </div>
     <div class="card">
@@ -191,8 +191,8 @@ button:disabled{opacity:.4}
       <input id="newMissionDesc" placeholder="Beschreibung (optional)">
       <div class="row">
         <select id="newMissionType">
-          <option value="solo">Solo (erste Person)</option>
-          <option value="group">Gruppe (alle die mitmachen)</option>
+          <option value="once">Einmalig (erste Person)</option>
+          <option value="multi">Mehrmalig (jeder kann sie einmal erfuellen)</option>
         </select>
         <select id="newMissionPoints">
           <option value="2">2 Pkt</option>
@@ -214,8 +214,6 @@ button:disabled{opacity:.4}
     <div id="hostControls" class="hidden">
       <div class="card">
         <h3>Offizielle Runde starten</h3>
-        <button class="btn-purple" data-start="quiz-who">Wer-Frage (einzeln)</button>
-        <button class="btn-purple" data-start="quiz-text">Text-Frage (mit Voting)</button>
         <button class="btn-gold" data-start="quiz-multi-3">🎯 Quiz: 3 Fragen gemischt</button>
         <button class="btn-gold" data-start="quiz-multi-5">🎯 Quiz: 5 Fragen gemischt</button>
         <button class="btn-gold" data-start="quiz-multi-10">🎯 Quiz: 10 Fragen gemischt</button>
@@ -235,19 +233,19 @@ button:disabled{opacity:.4}
         <button class="btn-red" data-cityvote="neg1">Modus: 1 Negativ-Stimme</button>
         <button class="btn-orange" data-cityvote="duel">Modus: Duell (waehle 2)</button>
         <button class="btn-purple" data-cityvote="ko">Modus: K.O. (eine fliegt)</button>
-        <button class="btn-blue" data-cityvote="bribe">Modus: Bribe (mit Tokens)</button>
         <button id="endCityVote" class="btn-purple">Voting beenden &amp; auswerten</button>
         <hr>
         <input id="newCity" placeholder="Stadt hinzufuegen...">
         <button id="addCity" class="btn-green">Stadt hinzufuegen</button>
       </div>
       <div class="card">
-        <h3>Tokens verteilen</h3>
-        <div class="sub">Gib einem Spieler einen Bonus-Token (z.B. fuer Off-App-Sieg)</div>
+        <h3>Tokens &amp; Punkte verteilen</h3>
+        <div class="sub">Host kann Bonus-Stimmen oder direkte Punkte vergeben (z.B. fuer Off-App-Siege)</div>
         <select id="tokenPlayer"></select>
+        <button class="btn-green" id="giveBonusVote">+1 Bonus-Stadt-Stimme</button>
         <div class="row">
-          <button class="btn-green" id="giveBonusVote">+1 Bonus-Stadt-Stimme</button>
-          <button class="btn-gold" id="giveBribe">+1 Bribe-Token</button>
+          <input id="hostPointAmt" type="number" placeholder="Punkte" value="5">
+          <button class="btn-gold" id="giveHostPoints">+Pkt geben</button>
         </div>
       </div>
       <div class="card">
@@ -344,18 +342,18 @@ const DRINK_RULES = [
   "Wer als letztes Salud sagt trinkt"
 ];
 const DEFAULT_MISSIONS = [
-  {title:"Gruppenfoto mit Einheimischem",desc:"Charmant fragen ob er aufs Foto will",points:10,type:"group"},
-  {title:"Paella zusammen essen",desc:"Mind. ein Teller pro Person geteilt",points:5,type:"group"},
-  {title:"Bestellen komplett auf Spanisch",desc:"Ohne ein englisches Wort",points:5,type:"solo"},
-  {title:"3 verschiedene Bars an einem Tag",desc:"Alle zusammen",points:10,type:"group"},
-  {title:"Sonnenuntergangs-Gruppenfoto",desc:"Am Meer, alle drauf",points:5,type:"group"},
-  {title:"Barkeeper zum Lachen gebracht",desc:"Joke, Story, egal wie",points:5,type:"solo"},
-  {title:"Alle mit Hut gleichzeitig",desc:"Foto als Beweis",points:10,type:"group"},
-  {title:"Tanzen im Club",desc:"Die ganze Gruppe auf der Tanzflaeche",points:10,type:"group"},
-  {title:"Im Meer baden",desc:"Komplett rein, nicht nur Fuesse",points:5,type:"solo"},
-  {title:"Nachtschwimmen",desc:"Nach Mitternacht im Meer",points:20,type:"group"},
-  {title:"Kuriose Sehenswuerdigkeit besucht",desc:"Etwas Untouristisches",points:10,type:"group"},
-  {title:"Mit Einheimischen angestossen",desc:"Salud!",points:5,type:"solo"}
+  {title:"Gruppenfoto mit Einheimischem",desc:"Charmant fragen ob er aufs Foto will",points:10,type:"once"},
+  {title:"Paella zusammen essen",desc:"Mind. ein Teller pro Person geteilt",points:5,type:"once"},
+  {title:"Bestellen komplett auf Spanisch",desc:"Ohne ein englisches Wort",points:5,type:"multi"},
+  {title:"3 verschiedene Bars an einem Tag",desc:"Alle zusammen",points:10,type:"once"},
+  {title:"Sonnenuntergangs-Gruppenfoto",desc:"Am Meer, alle drauf",points:5,type:"once"},
+  {title:"Barkeeper zum Lachen gebracht",desc:"Joke, Story, egal wie",points:5,type:"multi"},
+  {title:"Alle mit Hut gleichzeitig",desc:"Foto als Beweis",points:10,type:"once"},
+  {title:"Tanzen im Club",desc:"Die ganze Gruppe auf der Tanzflaeche",points:10,type:"once"},
+  {title:"Im Meer baden",desc:"Komplett rein, nicht nur Fuesse",points:5,type:"multi"},
+  {title:"Nachtschwimmen",desc:"Nach Mitternacht im Meer",points:20,type:"once"},
+  {title:"Kuriose Sehenswuerdigkeit besucht",desc:"Etwas Untouristisches",points:10,type:"once"},
+  {title:"Mit Einheimischen angestossen",desc:"Salud!",points:5,type:"multi"}
 ];
 const DEFAULT_CITIES = ["Lissabon","Prag","Krakau","Budapest","Valencia","Porto","Sevilla","Neapel","Belgrad"];
 
@@ -407,7 +405,14 @@ async function seedDefaults(){
   await set(ref(db,`rooms/${room}/cities/list`),cityObj);
   const mObj={};
   DEFAULT_MISSIONS.forEach((m,i)=>{
-    mObj["m_"+i]={...m,createdBy:"System",done:false,claimedBy:m.type==="group"?{}:null,confirmedBy:[],vetoedBy:[]};
+    // structure:
+    //  once: claimedBy=string|null, confirmedBy=[], done=bool
+    //  multi: completed={player:{confirmedBy:[],done:bool}}
+    if(m.type==="multi"){
+      mObj["m_"+i]={...m,createdBy:"System",completed:{}};
+    } else {
+      mObj["m_"+i]={...m,createdBy:"System",done:false,claimedBy:null,confirmedBy:[],vetoedBy:[]};
+    }
   });
   await set(ref(db,`rooms/${room}/missions`),mObj);
 }
@@ -459,6 +464,36 @@ function attach(){
     $("overlayText").innerText=e.text;
     $("overlay").classList.add("show");
   });
+  onValue(ref(db,`rooms/${room}/notifications`),snap=>{
+    const n=snap.val()||{};
+    for(const [key,notif] of Object.entries(n)){
+      if(notif.to!==user) continue;
+      if(notif.shown) continue;
+      toast(notif.text,4000);
+      set(ref(db,`rooms/${room}/notifications/${key}/shown`),true);
+      // cleanup after 10s
+      setTimeout(()=>remove(ref(db,`rooms/${room}/notifications/${key}`)),10000);
+    }
+  });
+  onValue(ref(db,`rooms/${room}/hostRequest`),snap=>{
+    const req=snap.val(); if(!req||req.from===user) return;
+    if(!isHost) return;
+    if(confirm(`${req.from} moechte Host uebernehmen. Erlauben?`)){
+      update(ref(db,`rooms/${room}/meta`),{host:req.from}).then(()=>{
+        remove(ref(db,`rooms/${room}/hostRequest`));
+        toast(`Host an ${req.from} uebergeben`);
+      });
+    } else {
+      remove(ref(db,`rooms/${room}/hostRequest`));
+    }
+  });
+  onValue(ref(db,`rooms/${room}/tournamentSetup`),snap=>{
+    state.tournamentSetup=snap.val();
+    if(state.tournamentSetup) {
+      switchTab("Games");
+      renderTournamentSetup();
+    }
+  });
   onValue(ref(db,`rooms/${room}/tournament`),snap=>{
     const wasActive=state.tournament&&state.tournament.active;
     state.tournament=snap.val();
@@ -502,7 +537,11 @@ function bindUI(){
   document.querySelectorAll("[data-cityvote]").forEach(b=>{
     b.onclick=()=>startCityVote(b.dataset.cityvote);
   });
-  $("btnTakeHost").onclick=()=>update(ref(db,`rooms/${room}/meta`),{host:user});
+  $("btnTakeHost").onclick=async()=>{
+    if(!confirm("Host-Anfrage senden? Der aktuelle Host muss bestaetigen.")) return;
+    await set(ref(db,`rooms/${room}/hostRequest`),{from:user,ts:Date.now()});
+    toast("Anfrage gesendet");
+  };
   $("bingoDealAll").onclick=bingoDealAll;
   $("addCity").onclick=addCity;
   $("endCityVote").onclick=endCityVote;
@@ -512,7 +551,15 @@ function bindUI(){
   $("addMission").onclick=addMission;
   $("bingoGetCard").onclick=requestNewBingoCard;
   $("giveBonusVote").onclick=()=>giveToken("bonusVotes");
-  $("giveBribe").onclick=()=>giveToken("bribes");
+  const ghp=$("giveHostPoints");
+  if(ghp) ghp.onclick=async()=>{
+    if(!isHost) return;
+    const p=$("tokenPlayer").value; if(!p) return;
+    const amt=parseInt($("hostPointAmt").value)||0;
+    if(amt===0) return;
+    await awardScore(p,amt);
+    toast(`${amt>0?'+':''}${amt} Pkt an ${p}`);
+  };
   document.querySelectorAll("[data-solo]").forEach(b=>{
     b.onclick=()=>startSolo(b.dataset.solo);
   });
@@ -538,9 +585,29 @@ function renderTokens(){
   const me=players[user]||{};
   const html=[];
   if(me.bonusVotes) html.push(`<span class="token bonus">⭐ ${me.bonusVotes}x Bonus-Stadt-Stimme</span>`);
-  if(me.bribes) html.push(`<span class="token">💰 ${me.bribes}x Bribe-Token</span>`);
-  if(!html.length) html.push('<div class="sub">Keine Tokens. Gewinne Spiele oder erhalte sie vom Host.</div>');
-  $("myTokens").innerHTML=html.join(" ");
+  html.push(`<div style="margin-top:10px"><b>Punkte verschenken:</b><div class="sub">Du kannst deine Punkte an andere Spieler verschenken (z.B. als Bribe).</div></div>`);
+  const others=Object.keys(players).filter(p=>p!==user);
+  html.push(`<div class="row"><select id="giftTarget">${others.map(p=>`<option value="${p}">${p}</option>`).join("")}</select><input id="giftAmount" type="number" placeholder="Pkt" style="max-width:80px"></div>`);
+  html.push(`<button class="btn-purple" id="giftSend">💝 Punkte senden</button>`);
+  if(!me.bonusVotes) html[0]='';
+  $("myTokens").innerHTML=html.filter(Boolean).join(" ");
+  const gs=$("giftSend"); if(gs) gs.onclick=giftPoints;
+}
+
+async function giftPoints(){
+  const target=$("giftTarget").value;
+  const amt=parseInt($("giftAmount").value);
+  if(!target||!amt||amt<=0) return;
+  const me=players[user]||{};
+  if((me.score||0)<amt) return alert("Nicht genug Punkte!");
+  await awardScore(user,-amt);
+  await awardScore(target,amt);
+  // notification
+  await set(ref(db,`rooms/${room}/notifications/${target}_${Date.now()}`),{
+    to:target,from:user,text:`💝 ${user} hat dir ${amt} Punkte geschenkt!`,ts:Date.now()
+  });
+  $("giftAmount").value="";
+  toast(`${amt} Pkt an ${target} geschickt`);
 }
 
 function renderTokenSelect(){
@@ -604,7 +671,14 @@ function renderOfficial(){
   clearTimers();
   const o=state.official;
   const t=state.tournament;
+  const setup=state.tournamentSetup;
   const panel=$("officialPanel");
+
+  if(setup){
+    panel.classList.remove("hidden");
+    renderTournamentSetup();
+    return;
+  }
 
   if(t && t.active){
     panel.classList.remove("hidden");
@@ -709,12 +783,14 @@ async function sendOfficial(){
 }
 
 async function evalOfficial(){
-  const o=state.official; if(!o) return;
+  // ALWAYS read fresh from DB to avoid stale closures (bug fix)
+  const oSnap=await get(ref(db,`rooms/${room}/official`));
+  const o=oSnap.val(); if(!o){ toast("Keine aktive Runde"); return; }
   let resultHtml="";
   // local award helper that respects quiz-multi mode
   const award=async(p,pts)=>{
     if(o.quizMulti) await awardQuizPoints(p,Math.max(1,Math.round(pts/2)));
-    else await award(p,pts);
+    else await awardScore(p,pts);
   };
 
   if(o.type==="quiz-who"){
@@ -905,28 +981,59 @@ async function finalizeQuizMulti(){
 // === REACTION TOURNAMENT ===
 async function startTournament(gameType="reaction"){
   if(!isHost) return;
-  const participants=Object.keys(players);
-  if(participants.length<2) return alert("Mind. 2 Spieler!");
+  // Step 1: open participant picker
+  await set(ref(db,`rooms/${room}/tournamentSetup`),{
+    gameType, picks:{}, startedAt:Date.now()
+  });
+  switchTab("Games");
+}
+
+function buildBracket(participants){
+  // Proper single-elimination: only first round has real pairs.
+  // Following rounds have placeholder p1/p2 = null, filled by advanceTournament.
   const shuffled=shuffle(participants);
   const matches=[];
-  let round=1,roundPlayers=shuffled;
-  while(roundPlayers.length>1){
-    const pairs=[];
-    for(let i=0;i<roundPlayers.length;i+=2){
-      if(i+1<roundPlayers.length) pairs.push({round,p1:roundPlayers[i],p2:roundPlayers[i+1],winner:null,times:{}});
-      else pairs.push({round,p1:roundPlayers[i],p2:null,winner:roundPlayers[i],times:{},bye:true});
+  // Round 1: pair them up
+  let r1=[];
+  for(let i=0;i<shuffled.length;i+=2){
+    if(i+1<shuffled.length){
+      r1.push({round:1,p1:shuffled[i],p2:shuffled[i+1],winner:null});
+    } else {
+      // odd one out gets a bye - winner is set immediately
+      r1.push({round:1,p1:shuffled[i],p2:null,winner:shuffled[i],bye:true});
     }
-    matches.push(...pairs);
-    roundPlayers=pairs.map(p=>p.winner||"TBD");
+  }
+  matches.push(...r1);
+  // Build subsequent rounds as empty placeholders
+  let prevCount=r1.length;
+  let round=2;
+  while(prevCount>1){
+    const cnt=Math.ceil(prevCount/2);
+    for(let i=0;i<cnt;i++){
+      matches.push({round,p1:null,p2:null,winner:null});
+    }
+    prevCount=cnt;
     round++;
   }
+  // Pre-fill bye winners into round 2
+  // (handled automatically by the auto-advance in render)
+  return matches;
+}
+
+async function actuallyStartTournament(){
+  if(!isHost) return;
+  const setupSnap=await get(ref(db,`rooms/${room}/tournamentSetup`));
+  const setup=setupSnap.val(); if(!setup) return;
+  const participants=Object.keys(setup.picks||{}).filter(p=>setup.picks[p]);
+  if(participants.length<2) return alert("Mindestens 2 Teilnehmer waehlen!");
+  const matches=buildBracket(participants);
   await remove(ref(db,`rooms/${room}/official`));
+  await remove(ref(db,`rooms/${room}/tournamentSetup`));
   await set(ref(db,`rooms/${room}/tournament`),{
-    active:true,gameType,matches,
+    active:true,gameType:setup.gameType,matches,
     currentMatchIdx:findFirstUnplayedMatch(matches),
     startedAt:Date.now()
   });
-  switchTab("Games");
 }
 
 function findFirstUnplayedMatch(matches){
@@ -937,6 +1044,33 @@ function findFirstUnplayedMatch(matches){
 }
 
 let reactionState={};
+function renderTournamentSetup(){
+  const setup=state.tournamentSetup; if(!setup) return;
+  const body=$("officialBody");
+  const gameLabel=setup.gameType==="battleship"?"⚓ Schiffeversenken":"⚡ Reaktions-Test";
+  let html=`<div class="q-big">${gameLabel} Turnier</div>`;
+  html+=`<h3>Teilnehmer waehlen:</h3><div class="sub">${isHost?'Tippe Spieler an die mitmachen':'Host waehlt die Teilnehmer...'}</div>`;
+  const picks=setup.picks||{};
+  Object.keys(players).forEach(p=>{
+    const sel=picks[p];
+    html+=`<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-pick="${p}" ${isHost?'':'disabled'}>${sel?'✓ ':''}${p}</button>`;
+  });
+  const cnt=Object.values(picks).filter(Boolean).length;
+  html+=`<div class="sub">${cnt} Teilnehmer ausgewaehlt</div>`;
+  if(isHost){
+    html+=`<button class="btn-green" id="bracketGo" ${cnt<2?'disabled':''}>Turnier starten!</button>`;
+    html+=`<button class="btn-red" id="bracketCancel">Abbrechen</button>`;
+  }
+  body.innerHTML=html;
+  document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=async()=>{
+    const p=b.dataset.pick;
+    const cur=(setup.picks||{})[p];
+    await set(ref(db,`rooms/${room}/tournamentSetup/picks/${p}`),!cur);
+  });
+  const bg=$("bracketGo"); if(bg) bg.onclick=actuallyStartTournament;
+  const bc=$("bracketCancel"); if(bc) bc.onclick=()=>remove(ref(db,`rooms/${room}/tournamentSetup`));
+}
+
 function renderTournament(t){
   if(t.gameType==="battleship") return renderBattleshipTournament(t);
   const body=$("officialBody");
@@ -981,20 +1115,8 @@ function renderTournament(t){
   }
 
   const m=t.matches[idx];
-  // bye auto-advance
   if(m.bye){
-    setTimeout(async()=>{
-      const next=findFirstUnplayedMatch(t.matches);
-      // promote winner into next round
-      const updated=[...t.matches];
-      const winnerName=m.p1;
-      // find next match in bracket that needs filling
-      for(let i=idx+1;i<updated.length;i++){
-        if(!updated[i].p1){updated[i].p1=winnerName;break;}
-        if(!updated[i].p2){updated[i].p2=winnerName;break;}
-      }
-      await update(ref(db,`rooms/${room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayedMatch(updated)});
-    },800);
+    setTimeout(()=>advanceTournament(idx,m.p1),800);
     body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bracketHtml}`;
     return;
   }
@@ -1060,23 +1182,24 @@ function renderTournament(t){
   const rb=$("reactBox"); if(rb && isPlayer){
     rb.onclick=async()=>{
       const tap=Date.now();
-      if(matchData.phase==="countdown"){
+      // read fresh state to avoid stale closures
+      const freshSnap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}`));
+      const fresh=freshSnap.val()||{};
+      if(fresh.phase==="countdown"){
         // too early - opponent wins
         const opp=user===m.p1?m.p2:m.p1;
         await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"done",winner:opp,times:{[user]:"FRUEH"}});
         await advanceTournament(idx,opp);
         return;
       }
-      if(matchData.phase==="go"){
-        const reactionTime=tap-(matchData.goAt||tap);
+      if(fresh.phase==="go"){
+        const reactionTime=tap-(fresh.goAt||tap);
         await set(ref(db,`rooms/${room}/tournament/reaction/${idx}/times/${user}`),reactionTime);
-        // check if both done
         const snap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}/times`));
         const tt=snap.val()||{};
         if(tt[m.p1]!==undefined && tt[m.p2]!==undefined){
           const winner=tt[m.p1]<tt[m.p2]?m.p1:m.p2;
           await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"done",winner});
-          // host will click next, or auto-advance after delay
           setTimeout(()=>advanceTournament(idx,winner),3000);
         }
       }
@@ -1089,16 +1212,25 @@ async function advanceTournament(idx,winner){
   const snap=await get(ref(db,`rooms/${room}/tournament`));
   const t=snap.val(); if(!t) return;
   const updated=[...t.matches];
-  if(!updated[idx].winner){
-    updated[idx].winner=winner;
-    // store times if exists
+  if(updated[idx].winner && !updated[idx].bye) {
+    // already advanced; only refresh idx
+  } else {
+    if(!updated[idx].winner) updated[idx].winner=winner;
+    // store reaction times if any
     const rsnap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}/times`));
     if(rsnap.val()) updated[idx].times=rsnap.val();
-    // promote into next match
-    for(let i=idx+1;i<updated.length;i++){
-      if(updated[i].p1==="TBD"||!updated[i].p1){updated[i].p1=winner;break;}
-      if(updated[i].p2==="TBD"||!updated[i].p2){updated[i].p2=winner;break;}
-    }
+  }
+  // Find this match's position in its round
+  const myRound=updated[idx].round;
+  const sameRound=updated.filter(x=>x.round===myRound);
+  const posInRound=sameRound.indexOf(updated[idx]);
+  // Each pair (pos 0+1, 2+3, ...) feeds into one match in next round
+  const nextPosInRound=Math.floor(posInRound/2);
+  const nextRound=updated.find(x=>x.round===myRound+1 && updated.filter(y=>y.round===myRound+1).indexOf(x)===nextPosInRound);
+  if(nextRound){
+    // p1 if even, p2 if odd
+    if(posInRound%2===0) nextRound.p1=updated[idx].winner;
+    else nextRound.p2=updated[idx].winner;
   }
   await update(ref(db,`rooms/${room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayedMatch(updated)});
 }
@@ -1206,14 +1338,7 @@ function renderBattleshipTournament(t){
   }
   const m=t.matches[idx];
   if(m.bye){
-    setTimeout(async()=>{
-      const updated=[...t.matches];
-      for(let i=idx+1;i<updated.length;i++){
-        if(!updated[i].p1){updated[i].p1=m.p1;break;}
-        if(!updated[i].p2){updated[i].p2=m.p1;break;}
-      }
-      await update(ref(db,`rooms/${room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayedMatch(updated)});
-    },800);
+    setTimeout(()=>advanceTournament(idx,m.p1),800);
     body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bracketHtml}`;
     return;
   }
@@ -1575,53 +1700,78 @@ async function endCityVote(){
 function renderMissions(){
   const list=$("missionsList");
   const missions=state.missions||{};
+  // sort: once-done last; within categories by points desc
   const entries=Object.entries(missions).sort((a,b)=>{
-    if(a[1].done!==b[1].done) return a[1].done?1:-1;
+    const aDone=a[1].type==="once"?a[1].done:false;
+    const bDone=b[1].type==="once"?b[1].done:false;
+    if(aDone!==bDone) return aDone?1:-1;
     return (b[1].points||0)-(a[1].points||0);
   });
   list.innerHTML=entries.map(([id,m])=>{
-    const isGroup=m.type==="group";
-    const conf=(m.confirmedBy||[]).length;
-    const vetoes=(m.vetoedBy||[]).length;
-    const claimed=isGroup?(m.claimedBy||{}):m.claimedBy;
-    const claimers=isGroup?Object.keys(claimed||{}):(claimed?[claimed]:[]);
-    const iJoined=isGroup?!!claimers.includes(user):(claimed===user);
-    const iConfirmed=(m.confirmedBy||[]).includes(user);
-    const iVetoed=(m.vetoedBy||[]).includes(user);
-
+    const isMulti=m.type==="multi";
+    const typeTag=isMulti?'<span class="type-tag group">MEHRMALIG</span>':'<span class="type-tag solo">EINMALIG</span>';
     let actions="";
-    if(m.done){
-      actions=`<div class="sub">✅ Erledigt von ${claimers.join(", ")} · +${m.points} Pkt</div>`;
-    } else {
-      // join/leave button
-      if(isGroup){
-        if(iJoined){
-          actions+=`<button class="btn-ghost btn-sm" data-leave="${id}">Aussteigen</button> `;
-        } else {
-          actions+=`<button class="btn-green btn-sm" data-join="${id}">Mitmachen</button> `;
-        }
+
+    if(isMulti){
+      // per-player tracking
+      const completed=m.completed||{};
+      const myEntry=completed[user];
+      const doneList=Object.entries(completed).filter(([p,e])=>e&&e.done).map(([p])=>p);
+      // my action
+      if(myEntry && myEntry.done){
+        actions+=`<div class="sub">✅ Du hast es erledigt (+${m.points} Pkt)</div>`;
+      } else if(myEntry && !myEntry.done){
+        const cb=(myEntry.confirmedBy||[]).length;
+        actions+=`<div class="sub">Dein Anspruch: ${cb}/2 Bestaetigungen</div>`;
+        actions+=`<button class="btn-ghost btn-sm" data-leavemulti="${id}">Zuruecknehmen</button>`;
       } else {
-        if(claimed && claimed!==user){
-          // someone else claimed it
-        } else if(claimed===user){
-          actions+=`<button class="btn-ghost btn-sm" data-leave="${id}">Zuruecknehmen</button> `;
-        } else {
-          actions+=`<button class="btn-green btn-sm" data-join="${id}">Ich habs!</button> `;
-        }
+        actions+=`<button class="btn-green btn-sm" data-joinmulti="${id}">Ich habs!</button>`;
       }
-      // confirm/veto buttons (for non-claimers)
-      const canConfirm=claimers.length>0 && !claimers.includes(user) && !iConfirmed && !iVetoed;
-      if(canConfirm){
-        actions+=`<button class="btn-blue btn-sm" data-confirm="${id}">✓ Bestaetigen</button> `;
-        actions+=`<button class="btn-red btn-sm" data-veto="${id}">✗ Quatsch</button>`;
+      // pending claims of others needing my confirmation
+      const pendingOthers=Object.entries(completed).filter(([p,e])=>p!==user && e && !e.done && !(e.confirmedBy||[]).includes(user));
+      if(pendingOthers.length){
+        actions+='<div class="sub" style="margin-top:6px">Bestaetigen:</div>';
+        pendingOthers.forEach(([p,e])=>{
+          const cb=(e.confirmedBy||[]).length;
+          actions+=`<button class="btn-blue btn-sm" data-confirmmulti="${id}" data-target="${p}">✓ ${p} (${cb}/2)</button> `;
+          actions+=`<button class="btn-red btn-sm" data-vetomulti="${id}" data-target="${p}">✗</button> `;
+        });
       }
-      if(claimers.length>0){
-        actions+=`<div class="sub" style="margin-top:6px">Beansprucht von: ${claimers.join(", ")} · ${conf}/2 Bestaetigungen${vetoes?` · ${vetoes} Veto`:''}</div>`;
+      if(doneList.length){
+        actions+=`<div class="sub" style="margin-top:6px">Erledigt: ${doneList.join(", ")}</div>`;
       }
+      return `<div class="mission ${isMulti?'group':''}">
+        <span class="pts">${m.points} Pkt</span>
+        ${typeTag}<b>${m.title}</b>
+        ${m.desc?`<div class="desc">${m.desc}</div>`:""}
+        ${actions}
+      </div>`;
     }
 
-    const typeTag=isGroup?'<span class="type-tag group">GRUPPE</span>':'<span class="type-tag solo">SOLO</span>';
-    return `<div class="mission ${m.done?'done':''} ${isGroup?'group':''}">
+    // ONCE mode
+    const conf=(m.confirmedBy||[]).length;
+    const claimed=m.claimedBy;
+    const iClaimed=claimed===user;
+    const iConfirmed=(m.confirmedBy||[]).includes(user);
+    if(m.done){
+      actions=`<div class="sub">✅ Erledigt von ${claimed} · +${m.points} Pkt</div>`;
+    } else {
+      if(!claimed){
+        actions+=`<button class="btn-green btn-sm" data-join="${id}">Ich habs!</button> `;
+      } else if(iClaimed){
+        actions+=`<div class="sub">Dein Anspruch: ${conf}/2 Bestaetigungen</div>`;
+        actions+=`<button class="btn-ghost btn-sm" data-leave="${id}">Zuruecknehmen</button>`;
+      } else {
+        actions+=`<div class="sub">Beansprucht von: ${claimed} (${conf}/2)</div>`;
+        if(!iConfirmed){
+          actions+=`<button class="btn-blue btn-sm" data-confirm="${id}">✓ Bestaetigen</button> `;
+          actions+=`<button class="btn-red btn-sm" data-veto="${id}">✗ Quatsch</button>`;
+        } else {
+          actions+=`<div class="sub">Du hast bestaetigt</div>`;
+        }
+      }
+    }
+    return `<div class="mission ${m.done?'done':''}">
       <span class="pts">${m.points} Pkt</span>
       ${typeTag}<b>${m.title}</b>
       ${m.desc?`<div class="desc">${m.desc}</div>`:""}
@@ -1629,77 +1779,100 @@ function renderMissions(){
     </div>`;
   }).join("")||'<div class="sub">Keine Missionen</div>';
 
-  list.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinMission(b.dataset.join));
-  list.querySelectorAll("[data-leave]").forEach(b=>b.onclick=()=>leaveMission(b.dataset.leave));
-  list.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>confirmMission(b.dataset.confirm));
-  list.querySelectorAll("[data-veto]").forEach(b=>b.onclick=()=>vetoMission(b.dataset.veto));
+  // once handlers
+  list.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinOnce(b.dataset.join));
+  list.querySelectorAll("[data-leave]").forEach(b=>b.onclick=()=>leaveOnce(b.dataset.leave));
+  list.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>confirmOnce(b.dataset.confirm));
+  list.querySelectorAll("[data-veto]").forEach(b=>b.onclick=()=>vetoOnce(b.dataset.veto));
+  // multi handlers
+  list.querySelectorAll("[data-joinmulti]").forEach(b=>b.onclick=()=>joinMulti(b.dataset.joinmulti));
+  list.querySelectorAll("[data-leavemulti]").forEach(b=>b.onclick=()=>leaveMulti(b.dataset.leavemulti));
+  list.querySelectorAll("[data-confirmmulti]").forEach(b=>b.onclick=()=>confirmMulti(b.dataset.confirmmulti,b.dataset.target));
+  list.querySelectorAll("[data-vetomulti]").forEach(b=>b.onclick=()=>vetoMulti(b.dataset.vetomulti,b.dataset.target));
 }
+
 async function addMission(){
   const t=$("newMissionTitle").value.trim(); if(!t) return;
   const d=$("newMissionDesc").value.trim();
   const p=parseInt($("newMissionPoints").value);
   const type=$("newMissionType").value;
-  await set(ref(db,`rooms/${room}/missions/m_${Date.now()}`),{
-    title:t,desc:d,points:p,type,createdBy:user,
-    done:false,
-    claimedBy:type==="group"?{}:null,
-    confirmedBy:[],vetoedBy:[]
-  });
+  const base={title:t,desc:d,points:p,type,createdBy:user};
+  if(type==="multi") base.completed={};
+  else { base.done=false; base.claimedBy=null; base.confirmedBy=[]; base.vetoedBy=[]; }
+  await set(ref(db,`rooms/${room}/missions/m_${Date.now()}`),base);
   $("newMissionTitle").value=""; $("newMissionDesc").value="";
   toast("Mission hinzugefuegt");
 }
-async function joinMission(id){
+
+// ONCE handlers
+async function joinOnce(id){
   const r=ref(db,`rooms/${room}/missions/${id}`);
   const m=(await get(r)).val(); if(!m||m.done) return;
-  if(m.type==="group"){
-    const claimed=m.claimedBy||{};
-    claimed[user]=true;
-    await update(r,{claimedBy:claimed,vetoedBy:[]});
-  } else {
-    if(m.claimedBy && m.claimedBy!==user) return;
-    await update(r,{claimedBy:user,confirmedBy:[],vetoedBy:[]});
-  }
+  if(m.claimedBy) return;
+  await update(r,{claimedBy:user,confirmedBy:[],vetoedBy:[]});
 }
-async function leaveMission(id){
+async function leaveOnce(id){
   const r=ref(db,`rooms/${room}/missions/${id}`);
   const m=(await get(r)).val(); if(!m||m.done) return;
-  if(m.type==="group"){
-    const claimed=m.claimedBy||{};
-    delete claimed[user];
-    await update(r,{claimedBy:claimed,confirmedBy:[]});
-  } else {
-    if(m.claimedBy===user) await update(r,{claimedBy:null,confirmedBy:[],vetoedBy:[]});
-  }
+  if(m.claimedBy===user) await update(r,{claimedBy:null,confirmedBy:[],vetoedBy:[]});
 }
-async function confirmMission(id){
+async function confirmOnce(id){
   const r=ref(db,`rooms/${room}/missions/${id}`);
-  const m=(await get(r)).val(); if(!m||m.done) return;
+  const m=(await get(r)).val(); if(!m||m.done||!m.claimedBy) return;
   const cb=m.confirmedBy||[];
-  if(cb.includes(user)) return;
+  if(cb.includes(user)||m.claimedBy===user) return;
   cb.push(user);
   if(cb.length>=2){
     await update(r,{confirmedBy:cb,done:true});
-    if(m.type==="group"){
-      for(const p of Object.keys(m.claimedBy||{})) await awardScore(p,m.points);
-    } else {
-      if(m.claimedBy) await awardScore(m.claimedBy,m.points);
-    }
+    await awardScore(m.claimedBy,m.points);
     toast(`Mission "${m.title}" abgeschlossen!`);
   } else {
     await update(r,{confirmedBy:cb});
   }
 }
-async function vetoMission(id){
+async function vetoOnce(id){
   const r=ref(db,`rooms/${room}/missions/${id}`);
   const m=(await get(r)).val(); if(!m||m.done) return;
   if(!confirm("Veto einlegen? Der Anspruch wird zurueckgesetzt.")) return;
-  // 1 veto = reset
-  if(m.type==="group"){
-    await update(r,{claimedBy:{},confirmedBy:[],vetoedBy:[user]});
-  } else {
-    await update(r,{claimedBy:null,confirmedBy:[],vetoedBy:[user]});
-  }
+  await update(r,{claimedBy:null,confirmedBy:[],vetoedBy:[user]});
   toast("Veto - Anspruch zurueckgesetzt");
+}
+
+// MULTI handlers
+async function joinMulti(id){
+  const r=ref(db,`rooms/${room}/missions/${id}/completed/${user}`);
+  const cur=(await get(r)).val();
+  if(cur) return;
+  await set(r,{confirmedBy:[],done:false,claimedAt:Date.now()});
+}
+async function leaveMulti(id){
+  const r=ref(db,`rooms/${room}/missions/${id}/completed/${user}`);
+  const cur=(await get(r)).val();
+  if(cur && !cur.done) await remove(r);
+}
+async function confirmMulti(id,target){
+  if(target===user) return;
+  const r=ref(db,`rooms/${room}/missions/${id}/completed/${target}`);
+  const entry=(await get(r)).val();
+  if(!entry||entry.done) return;
+  const cb=entry.confirmedBy||[];
+  if(cb.includes(user)) return;
+  cb.push(user);
+  if(cb.length>=2){
+    const msnap=await get(ref(db,`rooms/${room}/missions/${id}`));
+    const m=msnap.val();
+    await update(r,{confirmedBy:cb,done:true});
+    await awardScore(target,m.points);
+    toast(`${target} hat "${m.title}" erfuellt`);
+  } else {
+    await update(r,{confirmedBy:cb});
+  }
+}
+async function vetoMulti(id,target){
+  if(!confirm(`Veto gegen ${target}? Sein Anspruch wird geloescht.`)) return;
+  const r=ref(db,`rooms/${room}/missions/${id}/completed/${target}`);
+  await remove(r);
+  toast(`Veto gegen ${target}`);
 }
 
 // === SOLO GAMES ===
