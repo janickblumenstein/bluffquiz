@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mallorca 2026 V3</title>
+<title>Mallorca 2026 V5</title>
 <style>
 :root{--gold:#ffcc00;--dark:#0f0f12;--bg:#14141a;--card:#1e1e26;--card2:#2a2a34;--muted:#8a8a95;--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--purple:#9b59b6;--orange:#e67e22;--border:#2e2e38}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -101,6 +101,14 @@ button:disabled{opacity:.4}
 .bracket .match{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #444}
 .bracket .match:last-child{border:none}
 .bracket .winner{color:var(--green);font-weight:bold}
+.bs-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin:8px 0;max-width:300px}
+.bs-cell{aspect-ratio:1;background:var(--card2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.9rem;cursor:pointer;border:1px solid #444}
+.bs-cell.ship{background:#3e5060}
+.bs-cell.hit{background:var(--red);color:#fff}
+.bs-cell.miss{background:#1a3a4a;color:#88a}
+.bs-cell.sunk{background:#000;color:var(--gold)}
+.bs-cell.disabled{cursor:not-allowed;opacity:.7}
+.bs-label{font-size:.75rem;opacity:.7;margin-bottom:3px}
 </style>
 </head>
 <body>
@@ -108,7 +116,7 @@ button:disabled{opacity:.4}
 <div id="login" class="wrap">
   <div class="card" style="margin-top:40px;text-align:center">
     <h1 style="color:var(--gold);font-size:1.6rem;margin-bottom:4px">BIERKULTUR</h1>
-    <div class="sub" style="margin-bottom:20px">Mallorca 26 · V3</div>
+    <div class="sub" style="margin-bottom:20px">Mallorca 26 · V5</div>
     <input id="nameInp" placeholder="Dein Name" maxlength="20">
     <input id="roomInp" placeholder="Code" value="MALLE26">
     <button id="btnJoin">Beitreten</button>
@@ -215,6 +223,7 @@ button:disabled{opacity:.4}
         <button class="btn-blue" data-start="duel-estimate">Duell: Schaetzen</button>
         <button class="btn-orange" data-start="group-estimate">Gruppe vs Gruppe: Schaetzen</button>
         <button class="btn-red" data-start="reaction-tournament">Reaktions-Turnier</button>
+        <button class="btn-red" data-start="battleship-tournament">⚓ Schiffeversenken-Turnier</button>
       </div>
       <div class="card">
         <h3>Bingo</h3>
@@ -451,8 +460,15 @@ function attach(){
     $("overlay").classList.add("show");
   });
   onValue(ref(db,`rooms/${room}/tournament`),snap=>{
+    const wasActive=state.tournament&&state.tournament.active;
     state.tournament=snap.val();
-    if(state.tournament && state.tournament.active) renderOfficial();
+    if(state.tournament&&state.tournament.active){
+      if(!wasActive){
+        switchTab("Games");
+        toast("⚔️ Turnier gestartet!");
+      }
+      renderOfficial();
+    }
   });
 }
 
@@ -554,7 +570,8 @@ async function awardScore(player,pts,casual=false){
 // === OFFICIAL ROUND ===
 async function startOfficial(type){
   if(!isHost) return;
-  if(type==="reaction-tournament") return startTournament();
+  if(type==="reaction-tournament") return startTournament("reaction");
+  if(type==="battleship-tournament") return startTournament("battleship");
   // Quiz multi-question mode
   if(type.startsWith("quiz-multi-")){
     const total=parseInt(type.split("-")[2]);
@@ -886,24 +903,18 @@ async function finalizeQuizMulti(){
 }
 
 // === REACTION TOURNAMENT ===
-async function startTournament(){
+async function startTournament(gameType="reaction"){
   if(!isHost) return;
-  // pick participants - simply all current players
   const participants=Object.keys(players);
   if(participants.length<2) return alert("Mind. 2 Spieler!");
-  // build single-elimination bracket
   const shuffled=shuffle(participants);
   const matches=[];
   let round=1,roundPlayers=shuffled;
   while(roundPlayers.length>1){
     const pairs=[];
     for(let i=0;i<roundPlayers.length;i+=2){
-      if(i+1<roundPlayers.length){
-        pairs.push({round,p1:roundPlayers[i],p2:roundPlayers[i+1],winner:null,times:{}});
-      } else {
-        // bye
-        pairs.push({round,p1:roundPlayers[i],p2:null,winner:roundPlayers[i],times:{},bye:true});
-      }
+      if(i+1<roundPlayers.length) pairs.push({round,p1:roundPlayers[i],p2:roundPlayers[i+1],winner:null,times:{}});
+      else pairs.push({round,p1:roundPlayers[i],p2:null,winner:roundPlayers[i],times:{},bye:true});
     }
     matches.push(...pairs);
     roundPlayers=pairs.map(p=>p.winner||"TBD");
@@ -911,12 +922,10 @@ async function startTournament(){
   }
   await remove(ref(db,`rooms/${room}/official`));
   await set(ref(db,`rooms/${room}/tournament`),{
-    active:true,
-    matches,
+    active:true,gameType,matches,
     currentMatchIdx:findFirstUnplayedMatch(matches),
     startedAt:Date.now()
   });
-  // toast handled by listener
   switchTab("Games");
 }
 
@@ -929,6 +938,7 @@ function findFirstUnplayedMatch(matches){
 
 let reactionState={};
 function renderTournament(t){
+  if(t.gameType==="battleship") return renderBattleshipTournament(t);
   const body=$("officialBody");
   const idx=t.currentMatchIdx;
 
@@ -990,7 +1000,7 @@ function renderTournament(t){
   }
 
   const isPlayer=user===m.p1||user===m.p2;
-  const matchData=(t.reaction&&t.reaction[idx])||{phase:"waiting",ready:{}};
+  const matchData=Object.assign({phase:"waiting",ready:{}},(t.reaction&&t.reaction[idx])||{});
 
   let html=`<div class="q-big">⚔️ ${m.p1} vs ${m.p2}</div>`;
 
@@ -1091,6 +1101,208 @@ async function advanceTournament(idx,winner){
     }
   }
   await update(ref(db,`rooms/${room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayedMatch(updated)});
+}
+
+// === BATTLESHIP ===
+const BS_SIZE=6, BS_SHIPS=[{name:"Estrella-Frachter",len:3},{name:"Mahou-Boot",len:2},{name:"Caña-Kahn",len:2},{name:"Shot-Glas",len:1}];
+
+function placeShipsRandom(){
+  const grid=Array(BS_SIZE*BS_SIZE).fill(null);
+  const ships=[];
+  for(const s of BS_SHIPS){
+    let placed=false,tries=0;
+    while(!placed && tries<200){
+      tries++;
+      const horiz=Math.random()<0.5;
+      const r=Math.floor(Math.random()*BS_SIZE);
+      const c=Math.floor(Math.random()*BS_SIZE);
+      const cells=[];
+      let ok=true;
+      for(let i=0;i<s.len;i++){
+        const rr=horiz?r:r+i, cc=horiz?c+i:c;
+        if(rr>=BS_SIZE||cc>=BS_SIZE){ok=false;break;}
+        const idx=rr*BS_SIZE+cc;
+        if(grid[idx]!==null){ok=false;break;}
+        cells.push(idx);
+      }
+      if(ok){
+        cells.forEach(i=>grid[i]=ships.length);
+        ships.push({name:s.name,cells,hits:[]});
+        placed=true;
+      }
+    }
+  }
+  return {ships,shotsAt:[]};
+}
+
+async function initBattleshipMatch(idx,m){
+  // host initializes both players' boards
+  if(!isHost) return;
+  const data={
+    boards:{[m.p1]:placeShipsRandom(),[m.p2]:placeShipsRandom()},
+    turn:m.p1,
+    phase:"play",
+    startedAt:Date.now()
+  };
+  await set(ref(db,`rooms/${room}/tournament/battleship/${idx}`),data);
+}
+
+async function bsFire(idx,target,cellIdx){
+  const r=ref(db,`rooms/${room}/tournament/battleship/${idx}`);
+  const snap=await get(r); const d=snap.val(); if(!d||d.phase!=="play") return;
+  if(d.turn!==user) return;
+  const board=d.boards[target]; if(!board) return;
+  if((board.shotsAt||[]).includes(cellIdx)) return;
+  const shotsAt=[...(board.shotsAt||[]),cellIdx];
+  // check hit
+  let hitShipIdx=-1;
+  board.ships.forEach((s,si)=>{if(s.cells.includes(cellIdx)) hitShipIdx=si;});
+  if(hitShipIdx>=0){
+    board.ships[hitShipIdx].hits=[...(board.ships[hitShipIdx].hits||[]),cellIdx];
+  }
+  board.shotsAt=shotsAt;
+  // check win
+  const allSunk=board.ships.every(s=>s.cells.every(c=>(s.hits||[]).includes(c)));
+  const updates={[`boards/${target}`]:board};
+  if(allSunk){
+    updates.phase="done";
+    updates.winner=user;
+  } else {
+    // switch turn only on miss; hit = same player again
+    if(hitShipIdx<0) updates.turn=target;
+  }
+  await update(r,updates);
+  if(allSunk){
+    setTimeout(()=>advanceTournament(idx,user),3000);
+  }
+}
+
+function renderBattleshipTournament(t){
+  const body=$("officialBody");
+  const idx=t.currentMatchIdx;
+  // bracket
+  let bracketHtml='<h3>Bracket</h3><div class="bracket">';
+  const byRound={};
+  t.matches.forEach((m,i)=>{(byRound[m.round]=byRound[m.round]||[]).push({...m,idx:i})});
+  Object.keys(byRound).sort().forEach(r=>{
+    bracketHtml+=`<div style="font-size:.7rem;opacity:.6;margin-top:6px">Runde ${r}</div>`;
+    byRound[r].forEach(m=>{
+      bracketHtml+=`<div class="match"><span class="${m.winner===m.p1?'winner':''}">${m.p1||'?'}</span><span>vs</span><span class="${m.winner===m.p2?'winner':''}">${m.p2||(m.bye?'(Freilos)':'?')}</span></div>`;
+    });
+  });
+  bracketHtml+='</div>';
+
+  if(idx<0){
+    const winner=t.matches[t.matches.length-1].winner;
+    let html=`<div class="q-big">⚓ Sieger: ${winner}</div>${bracketHtml}`;
+    if(isHost){
+      html+='<hr><button class="btn-green" id="rewardScore">+5 Pkt</button><button class="btn-blue" id="rewardVote">+1 Bonus-Stimme</button><button class="btn-ghost" id="closeTour">Schliessen</button>';
+    }
+    body.innerHTML=html;
+    const rs=$("rewardScore"); if(rs) rs.onclick=async()=>{await awardScore(winner,5);toast(`+5 Pkt fuer ${winner}`);remove(ref(db,`rooms/${room}/tournament`));};
+    const rv=$("rewardVote"); if(rv) rv.onclick=async()=>{const r=ref(db,`rooms/${room}/players/${winner}/bonusVotes`);const c=(await get(r)).val()||0;await set(r,c+1);toast("Bonus-Stimme!");remove(ref(db,`rooms/${room}/tournament`));};
+    const cl=$("closeTour"); if(cl) cl.onclick=()=>remove(ref(db,`rooms/${room}/tournament`));
+    return;
+  }
+  const m=t.matches[idx];
+  if(m.bye){
+    setTimeout(async()=>{
+      const updated=[...t.matches];
+      for(let i=idx+1;i<updated.length;i++){
+        if(!updated[i].p1){updated[i].p1=m.p1;break;}
+        if(!updated[i].p2){updated[i].p2=m.p1;break;}
+      }
+      await update(ref(db,`rooms/${room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayedMatch(updated)});
+    },800);
+    body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bracketHtml}`;
+    return;
+  }
+
+  const matchData=(t.battleship&&t.battleship[idx]);
+  if(!matchData){
+    body.innerHTML=`<div class="q-big">⚓ ${m.p1} vs ${m.p2}</div>${isHost?'<button class="btn-orange" id="bsInit">Match starten (Schiffe verteilen)</button>':'<div class="sub">Warte auf Host...</div>'}${bracketHtml}`;
+    const bi=$("bsInit"); if(bi) bi.onclick=()=>initBattleshipMatch(idx,m);
+    return;
+  }
+
+  // play / done
+  const isP1=user===m.p1, isP2=user===m.p2, isPlayer=isP1||isP2;
+  const me=isP1?m.p1:(isP2?m.p2:null);
+  const opp=isP1?m.p2:(isP2?m.p1:null);
+
+  let html=`<div class="q-big">⚓ ${m.p1} vs ${m.p2}</div>`;
+  if(matchData.phase==="done"){
+    html+=`<div class="flash">🏆 ${matchData.winner} gewinnt!</div>`;
+    if(isHost) html+=`<button class="btn-green" id="bsNext">Nächstes Match</button>`;
+  } else {
+    html+=`<div class="sub" style="text-align:center">Am Zug: <b>${matchData.turn}</b></div>`;
+  }
+
+  if(isPlayer){
+    // own board
+    html+='<div class="bs-label">Deine Schiffe (Gegner schiesst hier):</div><div class="bs-grid" id="bsMine">';
+    const myBoard=matchData.boards[me];
+    const myShipsByCell={};
+    myBoard.ships.forEach((s,si)=>s.cells.forEach(c=>myShipsByCell[c]=si));
+    for(let i=0;i<BS_SIZE*BS_SIZE;i++){
+      const isShip=myShipsByCell[i]!==undefined;
+      const wasShot=(myBoard.shotsAt||[]).includes(i);
+      let cls="bs-cell";
+      if(isShip && !wasShot) cls+=" ship";
+      else if(isShip && wasShot){
+        const ship=myBoard.ships[myShipsByCell[i]];
+        const sunk=ship.cells.every(c=>(ship.hits||[]).includes(c));
+        cls+=sunk?" sunk":" hit";
+      } else if(wasShot) cls+=" miss";
+      html+=`<div class="${cls}"></div>`;
+    }
+    html+='</div>';
+    // opponent board (shoot here)
+    html+=`<div class="bs-label">Gegner-Feld (klick zum Schiessen):</div><div class="bs-grid" id="bsOpp">`;
+    const oppBoard=matchData.boards[opp];
+    const myTurn=matchData.turn===me && matchData.phase==="play";
+    const oppShipsByCell={};
+    oppBoard.ships.forEach((s,si)=>s.cells.forEach(c=>oppShipsByCell[c]=si));
+    for(let i=0;i<BS_SIZE*BS_SIZE;i++){
+      const wasShot=(oppBoard.shotsAt||[]).includes(i);
+      const isShip=oppShipsByCell[i]!==undefined;
+      let cls="bs-cell";
+      if(wasShot && isShip){
+        const ship=oppBoard.ships[oppShipsByCell[i]];
+        const sunk=ship.cells.every(c=>(ship.hits||[]).includes(c));
+        cls+=sunk?" sunk":" hit";
+      } else if(wasShot) cls+=" miss";
+      if(!myTurn||wasShot) cls+=" disabled";
+      html+=`<div class="${cls}" data-bs="${i}"></div>`;
+    }
+    html+='</div>';
+  } else {
+    // spectator: show both boards small without ships hidden
+    html+='<div class="sub">Zuschauer-Modus</div>';
+    [m.p1,m.p2].forEach(p=>{
+      const b=matchData.boards[p]; if(!b) return;
+      html+=`<div class="bs-label">${p}:</div><div class="bs-grid">`;
+      const sc={};
+      b.ships.forEach((s,si)=>s.cells.forEach(c=>sc[c]=si));
+      for(let i=0;i<BS_SIZE*BS_SIZE;i++){
+        const wasShot=(b.shotsAt||[]).includes(i);
+        let cls="bs-cell";
+        if(wasShot && sc[i]!==undefined) cls+=" hit";
+        else if(wasShot) cls+=" miss";
+        html+=`<div class="${cls}"></div>`;
+      }
+      html+='</div>';
+    });
+  }
+
+  html+=bracketHtml;
+  body.innerHTML=html;
+
+  document.querySelectorAll("#bsOpp .bs-cell[data-bs]").forEach(c=>{
+    if(c.classList.contains("disabled")) return;
+    c.onclick=()=>bsFire(idx,opp,parseInt(c.dataset.bs));
+  });
+  const bn=$("bsNext"); if(bn) bn.onclick=()=>advanceTournament(idx,matchData.winner);
 }
 
 // === BINGO ===
