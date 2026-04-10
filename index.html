@@ -30,6 +30,7 @@ button:disabled{opacity:.4}
 .btn-red{background:var(--red);color:#fff}
 .btn-purple{background:var(--purple);color:#fff}
 .btn-orange{background:var(--orange);color:#fff}
+.btn-gold{background:var(--gold);color:#000;border:2px solid #fff}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:#fff}
 .btn-sm{padding:8px 12px;font-size:.8rem;width:auto;margin:2px}
 .row{display:flex;gap:8px}
@@ -205,8 +206,11 @@ button:disabled{opacity:.4}
     <div id="hostControls" class="hidden">
       <div class="card">
         <h3>Offizielle Runde starten</h3>
-        <button class="btn-purple" data-start="quiz-who">Wer-Frage</button>
+        <button class="btn-purple" data-start="quiz-who">Wer-Frage (einzeln)</button>
         <button class="btn-purple" data-start="quiz-text">Text-Frage (mit Voting)</button>
+        <button class="btn-gold" data-start="quiz-multi-3">🎯 Quiz: 3 Fragen gemischt</button>
+        <button class="btn-gold" data-start="quiz-multi-5">🎯 Quiz: 5 Fragen gemischt</button>
+        <button class="btn-gold" data-start="quiz-multi-10">🎯 Quiz: 10 Fragen gemischt</button>
         <button class="btn-blue" data-start="duel-math">Duell: Kopfrechnen</button>
         <button class="btn-blue" data-start="duel-estimate">Duell: Schaetzen</button>
         <button class="btn-orange" data-start="group-estimate">Gruppe vs Gruppe: Schaetzen</button>
@@ -350,7 +354,7 @@ const DEFAULT_CITIES = ["Lissabon","Prag","Krakau","Budapest","Valencia","Porto"
 let user,room,state={},players={},isHost=false,lastEventTs=0,lastOfficialId=null;
 let currentTab="Score";
 let timers=[];
-function clearTimers(){timers.forEach(t=>clearInterval(t));timers=[];}
+function clearTimers(){timers.forEach(t=>{clearInterval(t);clearTimeout(t)});timers=[];}
 const $=id=>document.getElementById(id);
 
 function toast(text,duration=2500){
@@ -550,8 +554,15 @@ async function awardScore(player,pts,casual=false){
 // === OFFICIAL ROUND ===
 async function startOfficial(type){
   if(!isHost) return;
-  if(type==="reaction-tournament"){
-    return startTournament();
+  if(type==="reaction-tournament") return startTournament();
+  // Quiz multi-question mode
+  if(type.startsWith("quiz-multi-")){
+    const total=parseInt(type.split("-")[2]);
+    await remove(ref(db,`rooms/${room}/tournament`));
+    await set(ref(db,`rooms/${room}/quizMulti`),{
+      total,current:0,scores:{},startedAt:Date.now()
+    });
+    return nextQuizQuestion();
   }
   let data={type,startedAt:Date.now(),answers:{},votes:{},phase:"answer",endTime:Date.now()+30000};
   if(type==="quiz-who") data.q=QUIZ_WHO[Math.floor(Math.random()*QUIZ_WHO.length)];
@@ -591,8 +602,13 @@ function renderOfficial(){
     $("officialBody").innerHTML=`
       <div class="q-big">${o.q||""}</div>
       ${o.resultHtml||`<div class="flash">${o.result||"Runde beendet"}</div>`}
-      ${isHost?'<button class="btn-ghost" id="closeOff">Schliessen</button>':'<div class="sub">Host muss schliessen</div>'}`;
+      ${isHost?`
+        ${(o.type==='quiz-who'||o.type==='quiz-text')?'<button class="btn-purple" id="nextQ">Nächste Frage (gleicher Typ)</button>':''}
+        ${o.quizMulti?'<button class="btn-gold" id="nextMultiQ">Nächste Quiz-Frage</button>':''}
+        <button class="btn-ghost" id="closeOff">Schliessen</button>`:'<div class="sub">Host muss schliessen oder weiter machen</div>'}`;
     const cb=$("closeOff"); if(cb) cb.onclick=()=>remove(ref(db,`rooms/${room}/official`));
+    const nq=$("nextQ"); if(nq) nq.onclick=()=>startOfficial(o.type);
+    const nmq=$("nextMultiQ"); if(nmq) nmq.onclick=()=>nextQuizQuestion();
     return;
   }
 
@@ -678,6 +694,11 @@ async function sendOfficial(){
 async function evalOfficial(){
   const o=state.official; if(!o) return;
   let resultHtml="";
+  // local award helper that respects quiz-multi mode
+  const award=async(p,pts)=>{
+    if(o.quizMulti) await awardQuizPoints(p,Math.max(1,Math.round(pts/2)));
+    else await award(p,pts);
+  };
 
   if(o.type==="quiz-who"){
     // count votes
@@ -691,14 +712,14 @@ async function evalOfficial(){
     const awarded={};
     for(const [voter,who] of Object.entries(o.answers||{})){
       if(winners.includes(who)){
-        await awardScore(voter,2);
+        await award(voter,2);
         awarded[voter]=(awarded[voter]||0)+2;
       }
     }
     // trostpreis: 1 pkt for the named "winner"(s) themselves
     for(const w of winners){
       if(players[w]){
-        await awardScore(w,1);
+        await award(w,1);
         awarded[w]=(awarded[w]||0)+1;
       }
     }
@@ -734,7 +755,7 @@ async function evalOfficial(){
     const awarded={};
     for(const [author,ans] of Object.entries(o.answers||{})){
       if(winTexts.includes(ans)){
-        await awardScore(author,3);
+        await award(author,3);
         awarded[author]=(awarded[author]||0)+3;
       }
     }
@@ -760,9 +781,9 @@ async function evalOfficial(){
       p,val:a.val,ts:a.ts,diff:Math.abs((a.val||0)-o.target)
     })).sort((a,b)=>a.diff-b.diff||a.ts-b.ts);
     if(entries.length){
-      await awardScore(entries[0].p,3);
+      await award(entries[0].p,3);
       // 2nd place gets 1 point
-      if(entries.length>1) await awardScore(entries[1].p,1);
+      if(entries.length>1) await award(entries[1].p,1);
     }
     let html=`<div class="flash gold">Richtige Antwort: <b>${o.target}</b></div>`;
     entries.forEach((e,i)=>{
@@ -787,7 +808,7 @@ async function evalOfficial(){
     const dA=Math.abs(avgA-o.target),dB=Math.abs(avgB-o.target);
     const win=dA<dB?"A":"B";
     for(const [p,t] of Object.entries(o.teams||{})){
-      if(t===win) await awardScore(p,3);
+      if(t===win) await award(p,3);
     }
     let html=`<div class="flash gold">Richtige Antwort: <b>${o.target}</b></div>`;
     html+=`<div class="result-row ${win==='A'?'winner':''}">
@@ -802,6 +823,66 @@ async function evalOfficial(){
     resultHtml=html;
   }
   await update(ref(db,`rooms/${room}/official`),{phase:"done",resultHtml});
+}
+
+// === QUIZ MULTI ===
+async function nextQuizQuestion(){
+  if(!isHost) return;
+  const qmSnap=await get(ref(db,`rooms/${room}/quizMulti`));
+  const qm=qmSnap.val(); if(!qm) return;
+  if(qm.current>=qm.total){
+    return finalizeQuizMulti();
+  }
+  // pick random question type and content
+  const types=["quiz-who","duel-estimate"];
+  // include text only if first or last to avoid voting fatigue
+  if(qm.current===0||qm.current===qm.total-1) types.push("quiz-text");
+  const type=types[Math.floor(Math.random()*types.length)];
+  let data={type,startedAt:Date.now(),answers:{},votes:{},phase:"answer",endTime:Date.now()+30000,quizMulti:true,qNum:qm.current+1,qTotal:qm.total};
+  if(type==="quiz-who") data.q=`Frage ${qm.current+1}/${qm.total}: ${QUIZ_WHO[Math.floor(Math.random()*QUIZ_WHO.length)]}`;
+  else if(type==="quiz-text") data.q=`Frage ${qm.current+1}/${qm.total}: ${QUIZ_TEXT[Math.floor(Math.random()*QUIZ_TEXT.length)]}`;
+  else if(type==="duel-estimate"){
+    const s=SCHAETZ[Math.floor(Math.random()*SCHAETZ.length)];
+    data.q=`Frage ${qm.current+1}/${qm.total}: ${s.q}`;
+    data.target=s.a;
+    data.endTime=Date.now()+45000;
+  }
+  await update(ref(db,`rooms/${room}/quizMulti`),{current:qm.current+1});
+  await set(ref(db,`rooms/${room}/official`),data);
+}
+
+async function awardQuizPoints(player,pts){
+  // store in quizMulti.scores instead of direct
+  const r=ref(db,`rooms/${room}/quizMulti/scores/${player}`);
+  const cur=(await get(r)).val()||0;
+  await set(r,cur+pts);
+}
+
+async function finalizeQuizMulti(){
+  const snap=await get(ref(db,`rooms/${room}/quizMulti`));
+  const qm=snap.val(); if(!qm) return;
+  const scores=qm.scores||{};
+  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  // Award: 20/12/8/3
+  const rewards=[20,12,8];
+  const awarded={};
+  sorted.forEach(([p,s],i)=>{
+    let pts=0;
+    if(i===0) pts=20;
+    else if(i===1) pts=12;
+    else if(i===2) pts=8;
+    else if(s>0) pts=3;
+    if(pts>0){ awardScore(p,pts); awarded[p]=pts; }
+  });
+  let html='<div class="flash gold"><b>🏆 Quiz beendet!</b></div>';
+  sorted.forEach(([p,s],i)=>{
+    const medal=['🥇','🥈','🥉'][i]||((i+1)+'.');
+    const pts=awarded[p]||0;
+    html+=`<div class="result-row ${i===0?'winner':''}"><span>${medal} ${p}</span><span>${s} richtig</span><strong class="plus">${pts?'+'+pts:''}</strong></div>`;
+  });
+  html+='<div class="sub">Quiz-Punkte (1-3 pro Frage) wurden in offizielle Wochenend-Punkte umgewandelt: 20/12/8/3</div>';
+  await set(ref(db,`rooms/${room}/official`),{type:"quiz-done",q:"Quiz Endergebnis",phase:"done",resultHtml:html,startedAt:Date.now()});
+  await remove(ref(db,`rooms/${room}/quizMulti`));
 }
 
 // === REACTION TOURNAMENT ===
@@ -941,26 +1022,31 @@ function renderTournament(t){
   }
   body.innerHTML=html;
 
+  // server-time based phase: when both ready, set goAt to future timestamp; clients poll
   const rd=$("reactReady"); if(rd) rd.onclick=async()=>{
     await set(ref(db,`rooms/${room}/tournament/reaction/${idx}/ready/${user}`),true);
-    // check if both ready - any client can trigger countdown
     const snap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}/ready`));
     const r=snap.val()||{};
     if(r[m.p1]&&r[m.p2]){
       const wait=1500+Math.random()*3000;
-      await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait,startedAt:Date.now()});
-      setTimeout(async()=>{
-        await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
-      },wait);
+      await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
     }
   };
   const fs=$("forceStart"); if(fs) fs.onclick=async()=>{
     const wait=1500+Math.random()*3000;
     await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
-    setTimeout(async()=>{
-      await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
-    },wait);
   };
+  // client-side timer: if in countdown and goAt passed, switch phase to go
+  if(matchData.phase==="countdown" && matchData.goAt){
+    const remaining=matchData.goAt-Date.now();
+    if(remaining<=0){
+      update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
+    } else {
+      timers.push(setTimeout(()=>{
+        update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
+      },remaining));
+    }
+  }
   const rb=$("reactBox"); if(rb && isPlayer){
     rb.onclick=async()=>{
       const tap=Date.now();
