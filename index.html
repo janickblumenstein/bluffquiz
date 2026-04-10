@@ -3,192 +3,253 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Bierkultur Mallorca 2026</title>
+<title>Mallorca 2026</title>
 <style>
-:root{--gold:#ffcc00;--dark:#0f0f12;--card:#1e1e24;--card2:#2a2a32;--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--purple:#9b59b6;--orange:#e67e22;}
-*{box-sizing:border-box}
-body{font-family:-apple-system,system-ui,sans-serif;background:linear-gradient(160deg,#0f0f12,#1a1a24);color:#fff;margin:0;padding:10px;min-height:100vh}
-.wrap{max-width:480px;margin:auto}
-.card{background:var(--card);padding:18px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.5);margin-bottom:12px}
-h1,h2,h3{margin:0 0 10px}
-h1{font-size:1.4rem;color:var(--gold);text-align:center}
-.sub{text-align:center;opacity:.6;font-size:.8rem;margin-bottom:10px}
-input,select,button,textarea{width:100%;padding:14px;margin:6px 0;border-radius:10px;border:none;font-size:16px;font-family:inherit}
-select{background:#fff;color:#000;height:50px}
+:root{--gold:#ffcc00;--dark:#0f0f12;--bg:#14141a;--card:#1e1e26;--card2:#2a2a34;--muted:#8a8a95;--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--purple:#9b59b6;--orange:#e67e22;--border:#2e2e38}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:#fff;font-family:-apple-system,system-ui,sans-serif;min-height:100vh;overscroll-behavior:none}
+body{padding-bottom:80px}
+.wrap{max-width:480px;margin:auto;padding:10px}
+
+/* Top bar */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card);border-radius:12px;margin-bottom:10px;position:sticky;top:10px;z-index:50}
+.topbar h1{margin:0;font-size:1rem;color:var(--gold)}
+.badge{font-size:.7rem;opacity:.7}
+.badge.host{color:var(--gold);opacity:1;font-weight:bold}
+
+/* Cards */
+.card{background:var(--card);padding:16px;border-radius:14px;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+h2{margin:0 0 12px;font-size:1.1rem}
+h3{margin:14px 0 8px;font-size:.95rem}
+.sub{opacity:.55;font-size:.8rem;margin:4px 0}
+hr{border:none;border-top:1px dashed var(--border);margin:14px 0}
+
+/* Inputs */
+input,select,textarea,button{width:100%;padding:13px;margin:5px 0;border-radius:10px;border:none;font-size:16px;font-family:inherit}
+select{background:#fff;color:#000;height:48px}
+input,textarea{background:var(--card2);color:#fff;border:1px solid var(--border)}
 button{background:var(--gold);color:#000;font-weight:bold;cursor:pointer;transition:transform .1s}
 button:active{transform:scale(.97)}
-button:disabled{opacity:.4;cursor:not-allowed}
+button:disabled{opacity:.4}
 .btn-blue{background:var(--blue);color:#fff}
 .btn-green{background:var(--green);color:#fff}
 .btn-red{background:var(--red);color:#fff}
 .btn-purple{background:var(--purple);color:#fff}
 .btn-orange{background:var(--orange);color:#fff}
-.btn-ghost{background:transparent;border:1px solid #444;color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:#fff}
 .row{display:flex;gap:8px}
 .row>*{flex:1}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.tag{display:inline-block;padding:3px 8px;border-radius:12px;font-size:.7rem;background:#333;margin-right:4px}
-.tag.gold{background:var(--gold);color:#000}
-.tag.red{background:var(--red)}
-.tag.green{background:var(--green)}
 
-/* Score list */
-.score-row{display:flex;justify-content:space-between;padding:10px 12px;border-radius:8px;margin:4px 0;background:rgba(255,255,255,.04)}
+/* Tab bar */
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:6px 4px 10px;z-index:100}
+.tab{flex:1;background:none;border:none;color:var(--muted);padding:8px 2px;font-size:.65rem;text-align:center;cursor:pointer;border-radius:10px;margin:0}
+.tab.active{color:var(--gold);background:rgba(255,204,0,.1)}
+.tab .ic{display:block;font-size:1.4rem;margin-bottom:2px}
+
+/* Score */
+.score-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:10px;margin:5px 0;background:var(--card2)}
 .score-row.me{background:rgba(255,204,0,.15);border:1px solid var(--gold)}
 .score-row.top{border-left:4px solid var(--gold)}
-.plus{color:var(--green);font-weight:bold;animation:pop .5s}
-@keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.4)}100%{transform:scale(1)}}
+.score-row .casual{opacity:.5;font-size:.75rem;margin-left:6px}
+.plus{color:var(--green);font-weight:bold}
 
 /* Bingo */
-.bingo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
-.bingo-cell{aspect-ratio:1;background:var(--card2);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.65rem;padding:4px;cursor:pointer;position:relative;line-height:1.1;border:2px solid transparent}
+.bingo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:10px 0}
+.bingo-cell{aspect-ratio:1;background:var(--card2);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.6rem;padding:3px;cursor:pointer;position:relative;line-height:1.1;border:2px solid transparent;word-break:break-word}
 .bingo-cell.marked{background:rgba(255,204,0,.25);border-color:var(--gold)}
-.bingo-cell.confirmed{background:var(--green);color:#000;border-color:#fff}
+.bingo-cell.confirmed{background:var(--green);color:#000;border-color:#fff;font-weight:bold}
 .bingo-cell.free{background:#444;font-weight:bold}
-.bingo-cell .conf{position:absolute;bottom:2px;right:3px;font-size:.55rem;opacity:.8}
+.bingo-cell .conf{position:absolute;bottom:1px;right:3px;font-size:.55rem;opacity:.8}
+.bingo-cell.winrow{box-shadow:0 0 0 3px var(--gold) inset}
 
 /* Cities */
-.city-row{display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--card2);border-radius:8px;margin:5px 0}
-.city-row.elim{opacity:.4;text-decoration:line-through}
-.city-name{flex:1;font-weight:bold}
-.city-votes{display:flex;gap:6px;align-items:center}
-.vote-pill{background:var(--green);color:#000;padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:bold}
+.city-row{display:flex;align-items:center;justify-content:space-between;padding:11px;background:var(--card2);border-radius:10px;margin:5px 0}
+.city-row.elim{opacity:.35;text-decoration:line-through}
+.vote-pill{background:var(--green);color:#000;padding:3px 9px;border-radius:10px;font-size:.75rem;font-weight:bold}
 .vote-pill.neg{background:var(--red);color:#fff}
 
-/* Overlay */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
+/* Mission card */
+.mission{background:var(--card2);padding:12px;border-radius:10px;margin:6px 0;border-left:4px solid var(--purple)}
+.mission.done{border-left-color:var(--green);opacity:.7}
+.mission .pts{float:right;background:var(--gold);color:#000;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:bold}
+.mission .desc{font-size:.8rem;opacity:.75;margin:4px 0}
+.mission .meta{font-size:.7rem;opacity:.6;margin-top:4px}
+
+/* Flash / overlay */
+.flash{padding:10px;border-radius:8px;background:rgba(46,204,113,.15);border-left:3px solid var(--green);margin:8px 0;font-size:.85rem}
+.flash.warn{background:rgba(231,76,60,.15);border-left-color:var(--red)}
+.flash.info{background:rgba(52,152,219,.15);border-left-color:var(--blue)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
 .overlay.show{display:flex}
 .spin{font-size:5rem;animation:spin 2s infinite linear}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-.menu-btn{display:block;width:100%;padding:18px;margin:8px 0;border-radius:12px;text-align:left;font-size:1rem;font-weight:bold;cursor:pointer;border:none;color:#fff}
-.menu-btn small{display:block;font-weight:normal;opacity:.8;font-size:.75rem;margin-top:3px}
-.host-only{border:1px dashed #555;padding:10px;border-radius:10px;margin-top:10px;background:rgba(255,204,0,.05)}
-.flash{padding:10px;border-radius:8px;background:rgba(46,204,113,.2);border-left:4px solid var(--green);margin:8px 0;font-size:.9rem}
-.flash.warn{background:rgba(231,76,60,.2);border-left-color:var(--red)}
-.timer{font-size:2rem;color:var(--gold);text-align:center;font-weight:bold}
-.q-display{font-size:1.3rem;color:var(--gold);text-align:center;margin:15px 0;min-height:40px;font-weight:bold}
-hr{border:none;border-top:1px dashed #444;margin:14px 0}
+@keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.3)}100%{transform:scale(1)}}
+.q-big{font-size:1.4rem;color:var(--gold);text-align:center;margin:15px 0;font-weight:bold;min-height:40px}
+.timer{font-size:1.8rem;color:var(--gold);text-align:center;font-weight:bold;margin:8px 0}
+.hidden{display:none!important}
+.chip{display:inline-block;background:var(--card2);padding:4px 10px;border-radius:12px;font-size:.75rem;margin:2px}
+.chip.active{background:var(--gold);color:#000}
 </style>
 </head>
 <body>
-<div class="wrap">
 
 <!-- LOGIN -->
-<div id="login" class="card">
-  <h1>🍺 BIERKULTUR MALLORCA</h1>
-  <div class="sub">Trip-Companion 2026</div>
-  <input id="nameInp" placeholder="Dein Name" maxlength="20">
-  <input id="roomInp" placeholder="Code" value="MALLE26">
-  <button id="btnJoin">Beitreten</button>
-  <button id="btnHost" class="btn-blue">Als Host starten</button>
+<div id="login" class="wrap">
+  <div class="card" style="margin-top:40px;text-align:center">
+    <h1 style="color:var(--gold);font-size:1.6rem;margin-bottom:4px">BIERKULTUR</h1>
+    <div class="sub" style="margin-bottom:20px">Mallorca '26 Companion</div>
+    <input id="nameInp" placeholder="Dein Name" maxlength="20">
+    <input id="roomInp" placeholder="Code" value="MALLE26">
+    <button id="btnJoin">Beitreten</button>
+    <button id="btnHost" class="btn-blue">Als Host starten</button>
+  </div>
 </div>
 
-<!-- MAIN APP -->
-<div id="app" style="display:none">
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h1 style="font-size:1.1rem;text-align:left;margin:0">🍺 Mallorca '26</h1>
-      <div style="font-size:.75rem;opacity:.6" id="userBadge"></div>
+<!-- APP -->
+<div id="app" class="wrap hidden">
+  <div class="topbar">
+    <h1>🍺 Mallorca '26</h1>
+    <div class="badge" id="userBadge"></div>
+  </div>
+
+  <!-- TAB: LEADERBOARD -->
+  <div id="tabScore" class="tabPane">
+    <div class="card">
+      <h2>🏆 Wochenend-Stand</h2>
+      <div id="leaderboard"></div>
+      <div class="sub" style="margin-top:10px">Casual-Punkte (klein) = Solo-Spiele, zählen 10% so viel</div>
     </div>
   </div>
 
-  <!-- LIVE LEADERBOARD (always visible) -->
-  <div class="card">
-    <h3>🏆 Wochenend-Stand</h3>
-    <div id="leaderboard"></div>
-  </div>
+  <!-- TAB: BINGO -->
+  <div id="tabBingo" class="tabPane hidden">
+    <div class="card">
+      <h2>🎯 Bier-Bingo</h2>
+      <div class="sub">Tippe ein Feld wenn du das Bier getrunken hast. 2 andere müssen bestätigen. Bingo = 10 Pkt!</div>
+      <div id="bingoGrid" class="bingo-grid"></div>
+      <div id="bingoStatus"></div>
+      <button id="bingoGetCard" class="btn-orange hidden">Neue Karte holen</button>
+    </div>
 
-  <!-- HOST CONTROLS -->
-  <div id="hostPanel" class="card host-only" style="display:none">
-    <h3>🎮 Host: Modul starten</h3>
-    <button class="menu-btn btn-purple" data-mod="quiz">📝 Quiz / Wer-Frage<small>Klassische Frage, alle stimmen</small></button>
-    <button class="menu-btn btn-orange" data-mod="bingo">🎯 Bier-Bingo<small>Jeder kriegt eigene Karte</small></button>
-    <button class="menu-btn btn-blue" data-mod="duel">⚔️ 1vs1 / Duell<small>Schätzen oder Rechnen</small></button>
-    <button class="menu-btn btn-green" data-mod="cities">🏙️ Städte-Voting<small>Nächstes Reiseziel bestimmen</small></button>
-    <button class="menu-btn btn-red" data-mod="event">🎲 Trink-Event<small>Random Strafrunde</small></button>
-    <hr>
-    <button class="btn-ghost" id="btnMenu">↩️ Zum Hauptmenü</button>
-    <button class="btn-red" id="btnReset">⚠️ Komplett-Reset</button>
-  </div>
-
-  <!-- MODULE: QUIZ -->
-  <div id="modQuiz" class="card" style="display:none">
-    <h3>📝 Quiz</h3>
-    <div id="quizQ" class="q-display">—</div>
-    <div id="quizTimer" class="timer"></div>
-    <div id="quizInputArea"></div>
-    <div id="quizVoteArea"></div>
-    <div id="quizResult"></div>
-    <div class="host-only" id="quizHost" style="display:none">
-      <button id="qNext" class="btn-blue">Nächste Frage</button>
-      <button id="qEval" class="btn-green">Auswerten</button>
+    <div class="card">
+      <h3>🤝 Andere bestätigen</h3>
+      <div id="bingoConfirmList"><div class="sub">Nichts zu bestätigen</div></div>
     </div>
   </div>
 
-  <!-- MODULE: BINGO -->
-  <div id="modBingo" class="card" style="display:none">
-    <h3>🎯 Bier-Bingo</h3>
-    <div class="sub">Tippe Bier an wenn getrunken → andere bestätigen (2 nötig)</div>
-    <div id="bingoGrid" class="bingo-grid"></div>
-    <div id="bingoStatus"></div>
-    <hr>
-    <h3 style="font-size:.9rem">Andere Spieler bestätigen:</h3>
-    <div id="bingoConfirmList"></div>
-    <div class="host-only" id="bingoHost" style="display:none">
-      <button id="bingoNew" class="btn-orange">Neue Karten austeilen</button>
+  <!-- TAB: GAMES -->
+  <div id="tabGames" class="tabPane hidden">
+    <!-- Official round display (if active) -->
+    <div id="officialPanel" class="card hidden">
+      <h2>⭐ Offizielle Runde läuft</h2>
+      <div id="officialBody"></div>
+    </div>
+
+    <!-- Casual solo games -->
+    <div class="card">
+      <h2>🎮 Solo-Spiele <span class="sub" style="font-weight:normal">(Casual)</span></h2>
+      <div class="sub">Zeitvertreib. Punkte zählen nur 10% für den Gesamtstand.</div>
+      <button class="btn-blue" data-solo="math">🧮 Kopfrechnen Sprint (30s)</button>
+      <button class="btn-purple" data-solo="estimate">🎯 Schätz-Quiz (5 Fragen)</button>
+      <button class="btn-orange" data-solo="reaction">⚡ Reaktions-Test</button>
+    </div>
+
+    <!-- Solo game area -->
+    <div id="soloArea" class="card hidden"></div>
+  </div>
+
+  <!-- TAB: CITIES -->
+  <div id="tabCities" class="tabPane hidden">
+    <div class="card">
+      <h2>🏙️ Nächstes Reiseziel</h2>
+      <div id="citiesList"></div>
+      <div id="citiesAction"></div>
     </div>
   </div>
 
-  <!-- MODULE: DUEL -->
-  <div id="modDuel" class="card" style="display:none">
-    <h3>⚔️ Duell</h3>
-    <div id="duelInfo"></div>
-    <div id="duelQ" class="q-display">—</div>
-    <div id="duelTimer" class="timer"></div>
-    <div id="duelInputArea"></div>
-    <div id="duelResult"></div>
-    <div class="host-only" id="duelHost" style="display:none">
-      <h3 style="font-size:.9rem">Modus:</h3>
+  <!-- TAB: MISSIONS -->
+  <div id="tabMissions" class="tabPane hidden">
+    <div class="card">
+      <h2>📸 Missionen</h2>
+      <div class="sub">Challenges für das Wochenende. 2 Bestätigungen = Punkte!</div>
+      <div id="missionsList"></div>
+    </div>
+
+    <div class="card">
+      <h3>➕ Mission vorschlagen</h3>
+      <input id="newMissionTitle" placeholder="Titel z.B. Gruppenfoto am Strand">
+      <input id="newMissionDesc" placeholder="Beschreibung (optional)">
       <div class="row">
-        <button class="btn-blue" data-duel="rechen">Rechnen</button>
-        <button class="btn-blue" data-duel="schaetz">Schätzen</button>
-        <button class="btn-purple" data-duel="gruppe">Gruppe vs Gruppe</button>
+        <select id="newMissionPoints">
+          <option value="2">2 Pkt (easy)</option>
+          <option value="5" selected>5 Pkt (medium)</option>
+          <option value="10">10 Pkt (hard)</option>
+          <option value="20">20 Pkt (legendär)</option>
+        </select>
+        <button id="addMission" class="btn-green">Hinzufügen</button>
       </div>
-      <h3 style="font-size:.9rem;margin-top:10px">Teilnehmer:</h3>
-      <div id="duelPickList"></div>
-      <button id="duelStart" class="btn-green">Start!</button>
-      <button id="duelEval" class="btn-orange">Auswerten</button>
     </div>
   </div>
 
-  <!-- MODULE: CITIES -->
-  <div id="modCities" class="card" style="display:none">
-    <h3>🏙️ Städte-Voting</h3>
-    <div id="citiesInfo" class="sub">Nächstes Reiseziel bestimmen</div>
-    <div id="citiesList"></div>
-    <hr>
-    <div id="citiesAction"></div>
-    <div class="host-only" id="citiesHost" style="display:none">
-      <h3 style="font-size:.9rem">Stadt hinzufügen:</h3>
-      <input id="newCity" placeholder="z.B. Lissabon">
-      <button id="addCity" class="btn-green">Hinzufügen</button>
-      <hr>
-      <h3 style="font-size:.9rem">Voting-Runde starten:</h3>
-      <div class="grid2">
-        <button class="btn-green" data-vote="pos3">3 Punkte vergeben</button>
-        <button class="btn-red" data-vote="neg1">1 Negativ-Stimme</button>
-        <button class="btn-orange" data-vote="elim">Schwächste raus</button>
-        <button class="btn-blue" data-vote="revive">Eine zurückholen</button>
+  <!-- TAB: HOST -->
+  <div id="tabHost" class="tabPane hidden">
+    <div class="card">
+      <h2>👑 Host-Panel</h2>
+      <div id="hostStatus"></div>
+      <button id="btnTakeHost" class="btn-blue">Host übernehmen</button>
+    </div>
+
+    <div id="hostControls" class="hidden">
+      <div class="card">
+        <h3>⭐ Offizielle Runde starten</h3>
+        <button class="btn-purple" data-start="quiz-who">Wer-Frage</button>
+        <button class="btn-purple" data-start="quiz-text">Text-Frage (mit Voting)</button>
+        <button class="btn-blue" data-start="duel-math">Duell: Kopfrechnen</button>
+        <button class="btn-blue" data-start="duel-estimate">Duell: Schätzen</button>
+        <button class="btn-orange" data-start="group-estimate">Gruppe vs Gruppe: Schätzen</button>
       </div>
-      <button id="endVote" class="btn-purple">Voting beenden & auswerten</button>
+
+      <div class="card">
+        <h3>🎯 Bingo</h3>
+        <button id="bingoDealAll" class="btn-orange">Allen neue Karten austeilen</button>
+        <div class="sub">Jeder kann sich auch selbst eine Karte holen über den Bingo-Tab.</div>
+      </div>
+
+      <div class="card">
+        <h3>🏙️ Städte-Voting</h3>
+        <button class="btn-green" data-cityvote="pos3">3 Punkte vergeben</button>
+        <button class="btn-red" data-cityvote="neg1">1 Negativ-Stimme</button>
+        <button class="btn-orange" data-cityvote="elim">Schwächste rausschmeissen</button>
+        <button class="btn-blue" data-cityvote="revive">Eine zurückholen</button>
+        <button id="endCityVote" class="btn-purple">Voting beenden & auswerten</button>
+        <hr>
+        <input id="newCity" placeholder="Stadt hinzufügen...">
+        <button id="addCity" class="btn-green">Stadt hinzufügen</button>
+      </div>
+
+      <div class="card">
+        <h3>🎲 Sonstiges</h3>
+        <button class="btn-red" id="btnDrinkEvent">Trink-Event auslösen</button>
+        <button class="btn-ghost" id="btnResetScores">Scores zurücksetzen</button>
+        <button class="btn-red" id="btnFullReset">KOMPLETT-RESET</button>
+      </div>
     </div>
   </div>
 
 </div>
+
+<!-- Tab bar -->
+<div class="tabbar hidden" id="tabbar">
+  <button class="tab active" data-tab="Score"><span class="ic">🏆</span>Rang</button>
+  <button class="tab" data-tab="Bingo"><span class="ic">🎯</span>Bingo</button>
+  <button class="tab" data-tab="Games"><span class="ic">🎮</span>Spiele</button>
+  <button class="tab" data-tab="Cities"><span class="ic">🏙️</span>Städte</button>
+  <button class="tab" data-tab="Missions"><span class="ic">📸</span>Missionen</button>
+  <button class="tab" data-tab="Host"><span class="ic">👑</span>Host</button>
 </div>
 
-<!-- Event overlay -->
+<!-- Overlay for events -->
 <div id="overlay" class="overlay">
   <div class="spin">🍻</div>
   <div id="overlayText" style="font-size:1.8rem;color:var(--gold);font-weight:bold;margin:20px"></div>
@@ -197,11 +258,11 @@ hr{border:none;border-top:1px dashed #444;margin:14px 0}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, update, get, remove, push, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// === FIREBASE === (gleiche config wie alte app)
+// === CONFIG ===
 const firebaseConfig = {
-  apiKey: "AIzaSy...", // <- HIER KEY EINSETZEN
+  apiKey: "AIzaSy...", // HIER EINSETZEN
   authDomain: "bierkultur-d2fea.firebaseapp.com",
   databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
   projectId: "bierkultur-d2fea"
@@ -209,595 +270,743 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// === DATA POOLS ===
-const QUIZ_QUESTIONS = [
-  {q:"Wer eskaliert heute als Erster?",type:"who"},
-  {q:"Wer hat den schlimmsten Kater?",type:"who"},
-  {q:"Wer verschläft morgen das Frühstück?",type:"who"},
-  {q:"Wer flirtet am meisten?",type:"who"},
-  {q:"Wer bezahlt heute die meiste Runde?",type:"who"},
-  {q:"Wer verliert zuerst sein Handy?",type:"who"},
-  {q:"Was ist das Beste an Mallorca?",type:"text"},
-  {q:"Beschreibe den Trip in 3 Wörtern",type:"text"},
-  {q:"Wie viele Biere trinkt die Gruppe heute insgesamt?",type:"num"},
-  {q:"Wie viele km laufen wir morgen?",type:"num"},
-];
-// Regionale (Mallorca/Spanien) + Schweiz Mix für Bingo
+// === DATA ===
 const BIER_POOL = [
-  "Estrella Damm","Mahou","San Miguel","Cruzcampo","Alhambra",
-  "Rosa Blanca","Moritz","Voll-Damm","Ambar","Estrella Galicia",
-  "1906 Reserva","Inedit","Turia","Steinlager","Feldschlösschen",
-  "Calanda","Quöllfrisch","Eichhof","Chopfab","Locher",
-  "Cardinal","Müller Bräu","Unser Hausbier","Sangria-Bier","Radler",
-  "Caña (klein)","Doble (gross)","Tinto de Verano","Clara","Shandy"
+  "Estrella Damm","Mahou","San Miguel","Cruzcampo","Alhambra","Rosa Blanca",
+  "Moritz","Voll-Damm","Ambar","Estrella Galicia","1906 Reserva","Inedit",
+  "Turia","Amstel","Heineken","Feldschloesschen","Calanda","Quoellfrisch",
+  "Eichhof","Chopfab","Cardinal","Mueller Braeu","Radler","Sangria-Bier",
+  "Clara","Shandy","Tinto de Verano","Cana klein","Doble gross","Cerveza sin"
+];
+const QUIZ_WHO = [
+  "Wer eskaliert heute als Erster?",
+  "Wer hat morgen den schlimmsten Kater?",
+  "Wer verschlaeft das Fruehstueck?",
+  "Wer flirtet am meisten auf dem Trip?",
+  "Wer bezahlt am oeftesten die Runde?",
+  "Wer verliert zuerst sein Handy?",
+  "Wer war am laengsten im Wasser?",
+  "Wer hat den schlimmsten Sonnenbrand?",
+  "Wer rauscht als Erster ab?",
+  "Wer traegt die schraegste Badehose?",
+  "Wer faellt als Erster ins Wasser (angezogen)?",
+  "Wer ist der heimliche Chef der Truppe?",
+  "Wer redet im Schlaf?",
+  "Wer schnarcht am lautesten?",
+  "Wer verliert die Wette als Erster?"
+];
+const QUIZ_TEXT = [
+  "Was ist das Motto des Trips in 3 Woertern?",
+  "Beschreibe Mallorca mit einem Emoji-Kombo",
+  "Was ist der beste Drink auf der Insel?",
+  "Welcher Song beschreibt diesen Trip?",
+  "Worueber wurde heute am meisten gelacht?"
+];
+const SCHAETZ = [
+  {q:"Einwohner Palma de Mallorca?",a:416065},
+  {q:"Hoehe der Kathedrale La Seu in Metern?",a:44},
+  {q:"Laenge Mallorcas Kueste in km?",a:550},
+  {q:"Anzahl Inseln der Balearen (alle)?",a:151},
+  {q:"Durchschnittstemperatur Palma April Celsius?",a:18},
+  {q:"Wie viele Kilometer ist Palma von Barcelona entfernt (Luftlinie)?",a:230},
+  {q:"Wie viele Sonnenstunden hat Mallorca pro Jahr?",a:2800},
+  {q:"Hoechster Berg Mallorcas (Puig Major) in Metern?",a:1445},
+  {q:"Wie viele Touristen besuchen Mallorca pro Jahr (Millionen)?",a:14},
+  {q:"Preis eines Estrella im Ballermann in Euro (grob)?",a:5}
 ];
 const DRINK_RULES = [
-  "ALLE TRINKEN! 🍻","Letzter trinkt 2 Schlucke","Brillenträger trinken",
-  "Top 3 der Rangliste trinken","Der mit dem geringsten Score darf verteilen",
-  "Wer als letztes „Salud! sagt, trinkt"
+  "ALLE TRINKEN!",
+  "Letzter trinkt 2 Schlucke",
+  "Brillentraeger trinken",
+  "Top 3 der Rangliste trinken",
+  "Der letzte der Rangliste verteilt 3 Schlucke",
+  "Host trinkt und bestimmt einen Mittrinker",
+  "Wer als letztes Salud sagt trinkt"
 ];
-const SCHAETZ_FRAGEN = [
-  {q:"Einwohner von Palma?",a:416065},
-  {q:"Höhe Kathedrale Palma in Metern?",a:44},
-  {q:"Länge Mallorcas Küste in km?",a:550},
-  {q:"Jahr der Eröffnung Ballermann 6?",a:1953},
-  {q:"Anzahl Inseln der Balearen?",a:151},
+const DEFAULT_MISSIONS = [
+  {title:"Gruppenfoto mit Einheimischem",desc:"Jemanden charmant fragen ob er aufs Foto will",points:10},
+  {title:"Paella gegessen",desc:"Mind. ein Teller pro Person geteilt",points:5},
+  {title:"Bestellen komplett auf Spanisch",desc:"Ohne ein englisches Wort",points:5},
+  {title:"3 verschiedene Bars an einem Tag",desc:"Alle zusammen",points:10},
+  {title:"Sonnenuntergangs-Gruppenfoto",desc:"Am Meer, alle drauf",points:5},
+  {title:"Barkeeper zum Lachen gebracht",desc:"Joke, Story, egal wie",points:5},
+  {title:"Alle mit Hut gleichzeitig",desc:"Foto als Beweis",points:10},
+  {title:"Tanzen im Club",desc:"Die ganze Gruppe auf der Tanzflaeche",points:10},
+  {title:"Im Meer baden",desc:"Komplett rein, nicht nur Fuesse",points:5},
+  {title:"Nachtschwimmen",desc:"Nach Mitternacht im Meer",points:20}
 ];
+const DEFAULT_CITIES = ["Lissabon","Prag","Krakau","Budapest","Valencia","Porto","Sevilla","Neapel","Belgrad"];
 
 // === STATE ===
-let user, room, isHost=false, lastEventTs=0, players={}, state={};
-const $ = id => document.getElementById(id);
+let user,room,state={},players={},isHost=false,lastEventTs=0;
+let timers=[];
+function clearTimers(){timers.forEach(t=>clearInterval(t));timers=[];}
+const $=id=>document.getElementById(id);
 
 // === LOGIN ===
-$("btnJoin").onclick = () => start(false);
-$("btnHost").onclick = () => start(true);
+$("btnJoin").onclick=()=>start(false);
+$("btnHost").onclick=()=>start(true);
+$("overlayClose").onclick=()=>$("overlay").classList.remove("show");
 
-async function start(asHost){
-  user = $("nameInp").value.trim();
-  room = ($("roomInp").value.trim()||"MALLE26").toUpperCase();
+async function start(takeHost){
+  user=$("nameInp").value.trim();
+  room=($("roomInp").value.trim()||"MALLE26").toUpperCase();
   if(!user) return alert("Name eingeben!");
-  isHost = asHost;
-  if(asHost){
-    const exists = (await get(ref(db,`rooms/${room}/state`))).exists();
-    if(exists && !confirm("Room existiert. Reset & übernehmen?")){ /* join existing */ }
-    else if(!exists){
-      await set(ref(db,`rooms/${room}/state`),{phase:"menu",host:user,createdAt:Date.now()});
-    } else {
-      await update(ref(db,`rooms/${room}/state`),{host:user,phase:"menu"});
-    }
+  // init meta if needed
+  const metaSnap=await get(ref(db,`rooms/${room}/meta`));
+  if(!metaSnap.exists()){
+    await set(ref(db,`rooms/${room}/meta`),{host:user,created:Date.now()});
+    await seedDefaults();
+  } else if(takeHost){
+    await update(ref(db,`rooms/${room}/meta`),{host:user});
   }
-  const pRef = ref(db,`rooms/${room}/players/${user}`);
-  if(!(await get(pRef)).exists()) await set(pRef,{score:0,joined:Date.now()});
-  $("login").style.display="none";
-  $("app").style.display="block";
-  $("userBadge").innerText = user + (isHost?" 👑":"");
-  if(isHost){ $("hostPanel").style.display="block"; }
-  attachListeners();
-  bindHostUI();
+  const pRef=ref(db,`rooms/${room}/players/${user}`);
+  if(!(await get(pRef)).exists()){
+    await set(pRef,{score:0,casual:0,joined:Date.now()});
+  }
+  $("login").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("tabbar").classList.remove("hidden");
+  attach();
+  bindUI();
 }
 
-// === FIREBASE LISTENERS ===
-function attachListeners(){
-  onValue(ref(db,`rooms/${room}/players`), snap => {
-    players = snap.val()||{};
+async function seedDefaults(){
+  // seed cities
+  const cityObj={};
+  DEFAULT_CITIES.forEach((n,i)=>{cityObj["c_"+i]={name:n,status:"active",votes:0}});
+  await set(ref(db,`rooms/${room}/cities/list`),cityObj);
+  // seed missions
+  const mObj={};
+  DEFAULT_MISSIONS.forEach((m,i)=>{
+    mObj["m_"+i]={...m,createdBy:"System",done:false,claimedBy:null,confirmedBy:[]};
+  });
+  await set(ref(db,`rooms/${room}/missions`),mObj);
+}
+
+// === LISTENERS ===
+function attach(){
+  onValue(ref(db,`rooms/${room}/meta`),snap=>{
+    const m=snap.val()||{}; isHost=(m.host===user);
+    $("userBadge").innerHTML = user + (isHost?' <span class="badge host">(Host)</span>':'');
+    $("hostStatus").innerHTML = `Aktueller Host: <b>${m.host||'-'}</b>`;
+    $("btnTakeHost").style.display = isHost?"none":"block";
+    $("hostControls").classList.toggle("hidden",!isHost);
+  });
+  onValue(ref(db,`rooms/${room}/players`),snap=>{
+    players=snap.val()||{};
     renderLeaderboard();
-    if(state.phase==="duel") renderDuel();
   });
-  onValue(ref(db,`rooms/${room}/state`), snap => {
-    state = snap.val()||{};
-    renderPhase();
+  onValue(ref(db,`rooms/${room}/official`),snap=>{
+    state.official=snap.val();
+    renderOfficial();
   });
-  onValue(ref(db,`rooms/${room}/event`), snap => {
-    const e = snap.val(); if(!e || e.ts===lastEventTs) return;
-    lastEventTs = e.ts;
-    $("overlayText").innerText = e.text;
+  onValue(ref(db,`rooms/${room}/bingo`),snap=>{
+    state.bingo=snap.val()||{};
+    renderBingo();
+  });
+  onValue(ref(db,`rooms/${room}/cities`),snap=>{
+    state.cities=snap.val()||{};
+    renderCities();
+  });
+  onValue(ref(db,`rooms/${room}/missions`),snap=>{
+    state.missions=snap.val()||{};
+    renderMissions();
+  });
+  onValue(ref(db,`rooms/${room}/event`),snap=>{
+    const e=snap.val(); if(!e||e.ts===lastEventTs) return;
+    lastEventTs=e.ts;
+    $("overlayText").innerText=e.text;
     $("overlay").classList.add("show");
   });
-  // module-specific listeners
-  onValue(ref(db,`rooms/${room}/quiz`), () => { if(state.phase==="quiz") renderQuiz(); });
-  onValue(ref(db,`rooms/${room}/bingo`), () => { if(state.phase==="bingo") renderBingo(); });
-  onValue(ref(db,`rooms/${room}/duel`), () => { if(state.phase==="duel") renderDuel(); });
-  onValue(ref(db,`rooms/${room}/cities`), () => { if(state.phase==="cities") renderCities(); });
 }
 
-$("overlayClose").onclick = () => $("overlay").classList.remove("show");
+// === TABS ===
+document.querySelectorAll(".tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    document.querySelectorAll(".tabPane").forEach(p=>p.classList.add("hidden"));
+    $("tab"+t.dataset.tab).classList.remove("hidden");
+  };
+});
+
+// === UI BINDINGS ===
+function bindUI(){
+  // host controls
+  document.querySelectorAll("[data-start]").forEach(b=>{
+    b.onclick=()=>startOfficial(b.dataset.start);
+  });
+  document.querySelectorAll("[data-cityvote]").forEach(b=>{
+    b.onclick=()=>startCityVote(b.dataset.cityvote);
+  });
+  $("btnTakeHost").onclick=()=>update(ref(db,`rooms/${room}/meta`),{host:user});
+  $("bingoDealAll").onclick=bingoDealAll;
+  $("addCity").onclick=addCity;
+  $("endCityVote").onclick=endCityVote;
+  $("btnDrinkEvent").onclick=()=>set(ref(db,`rooms/${room}/event`),{text:DRINK_RULES[Math.floor(Math.random()*DRINK_RULES.length)],ts:Date.now()});
+  $("btnResetScores").onclick=resetScores;
+  $("btnFullReset").onclick=fullReset;
+  $("addMission").onclick=addMission;
+  $("bingoGetCard").onclick=()=>bingoDealOne(user);
+  document.querySelectorAll("[data-solo]").forEach(b=>{
+    b.onclick=()=>startSolo(b.dataset.solo);
+  });
+}
 
 // === LEADERBOARD ===
 function renderLeaderboard(){
-  const sorted = Object.entries(players).sort((a,b)=>(b[1].score||0)-(a[1].score||0));
-  $("leaderboard").innerHTML = sorted.map(([n,d],i)=>`
-    <div class="score-row ${n===user?'me':''} ${i===0?'top':''}">
+  const sorted=Object.entries(players).sort((a,b)=>{
+    const sa=(a[1].score||0)+((a[1].casual||0)*0.1);
+    const sb=(b[1].score||0)+((b[1].casual||0)*0.1);
+    return sb-sa;
+  });
+  $("leaderboard").innerHTML=sorted.map(([n,d],i)=>{
+    const tot=(d.score||0)+((d.casual||0)*0.1);
+    return `<div class="score-row ${n===user?'me':''} ${i===0?'top':''}">
       <span>${i===0?'👑 ':(i+1+'. ')}${n}</span>
-      <strong>${d.score||0} Pkt</strong>
-    </div>`).join("") || '<div class="sub">Noch keine Spieler</div>';
+      <strong>${tot.toFixed(1)} Pkt<span class="casual">(${d.score||0}+${d.casual||0}c)</span></strong>
+    </div>`;
+  }).join("")||'<div class="sub">Keine Spieler</div>';
 }
 
-// === PHASE ROUTER ===
-function renderPhase(){
-  ["modQuiz","modBingo","modDuel","modCities"].forEach(id=>$(id).style.display="none");
-  const map = {quiz:"modQuiz",bingo:"modBingo",duel:"modDuel",cities:"modCities"};
-  if(map[state.phase]){
-    $(map[state.phase]).style.display="block";
-    if(isHost) $(map[state.phase].replace("mod","mod").toLowerCase()+"Host"); // noop
+async function awardScore(player,pts,casual=false){
+  const key=casual?"casual":"score";
+  const r=ref(db,`rooms/${room}/players/${player}/${key}`);
+  const cur=(await get(r)).val()||0;
+  await set(r,cur+pts);
+}
+
+// === OFFICIAL ROUND ===
+async function startOfficial(type){
+  if(!isHost) return;
+  let data={type,startedAt:Date.now(),answers:{},votes:{},phase:"answer",endTime:Date.now()+30000};
+  if(type==="quiz-who"){
+    data.q=QUIZ_WHO[Math.floor(Math.random()*QUIZ_WHO.length)];
+  } else if(type==="quiz-text"){
+    data.q=QUIZ_TEXT[Math.floor(Math.random()*QUIZ_TEXT.length)];
+  } else if(type==="duel-math"){
+    const a=Math.floor(Math.random()*40+10),b=Math.floor(Math.random()*20+5),op=["+","-","*"][Math.floor(Math.random()*3)];
+    data.q=`${a} ${op} ${b} = ?`;
+    data.target=eval(`${a}${op}${b}`);
+    data.endTime=Date.now()+20000;
+  } else if(type==="duel-estimate"||type==="group-estimate"){
+    const s=SCHAETZ[Math.floor(Math.random()*SCHAETZ.length)];
+    data.q=s.q; data.target=s.a;
+    data.endTime=Date.now()+45000;
+    if(type==="group-estimate") data.teams={};
   }
-  // host sub-panels
-  $("quizHost").style.display = (isHost && state.phase==="quiz")?"block":"none";
-  $("bingoHost").style.display = (isHost && state.phase==="bingo")?"block":"none";
-  $("duelHost").style.display = (isHost && state.phase==="duel")?"block":"none";
-  $("citiesHost").style.display = (isHost && state.phase==="cities")?"block":"none";
-
-  if(state.phase==="quiz") renderQuiz();
-  if(state.phase==="bingo") renderBingo();
-  if(state.phase==="duel") renderDuel();
-  if(state.phase==="cities") renderCities();
+  await set(ref(db,`rooms/${room}/official`),data);
 }
 
-// === HOST UI BINDINGS ===
-function bindHostUI(){
-  document.querySelectorAll("#hostPanel [data-mod]").forEach(b=>{
-    b.onclick = () => launchModule(b.dataset.mod);
-  });
-  $("btnMenu").onclick = () => update(ref(db,`rooms/${room}/state`),{phase:"menu"});
-  $("btnReset").onclick = async () => {
-    if(!confirm("ALLES zurücksetzen? (Scores gehen verloren)")) return;
-    await remove(ref(db,`rooms/${room}`));
-    location.reload();
-  };
-
-  // quiz host
-  $("qNext").onclick = quizNext;
-  $("qEval").onclick = quizEval;
-
-  // bingo host
-  $("bingoNew").onclick = bingoDealAll;
-
-  // duel host
-  document.querySelectorAll("#duelHost [data-duel]").forEach(b=>{
-    b.onclick = () => { 
-      update(ref(db,`rooms/${room}/duel`),{mode:b.dataset.duel,picks:{},answers:{},q:null,started:false}); 
-    };
-  });
-  $("duelStart").onclick = duelStart;
-  $("duelEval").onclick = duelEval;
-
-  // cities host
-  $("addCity").onclick = async () => {
-    const v = $("newCity").value.trim(); if(!v) return;
-    const k = "c_"+Date.now();
-    await set(ref(db,`rooms/${room}/cities/list/${k}`),{name:v,status:"active",addedBy:user});
-    $("newCity").value="";
-  };
-  document.querySelectorAll("#citiesHost [data-vote]").forEach(b=>{
-    b.onclick = () => startCityVote(b.dataset.vote);
-  });
-  $("endVote").onclick = endCityVote;
-}
-
-async function launchModule(mod){
-  if(mod==="event"){
-    const txt = DRINK_RULES[Math.floor(Math.random()*DRINK_RULES.length)];
-    await set(ref(db,`rooms/${room}/event`),{text:txt,ts:Date.now()});
+function renderOfficial(){
+  clearTimers();
+  const o=state.official;
+  const panel=$("officialPanel");
+  if(!o||o.phase==="done"){
+    if(!o){ panel.classList.add("hidden"); return; }
+    // show done state briefly
+    panel.classList.remove("hidden");
+    $("officialBody").innerHTML=`<div class="q-big">${o.q||""}</div><div class="flash">${o.result||"Runde beendet"}</div>${isHost?'<button class="btn-ghost" id="closeOff">Schliessen</button>':''}`;
+    const cb=$("closeOff"); if(cb) cb.onclick=()=>remove(ref(db,`rooms/${room}/official`));
     return;
   }
-  // reset module state on launch
-  if(mod==="quiz"){
-    await set(ref(db,`rooms/${room}/quiz`),{qIdx:-1,answers:{},votes:{},phase:"idle"});
-  }
-  if(mod==="duel"){
-    await set(ref(db,`rooms/${room}/duel`),{mode:null,picks:{},answers:{},started:false});
-  }
-  if(mod==="cities"){
-    const exists = (await get(ref(db,`rooms/${room}/cities`))).exists();
-    if(!exists){
-      // seed default city list
-      const seed = {
-        c_1:{name:"Lissabon",status:"active"},
-        c_2:{name:"Prag",status:"active"},
-        c_3:{name:"Krakau",status:"active"},
-        c_4:{name:"Budapest",status:"active"},
-        c_5:{name:"Valencia",status:"active"},
-        c_6:{name:"Porto",status:"active"},
-      };
-      await set(ref(db,`rooms/${room}/cities/list`),seed);
-    }
-  }
-  await update(ref(db,`rooms/${room}/state`),{phase:mod});
-}
+  panel.classList.remove("hidden");
+  const body=$("officialBody");
+  let html=`<div class="q-big">${o.q}</div><div class="timer" id="offTimer"></div>`;
 
-// === QUIZ MODULE ===
-let quizTimerInt=null;
-async function quizNext(){
-  const q = QUIZ_QUESTIONS[Math.floor(Math.random()*QUIZ_QUESTIONS.length)];
-  await set(ref(db,`rooms/${room}/quiz`),{
-    q:q.q, type:q.type, answers:{}, votes:{}, phase:"answer", endTime:Date.now()+30000
-  });
-}
-async function renderQuiz(){
-  const snap = await get(ref(db,`rooms/${room}/quiz`));
-  const q = snap.val()||{};
-  $("quizQ").innerText = q.q || "Warten auf Host…";
-  const ia = $("quizInputArea"), va = $("quizVoteArea"), rs = $("quizResult");
-  ia.innerHTML=""; va.innerHTML=""; rs.innerHTML="";
-
-  if(quizTimerInt) clearInterval(quizTimerInt);
-  if(q.phase==="answer" && q.endTime){
-    quizTimerInt = setInterval(()=>{
-      const d = Math.max(0,Math.ceil((q.endTime-Date.now())/1000));
-      $("quizTimer").innerText = d>0?("⏳ "+d+"s"):"⏱️ Zeit!";
-      if(d<=0) clearInterval(quizTimerInt);
-    },500);
-    // input
-    const myAns = q.answers && q.answers[user];
-    if(myAns){
-      ia.innerHTML = `<div class="flash">✅ Deine Antwort: <b>${myAns}</b></div>`;
-    } else {
-      if(q.type==="who"){
-        const opts = Object.keys(players).map(p=>`<option>${p}</option>`).join("");
-        ia.innerHTML = `<select id="qAns"><option value="">— wähle —</option>${opts}</select><button id="qSend">Senden</button>`;
-      } else if(q.type==="num"){
-        ia.innerHTML = `<input id="qAns" type="number" placeholder="Zahl…"><button id="qSend">Senden</button>`;
-      } else {
-        ia.innerHTML = `<input id="qAns" placeholder="Deine Antwort…"><button id="qSend">Senden</button>`;
-      }
-      const send = $("qSend");
-      if(send) send.onclick = async () => {
-        const v = $("qAns").value.trim(); if(!v) return;
-        await set(ref(db,`rooms/${room}/quiz/answers/${user}`),v);
-      };
-    }
-  } else {
-    $("quizTimer").innerText = "";
-  }
-
-  if(q.phase==="vote"){
-    const unique = [...new Set(Object.values(q.answers||{}))];
-    const myVote = q.votes && q.votes[user];
-    va.innerHTML = "<h3>Wähle den Favoriten:</h3>" + unique.map(t=>`
-      <button class="btn-ghost" style="text-align:left;${myVote===t?'border-color:var(--green);background:rgba(46,204,113,.2)':''}" data-v="${t.replace(/"/g,'&quot;')}">${t}</button>`).join("");
-    va.querySelectorAll("[data-v]").forEach(b=>b.onclick=async()=>{
-      await set(ref(db,`rooms/${room}/quiz/votes/${user}`),b.dataset.v);
-    });
-  }
-
-  if(q.phase==="done"){
-    rs.innerHTML = `<div class="flash"><b>Sieger:</b> ${q.winner||"—"}<br>Punkte verteilt!</div>`;
-  }
-}
-async function quizEval(){
-  const snap = await get(ref(db,`rooms/${room}/quiz`));
-  const q = snap.val()||{};
-  if(!q.q) return;
-
-  if(q.type==="num"){
-    // closest wins
-    const target = Number((q.answers && Object.values(q.answers)[0])||0); // host could set; fallback
-    // we don't have a "true" answer for free quiz - skip: just no points
-    await update(ref(db,`rooms/${room}/quiz`),{phase:"done",winner:"(Schätzfrage – Host entscheidet)"});
-    return;
-  }
-
-  if(q.type==="who"){
-    // count answers
-    const counts={};
-    Object.values(q.answers||{}).forEach(a=>{counts[a]=(counts[a]||0)+1});
-    const max = Math.max(0,...Object.values(counts));
-    const winners = Object.keys(counts).filter(k=>counts[k]===max);
-    // award point to those who voted for winners
-    for(const [p,a] of Object.entries(q.answers||{})){
-      if(winners.includes(a)) await awardPoint(p,1);
-    }
-    await update(ref(db,`rooms/${room}/quiz`),{phase:"done",winner:winners.join(", ")});
-    return;
-  }
-
-  // text → go to vote phase if not yet
-  if(q.phase==="answer"){
-    await update(ref(db,`rooms/${room}/quiz`),{phase:"vote"});
-    return;
-  }
-  // vote phase → tally
-  if(q.phase==="vote"){
-    const counts={};
-    Object.values(q.votes||{}).forEach(v=>{counts[v]=(counts[v]||0)+1});
-    const max = Math.max(0,...Object.values(counts));
-    const winnersTexts = Object.keys(counts).filter(k=>counts[k]===max);
-    // award point to authors
-    for(const [author,ans] of Object.entries(q.answers||{})){
-      if(winnersTexts.includes(ans)) await awardPoint(author,2);
-    }
-    await update(ref(db,`rooms/${room}/quiz`),{phase:"done",winner:winnersTexts.join(", ")});
-  }
-}
-
-async function awardPoint(player, n=1){
-  const r = ref(db,`rooms/${room}/players/${player}/score`);
-  const cur = (await get(r)).val()||0;
-  await set(r,cur+n);
-}
-async function deductPoint(player,n=1){ await awardPoint(player,-n); }
-
-// === BINGO MODULE ===
-function shuffle(a){return [...a].sort(()=>Math.random()-0.5)}
-async function bingoDealAll(){
-  const ps = Object.keys(players);
-  const cards = {};
-  for(const p of ps){
-    const picks = shuffle(BIER_POOL).slice(0,24);
-    // 5x5 with FREE middle
-    const grid = [];
-    for(let i=0;i<25;i++){
-      if(i===12) grid.push({beer:"FREI",free:true,marked:true,confirmedBy:[]});
-      else { grid.push({beer:picks[i>12?i-1:i],marked:false,confirmedBy:[]}); }
-    }
-    cards[p] = {grid,won:false};
-  }
-  await set(ref(db,`rooms/${room}/bingo`),{cards,dealt:Date.now()});
-}
-async function renderBingo(){
-  const snap = await get(ref(db,`rooms/${room}/bingo`));
-  const data = snap.val()||{};
-  const myCard = data.cards && data.cards[user];
-  const grid = $("bingoGrid");
-  grid.innerHTML="";
-  if(!myCard){
-    grid.innerHTML = '<div style="grid-column:1/-1" class="sub">Noch keine Karte – Host muss austeilen.</div>';
-  } else {
-    myCard.grid.forEach((cell,i)=>{
-      const div = document.createElement("div");
-      const conf = (cell.confirmedBy||[]).length;
-      const isConfirmed = conf>=2 || cell.free;
-      div.className = "bingo-cell" + (cell.marked?" marked":"") + (isConfirmed?" confirmed":"") + (cell.free?" free":"");
-      div.innerHTML = `<span>${cell.beer}</span>${conf>0&&!cell.free?`<span class="conf">${conf}/2</span>`:""}`;
-      div.onclick = () => bingoToggle(user,i);
-      grid.appendChild(div);
-    });
-    // check bingo
-    const won = checkBingo(myCard.grid);
-    $("bingoStatus").innerHTML = won 
-      ? `<div class="flash">🎉 BINGO! Du hast eine Reihe!</div>` 
-      : `<div class="sub">Markiert: ${myCard.grid.filter(c=>c.marked).length}/25</div>`;
-    if(won && !myCard.won){
-      await update(ref(db,`rooms/${room}/bingo/cards/${user}`),{won:true});
-      await awardPoint(user,5);
-    }
-  }
-  // confirm list - show others' pending
-  const list = $("bingoConfirmList");
-  list.innerHTML="";
-  if(data.cards){
-    for(const [p,card] of Object.entries(data.cards)){
-      if(p===user) continue;
-      const pending = card.grid.map((c,i)=>({...c,i})).filter(c=>c.marked && !c.free && (c.confirmedBy||[]).length<2 && !(c.confirmedBy||[]).includes(user));
-      if(pending.length===0) continue;
-      const div = document.createElement("div");
-      div.style.cssText="background:var(--card2);padding:8px;border-radius:8px;margin:4px 0";
-      div.innerHTML = `<b>${p}</b><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${pending.map(c=>`<button class="btn-green" style="font-size:.7rem;padding:6px 10px;width:auto;margin:0" data-p="${p}" data-i="${c.i}">✓ ${c.beer}</button>`).join("")}</div>`;
-      list.appendChild(div);
-    }
-    list.querySelectorAll("button[data-p]").forEach(b=>b.onclick=async()=>{
-      const p=b.dataset.p, i=parseInt(b.dataset.i);
-      const r = ref(db,`rooms/${room}/bingo/cards/${p}/grid/${i}/confirmedBy`);
-      const cur = (await get(r)).val()||[];
-      if(!cur.includes(user)) cur.push(user);
-      await set(r,cur);
-    });
-  }
-}
-async function bingoToggle(p,i){
-  const r = ref(db,`rooms/${room}/bingo/cards/${p}/grid/${i}`);
-  const cur = (await get(r)).val();
-  if(!cur || cur.free) return;
-  await update(r,{marked:!cur.marked, confirmedBy: cur.marked?[]:cur.confirmedBy||[]});
-}
-function checkBingo(grid){
-  // grid 5x5, only count cells that are confirmed (free counts)
-  const ok = i => grid[i].free || (grid[i].marked && (grid[i].confirmedBy||[]).length>=2);
-  // rows
-  for(let r=0;r<5;r++){ if([0,1,2,3,4].every(c=>ok(r*5+c))) return true; }
-  // cols
-  for(let c=0;c<5;c++){ if([0,1,2,3,4].every(r=>ok(r*5+c))) return true; }
-  // diags
-  if([0,6,12,18,24].every(ok)) return true;
-  if([4,8,12,16,20].every(ok)) return true;
-  return false;
-}
-
-// === DUEL MODULE ===
-let duelTimerInt=null;
-async function renderDuel(){
-  const snap = await get(ref(db,`rooms/${room}/duel`));
-  const d = snap.val()||{};
-  $("duelInfo").innerHTML = d.mode 
-    ? `<div class="flash">Modus: <b>${d.mode}</b> · Teilnehmer: ${Object.keys(d.picks||{}).join(", ")||"—"}</div>`
-    : `<div class="sub">Host wählt Modus & Teilnehmer.</div>`;
-  $("duelQ").innerText = d.q || "—";
-  const ia = $("duelInputArea"); ia.innerHTML="";
-  const rs = $("duelResult"); rs.innerHTML="";
-
-  if(duelTimerInt) clearInterval(duelTimerInt);
-
-  // host pick list
-  if(isHost){
-    const list = $("duelPickList");
-    list.innerHTML = Object.keys(players).map(p=>{
-      const sel = (d.picks||{})[p] ? "btn-green" : "btn-ghost";
-      return `<button class="${sel}" data-pick="${p}" style="text-align:left">${(d.picks||{})[p]?'✓ ':''}${p}</button>`;
-    }).join("");
-    list.querySelectorAll("[data-pick]").forEach(b=>b.onclick=async()=>{
-      const p=b.dataset.pick;
-      const r = ref(db,`rooms/${room}/duel/picks/${p}`);
-      const cur=(await get(r)).val();
-      if(cur) await remove(r); else await set(r,d.mode==="gruppe"?(prompt("Team A oder B?","A")||"A"):true);
-    });
-  }
-
-  if(d.started && (d.picks||{})[user]){
-    const myAns = d.answers && d.answers[user];
+  const myAns=(o.answers||{})[user];
+  if(o.phase==="answer"){
     if(myAns!==undefined){
-      ia.innerHTML = `<div class="flash">✅ Deine Antwort: ${myAns}</div>`;
+      html+=`<div class="flash">✅ Deine Antwort: <b>${typeof myAns==='object'?myAns.val:myAns}</b></div>`;
     } else {
-      ia.innerHTML = `<input id="dAns" type="number" placeholder="Deine Antwort…"><button id="dSend">Senden</button>`;
-      $("dSend").onclick = async () => {
-        const v = $("dAns").value; if(v==="") return;
-        await set(ref(db,`rooms/${room}/duel/answers/${user}`),{val:Number(v),ts:Date.now()});
-      };
-    }
-    if(d.endTime){
-      duelTimerInt = setInterval(()=>{
-        const x = Math.max(0,Math.ceil((d.endTime-Date.now())/1000));
-        $("duelTimer").innerText = x>0?("⏳ "+x+"s"):"⏱️ Ende";
-        if(x<=0) clearInterval(duelTimerInt);
-      },500);
-    }
-  }
-  if(d.result) rs.innerHTML = `<div class="flash">${d.result}</div>`;
-}
-async function duelStart(){
-  const snap = await get(ref(db,`rooms/${room}/duel`));
-  const d = snap.val()||{};
-  if(!d.mode) return alert("Modus wählen!");
-  if(!d.picks || Object.keys(d.picks).length<2) return alert("Mind. 2 Teilnehmer!");
-  let q,target;
-  if(d.mode==="rechen"){
-    const a=Math.floor(Math.random()*40+10), b=Math.floor(Math.random()*20+5), op=["+","-","*"][Math.floor(Math.random()*3)];
-    q = `${a} ${op} ${b} = ?`;
-    target = eval(`${a}${op}${b}`);
-  } else {
-    const sf = SCHAETZ_FRAGEN[Math.floor(Math.random()*SCHAETZ_FRAGEN.length)];
-    q = sf.q; target = sf.a;
-  }
-  await update(ref(db,`rooms/${room}/duel`),{q,target,started:true,answers:{},endTime:Date.now()+30000,result:null});
-}
-async function duelEval(){
-  const snap = await get(ref(db,`rooms/${room}/duel`));
-  const d = snap.val()||{};
-  if(!d.target || !d.answers) return;
-  if(d.mode==="gruppe"){
-    // average per team
-    const teams={};
-    for(const [p,a] of Object.entries(d.answers)){
-      const team = d.picks[p]||"A";
-      if(!teams[team]) teams[team]={sum:0,n:0};
-      teams[team].sum += a.val; teams[team].n++;
-    }
-    let best=null,bestDiff=Infinity;
-    for(const [t,v] of Object.entries(teams)){
-      const avg = v.sum/v.n; const diff = Math.abs(avg-d.target);
-      if(diff<bestDiff){bestDiff=diff;best=t;}
-    }
-    // award everyone in winning team
-    for(const [p,team] of Object.entries(d.picks)){
-      if(team===best) await awardPoint(p,3);
-    }
-    await update(ref(db,`rooms/${room}/duel`),{result:`Team ${best} gewinnt! (Antwort: ${d.target}) · +3 Pkt`});
-  } else {
-    // closest individual
-    let best=null,bestDiff=Infinity,bestTs=Infinity;
-    for(const [p,a] of Object.entries(d.answers)){
-      const diff = Math.abs(a.val-d.target);
-      if(diff<bestDiff || (diff===bestDiff && a.ts<bestTs)){
-        bestDiff=diff; bestTs=a.ts; best=p;
+      // input based on type
+      if(o.type==="quiz-who"){
+        const opts=Object.keys(players).map(p=>`<option>${p}</option>`).join("");
+        html+=`<select id="offIn"><option value="">-- waehle --</option>${opts}</select>`;
+      } else if(o.type==="quiz-text"){
+        html+=`<input id="offIn" placeholder="Deine Antwort...">`;
+      } else {
+        // duel or group = number
+        html+=`<input id="offIn" type="number" placeholder="Zahl...">`;
       }
+      if(o.type==="group-estimate"){
+        const myTeam=(o.teams||{})[user];
+        html+=`<div class="sub">Team waehlen:</div>
+          <div class="row">
+            <button class="${myTeam==='A'?'btn-green':'btn-ghost'}" data-team="A">Team A</button>
+            <button class="${myTeam==='B'?'btn-green':'btn-ghost'}" data-team="B">Team B</button>
+          </div>`;
+      }
+      html+=`<button id="offSend" class="btn-green">Senden</button>`;
+    }
+  } else if(o.phase==="vote"){
+    const unique=[...new Set(Object.values(o.answers||{}))];
+    const myVote=(o.votes||{})[user];
+    html+=`<h3>Bester Vorschlag?</h3>`+unique.map(t=>`<button class="${myVote===t?'btn-green':'btn-ghost'}" style="text-align:left" data-vote="${t.replace(/"/g,'&quot;')}">${t}</button>`).join("");
+  }
+
+  if(isHost && o.phase!=="done"){
+    html+=`<hr><h3>Host:</h3>`;
+    if(o.type==="quiz-text" && o.phase==="answer"){
+      html+=`<button class="btn-orange" id="toVote">Zu Voting wechseln</button>`;
+    }
+    html+=`<button class="btn-green" id="evalNow">Jetzt auswerten</button>
+      <button class="btn-red" id="cancelOff">Abbrechen</button>`;
+  }
+
+  body.innerHTML=html;
+
+  // bind
+  const si=$("offSend"); if(si) si.onclick=sendOfficial;
+  const ev=$("evalNow"); if(ev) ev.onclick=evalOfficial;
+  const tv=$("toVote"); if(tv) tv.onclick=()=>update(ref(db,`rooms/${room}/official`),{phase:"vote"});
+  const co=$("cancelOff"); if(co) co.onclick=()=>remove(ref(db,`rooms/${room}/official`));
+  document.querySelectorAll("[data-team]").forEach(b=>b.onclick=()=>set(ref(db,`rooms/${room}/official/teams/${user}`),b.dataset.team));
+  document.querySelectorAll("[data-vote]").forEach(b=>b.onclick=()=>set(ref(db,`rooms/${room}/official/votes/${user}`),b.dataset.vote));
+
+  // timer
+  if(o.endTime){
+    const tick=()=>{
+      const d=Math.max(0,Math.ceil((o.endTime-Date.now())/1000));
+      const tEl=$("offTimer");
+      if(tEl) tEl.innerText=d>0?("⏳ "+d+"s"):"⏱️ Zeit!";
+      if(d<=0){ clearTimers(); }
+    };
+    tick();
+    timers.push(setInterval(tick,500));
+  }
+}
+
+async function sendOfficial(){
+  const i=$("offIn"); if(!i) return;
+  const v=i.value.trim(); if(v==="") return;
+  const o=state.official; if(!o) return;
+  let val=v;
+  if(o.type.startsWith("duel")||o.type==="group-estimate"){
+    val={val:Number(v),ts:Date.now()};
+  }
+  await set(ref(db,`rooms/${room}/official/answers/${user}`),val);
+}
+
+async function evalOfficial(){
+  const o=state.official; if(!o) return;
+  let result="";
+
+  if(o.type==="quiz-who"){
+    const counts={};
+    Object.values(o.answers||{}).forEach(a=>{counts[a]=(counts[a]||0)+1});
+    const max=Math.max(0,...Object.values(counts));
+    const winners=Object.keys(counts).filter(k=>counts[k]===max);
+    for(const [p,a] of Object.entries(o.answers||{})){
+      if(winners.includes(a)) await awardScore(p,2);
+    }
+    result=`Sieger: ${winners.join(", ")} (+2 Pkt für alle die richtig tippten)`;
+  }
+  else if(o.type==="quiz-text"){
+    if(o.phase==="answer"){
+      await update(ref(db,`rooms/${room}/official`),{phase:"vote"});
+      return;
+    }
+    const counts={};
+    Object.values(o.votes||{}).forEach(v=>{counts[v]=(counts[v]||0)+1});
+    const max=Math.max(0,...Object.values(counts));
+    const winTexts=Object.keys(counts).filter(k=>counts[k]===max);
+    for(const [p,ans] of Object.entries(o.answers||{})){
+      if(winTexts.includes(ans)) await awardScore(p,3);
+    }
+    result=`Beste Antwort: ${winTexts.join(", ")} (+3 Pkt)`;
+  }
+  else if(o.type==="duel-math"||o.type==="duel-estimate"){
+    let best=null,bestDiff=Infinity,bestTs=Infinity;
+    for(const [p,a] of Object.entries(o.answers||{})){
+      const d=Math.abs((a.val||0)-o.target);
+      if(d<bestDiff||(d===bestDiff&&a.ts<bestTs)){bestDiff=d;bestTs=a.ts;best=p;}
     }
     if(best){
-      await awardPoint(best,3);
-      await update(ref(db,`rooms/${room}/duel`),{result:`🏆 ${best} gewinnt! (Antwort: ${d.target}, deine: ${d.answers[best].val}) · +3 Pkt`});
-    }
+      await awardScore(best,3);
+      result=`🏆 ${best} gewinnt! (Richtig: ${o.target}, Abgabe: ${o.answers[best].val}) +3 Pkt`;
+    } else result="Niemand hat geantwortet";
   }
+  else if(o.type==="group-estimate"){
+    const teamSums={A:{sum:0,n:0},B:{sum:0,n:0}};
+    for(const [p,a] of Object.entries(o.answers||{})){
+      const t=(o.teams||{})[p]; if(!t||!teamSums[t]) continue;
+      teamSums[t].sum+=a.val; teamSums[t].n++;
+    }
+    const avgA=teamSums.A.n?teamSums.A.sum/teamSums.A.n:Infinity;
+    const avgB=teamSums.B.n?teamSums.B.sum/teamSums.B.n:Infinity;
+    const dA=Math.abs(avgA-o.target),dB=Math.abs(avgB-o.target);
+    const win=dA<dB?"A":"B";
+    for(const [p,t] of Object.entries(o.teams||{})){
+      if(t===win) await awardScore(p,3);
+    }
+    result=`Team ${win} gewinnt! (Richtig: ${o.target}, A-Schnitt: ${avgA.toFixed(1)}, B: ${avgB.toFixed(1)}) +3 Pkt pro Teammitglied`;
+  }
+  await update(ref(db,`rooms/${room}/official`),{phase:"done",result});
 }
 
-// === CITIES MODULE ===
-async function renderCities(){
-  const snap = await get(ref(db,`rooms/${room}/cities`));
-  const c = snap.val()||{};
-  const list = c.list||{};
-  const round = c.round;
+// === BINGO ===
+function shuffle(a){return [...a].sort(()=>Math.random()-0.5)}
+function makeCard(){
+  const picks=shuffle(BIER_POOL).slice(0,24);
+  const grid=[];
+  for(let i=0;i<25;i++){
+    if(i===12) grid.push({beer:"FREI",free:true,marked:true,confirmedBy:[]});
+    else grid.push({beer:picks[i>12?i-1:i],marked:false,confirmedBy:[]});
+  }
+  return {grid,won:false,dealt:Date.now()};
+}
+async function bingoDealAll(){
+  if(!isHost) return;
+  const cards={};
+  Object.keys(players).forEach(p=>{cards[p]=makeCard()});
+  await set(ref(db,`rooms/${room}/bingo/cards`),cards);
+}
+async function bingoDealOne(p){
+  await set(ref(db,`rooms/${room}/bingo/cards/${p}`),makeCard());
+}
 
-  // sort: active first, then by votes desc
-  const entries = Object.entries(list).sort((a,b)=>{
+function renderBingo(){
+  const cards=(state.bingo&&state.bingo.cards)||{};
+  const myCard=cards[user];
+  const grid=$("bingoGrid");
+  grid.innerHTML="";
+  if(!myCard){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px" class="sub">Noch keine Karte.</div>';
+    $("bingoGetCard").classList.remove("hidden");
+    $("bingoStatus").innerHTML="";
+  } else {
+    $("bingoGetCard").classList.add("hidden");
+    const winCells=findWinLine(myCard.grid);
+    myCard.grid.forEach((cell,i)=>{
+      const div=document.createElement("div");
+      const conf=(cell.confirmedBy||[]).length;
+      const isConfirmed=conf>=2||cell.free;
+      div.className="bingo-cell"+(cell.marked?" marked":"")+(isConfirmed?" confirmed":"")+(cell.free?" free":"")+(winCells.includes(i)?" winrow":"");
+      div.innerHTML=`<span>${cell.beer}</span>${conf>0&&!cell.free?`<span class="conf">${conf}/2</span>`:""}`;
+      div.onclick=()=>bingoToggle(i);
+      grid.appendChild(div);
+    });
+    const marked=myCard.grid.filter(c=>c.marked).length;
+    if(winCells.length && !myCard.won){
+      $("bingoStatus").innerHTML='<div class="flash">🎉 BINGO! +10 Pkt!</div>';
+      update(ref(db,`rooms/${room}/bingo/cards/${user}`),{won:true});
+      awardScore(user,10);
+    } else if(winCells.length){
+      $("bingoStatus").innerHTML='<div class="flash">🎉 BINGO erreicht!</div>';
+    } else {
+      $("bingoStatus").innerHTML=`<div class="sub">${marked}/25 markiert</div>`;
+    }
+  }
+  // confirm list
+  const list=$("bingoConfirmList");
+  list.innerHTML="";
+  let any=false;
+  for(const [p,card] of Object.entries(cards)){
+    if(p===user) continue;
+    const pending=card.grid.map((c,i)=>({...c,i})).filter(c=>c.marked&&!c.free&&(c.confirmedBy||[]).length<2&&!(c.confirmedBy||[]).includes(user));
+    if(pending.length===0) continue;
+    any=true;
+    const div=document.createElement("div");
+    div.style.cssText="background:var(--card2);padding:10px;border-radius:8px;margin:5px 0";
+    div.innerHTML=`<b>${p}</b><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${pending.map(c=>`<button class="btn-green" style="font-size:.7rem;padding:6px 10px;width:auto;margin:0" data-p="${p}" data-i="${c.i}">✓ ${c.beer}</button>`).join("")}</div>`;
+    list.appendChild(div);
+  }
+  if(!any) list.innerHTML='<div class="sub">Nichts zu bestätigen</div>';
+  list.querySelectorAll("button[data-p]").forEach(b=>b.onclick=async()=>{
+    const p=b.dataset.p,i=parseInt(b.dataset.i);
+    const r=ref(db,`rooms/${room}/bingo/cards/${p}/grid/${i}/confirmedBy`);
+    const cur=(await get(r)).val()||[];
+    if(!cur.includes(user)) cur.push(user);
+    await set(r,cur);
+  });
+}
+
+async function bingoToggle(i){
+  const cards=(state.bingo&&state.bingo.cards)||{};
+  const myCard=cards[user]; if(!myCard) return;
+  const cell=myCard.grid[i]; if(!cell||cell.free) return;
+  const r=ref(db,`rooms/${room}/bingo/cards/${user}/grid/${i}`);
+  await update(r,{marked:!cell.marked,confirmedBy:cell.marked?[]:(cell.confirmedBy||[])});
+}
+function findWinLine(grid){
+  const ok=i=>grid[i].free||(grid[i].marked&&(grid[i].confirmedBy||[]).length>=2);
+  const lines=[];
+  for(let r=0;r<5;r++) lines.push([0,1,2,3,4].map(c=>r*5+c));
+  for(let c=0;c<5;c++) lines.push([0,1,2,3,4].map(r=>r*5+c));
+  lines.push([0,6,12,18,24]);
+  lines.push([4,8,12,16,20]);
+  for(const ln of lines){
+    if(ln.every(ok)) return ln;
+  }
+  return [];
+}
+
+// === CITIES ===
+function renderCities(){
+  const c=state.cities||{};
+  const list=c.list||{};
+  const round=c.round;
+  const entries=Object.entries(list).sort((a,b)=>{
     if(a[1].status!==b[1].status) return a[1].status==="active"?-1:1;
     return (b[1].votes||0)-(a[1].votes||0);
   });
-
-  $("citiesList").innerHTML = entries.map(([k,city])=>`
+  $("citiesList").innerHTML=entries.map(([k,city])=>`
     <div class="city-row ${city.status==='eliminated'?'elim':''}">
-      <span class="city-name">${city.name}</span>
-      <div class="city-votes">
-        ${city.votes?`<span class="vote-pill">${city.votes>0?'+':''}${city.votes}</span>`:""}
-      </div>
-    </div>`).join("") || '<div class="sub">Noch keine Städte</div>';
+      <span style="flex:1;font-weight:bold">${city.name}</span>
+      ${city.votes?`<span class="vote-pill ${city.votes<0?'neg':''}">${city.votes>0?'+':''}${city.votes}</span>`:''}
+    </div>`).join("")||'<div class="sub">Keine Städte</div>';
 
-  // action area for current voter
-  const aa = $("citiesAction"); aa.innerHTML="";
-  if(round && round.type){
-    const myVotes = (round.votes||{})[user];
+  const aa=$("citiesAction"); aa.innerHTML="";
+  if(round&&round.type){
+    const myV=(round.votes||{})[user];
     if(round.type==="pos3"){
-      aa.innerHTML = `<h3>Vergib 3 Punkte (max 3 Städte):</h3>` + 
-        entries.filter(e=>e[1].status==="active").map(([k,city])=>{
-          const sel = myVotes && myVotes.includes(k);
-          return `<button class="${sel?'btn-green':'btn-ghost'}" data-city="${k}" style="text-align:left">${sel?'✓ ':''}${city.name}</button>`;
-        }).join("");
-      aa.querySelectorAll("[data-city]").forEach(b=>b.onclick=async()=>{
-        const k = b.dataset.city;
-        let cur = myVotes||[];
+      aa.innerHTML=`<hr><h3>Vergib 3 Punkte (max. 3 Städte):</h3>`+entries.filter(e=>e[1].status==="active").map(([k,city])=>{
+        const sel=myV&&myV.includes(k);
+        return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
+      }).join("");
+    } else if(round.type==="neg1"){
+      aa.innerHTML=`<hr><h3>Welche Stadt soll WEG?</h3>`+entries.filter(e=>e[1].status==="active").map(([k,city])=>{
+        const sel=myV===k;
+        return `<button class="${sel?'btn-red':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✗ ':''}${city.name}</button>`;
+      }).join("");
+    } else if(round.type==="elim"){
+      aa.innerHTML=`<div class="flash warn">Schwächste Stadt fliegt beim Auswerten raus (nur Host).</div>`;
+    } else if(round.type==="revive"){
+      const elim=entries.filter(e=>e[1].status==="eliminated");
+      aa.innerHTML=`<hr><h3>Welche zurückholen?</h3>`+(elim.length?elim.map(([k,city])=>{
+        const sel=myV===k;
+        return `<button class="${sel?'btn-blue':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'↩ ':''}${city.name}</button>`;
+      }).join(""):'<div class="sub">Keine eliminierten Städte</div>');
+    }
+    aa.querySelectorAll("[data-city]").forEach(b=>b.onclick=async()=>{
+      const k=b.dataset.city;
+      if(round.type==="pos3"){
+        let cur=myV||[];
         if(cur.includes(k)) cur=cur.filter(x=>x!==k);
         else if(cur.length<3) cur.push(k);
         await set(ref(db,`rooms/${room}/cities/round/votes/${user}`),cur);
-      });
-    } else if(round.type==="neg1"){
-      aa.innerHTML = `<h3>Welche Stadt soll WEG?</h3>` +
-        entries.filter(e=>e[1].status==="active").map(([k,city])=>{
-          const sel = myVotes===k;
-          return `<button class="${sel?'btn-red':'btn-ghost'}" data-city="${k}" style="text-align:left">${sel?'✗ ':''}${city.name}</button>`;
-        }).join("");
-      aa.querySelectorAll("[data-city]").forEach(b=>b.onclick=async()=>{
-        await set(ref(db,`rooms/${room}/cities/round/votes/${user}`),b.dataset.city);
-      });
-    } else if(round.type==="elim"){
-      aa.innerHTML = `<div class="flash warn">Schwächste Stadt fliegt automatisch beim Auswerten raus.</div>`;
-    } else if(round.type==="revive"){
-      aa.innerHTML = `<h3>Welche zurückholen?</h3>` +
-        entries.filter(e=>e[1].status==="eliminated").map(([k,city])=>{
-          const sel = myVotes===k;
-          return `<button class="${sel?'btn-blue':'btn-ghost'}" data-city="${k}" style="text-align:left">${sel?'↩ ':''}${city.name}</button>`;
-        }).join("") || '<div class="sub">Keine eliminierten Städte</div>';
-      aa.querySelectorAll("[data-city]").forEach(b=>b.onclick=async()=>{
-        await set(ref(db,`rooms/${room}/cities/round/votes/${user}`),b.dataset.city);
-      });
-    }
+      } else {
+        await set(ref(db,`rooms/${room}/cities/round/votes/${user}`),k);
+      }
+    });
   }
 }
+async function addCity(){
+  if(!isHost) return;
+  const v=$("newCity").value.trim(); if(!v) return;
+  await set(ref(db,`rooms/${room}/cities/list/c_${Date.now()}`),{name:v,status:"active",votes:0});
+  $("newCity").value="";
+}
 async function startCityVote(type){
+  if(!isHost) return;
   await set(ref(db,`rooms/${room}/cities/round`),{type,votes:{},startedAt:Date.now()});
 }
 async function endCityVote(){
-  const snap = await get(ref(db,`rooms/${room}/cities`));
-  const c = snap.val()||{}; const r = c.round; if(!r) return;
-  const list = c.list||{};
-  const tally = {};
+  if(!isHost) return;
+  const c=state.cities||{},r=c.round; if(!r) return;
+  const list=c.list||{}; const tally={};
   if(r.type==="pos3"){
     Object.values(r.votes||{}).forEach(arr=>{(arr||[]).forEach(k=>tally[k]=(tally[k]||0)+1)});
-    for(const [k,v] of Object.entries(tally)){
-      await set(ref(db,`rooms/${room}/cities/list/${k}/votes`),((list[k].votes)||0)+v);
-    }
+    for(const [k,v] of Object.entries(tally)) await set(ref(db,`rooms/${room}/cities/list/${k}/votes`),((list[k].votes)||0)+v);
   } else if(r.type==="neg1"){
     Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
-    for(const [k,v] of Object.entries(tally)){
-      await set(ref(db,`rooms/${room}/cities/list/${k}/votes`),((list[k].votes)||0)-v);
-    }
+    for(const [k,v] of Object.entries(tally)) await set(ref(db,`rooms/${room}/cities/list/${k}/votes`),((list[k].votes)||0)-v);
   } else if(r.type==="elim"){
-    // find lowest active
-    const active = Object.entries(list).filter(e=>e[1].status==="active");
-    if(active.length){
-      active.sort((a,b)=>(a[1].votes||0)-(b[1].votes||0));
-      await update(ref(db,`rooms/${room}/cities/list/${active[0][0]}`),{status:"eliminated"});
-    }
+    const active=Object.entries(list).filter(e=>e[1].status==="active").sort((a,b)=>(a[1].votes||0)-(b[1].votes||0));
+    if(active.length) await update(ref(db,`rooms/${room}/cities/list/${active[0][0]}`),{status:"eliminated"});
   } else if(r.type==="revive"){
     Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
-    const winner = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0];
-    if(winner) await update(ref(db,`rooms/${room}/cities/list/${winner[0]}`),{status:"active"});
+    const win=Object.entries(tally).sort((a,b)=>b[1]-a[1])[0];
+    if(win) await update(ref(db,`rooms/${room}/cities/list/${win[0]}`),{status:"active",votes:0});
   }
   await remove(ref(db,`rooms/${room}/cities/round`));
+}
+
+// === MISSIONS ===
+function renderMissions(){
+  const list=$("missionsList");
+  const missions=state.missions||{};
+  const entries=Object.entries(missions).sort((a,b)=>{
+    if(a[1].done!==b[1].done) return a[1].done?1:-1;
+    return (b[1].points||0)-(a[1].points||0);
+  });
+  list.innerHTML=entries.map(([id,m])=>{
+    const conf=(m.confirmedBy||[]).length;
+    const claimed=m.claimedBy;
+    const iClaimed=claimed===user;
+    const iConfirmed=(m.confirmedBy||[]).includes(user);
+    let btn="";
+    if(m.done){
+      btn=`<div class="sub">✅ Erledigt von ${m.claimedBy} · ${conf} Bestätigungen</div>`;
+    } else if(!claimed){
+      btn=`<button class="btn-green" style="margin-top:6px" data-claim="${id}">Ich habs geschafft!</button>`;
+    } else if(iClaimed){
+      btn=`<div class="sub">Warte auf Bestätigung (${conf}/2)</div>
+        <button class="btn-ghost" style="margin-top:6px;font-size:.75rem" data-unclaim="${id}">Zurücknehmen</button>`;
+    } else {
+      btn=`<div class="sub">${claimed} hat es beansprucht (${conf}/2 Bestätigungen)</div>`+
+        (iConfirmed?'<div class="sub">✓ Du hast bestätigt</div>':`<button class="btn-blue" style="margin-top:6px" data-confirm="${id}">✓ Bestätigen</button>`);
+    }
+    return `<div class="mission ${m.done?'done':''}">
+      <span class="pts">${m.points} Pkt</span>
+      <b>${m.title}</b>
+      ${m.desc?`<div class="desc">${m.desc}</div>`:""}
+      ${btn}
+    </div>`;
+  }).join("")||'<div class="sub">Keine Missionen</div>';
+
+  list.querySelectorAll("[data-claim]").forEach(b=>b.onclick=()=>claimMission(b.dataset.claim));
+  list.querySelectorAll("[data-unclaim]").forEach(b=>b.onclick=()=>unclaimMission(b.dataset.unclaim));
+  list.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>confirmMission(b.dataset.confirm));
+}
+async function addMission(){
+  const t=$("newMissionTitle").value.trim(); if(!t) return;
+  const d=$("newMissionDesc").value.trim();
+  const p=parseInt($("newMissionPoints").value);
+  await set(ref(db,`rooms/${room}/missions/m_${Date.now()}`),{title:t,desc:d,points:p,createdBy:user,done:false,claimedBy:null,confirmedBy:[]});
+  $("newMissionTitle").value=""; $("newMissionDesc").value="";
+}
+async function claimMission(id){
+  await update(ref(db,`rooms/${room}/missions/${id}`),{claimedBy:user,confirmedBy:[]});
+}
+async function unclaimMission(id){
+  await update(ref(db,`rooms/${room}/missions/${id}`),{claimedBy:null,confirmedBy:[]});
+}
+async function confirmMission(id){
+  const r=ref(db,`rooms/${room}/missions/${id}`);
+  const m=(await get(r)).val(); if(!m||m.done) return;
+  const cb=m.confirmedBy||[];
+  if(cb.includes(user)) return;
+  cb.push(user);
+  if(cb.length>=2){
+    await update(r,{confirmedBy:cb,done:true});
+    await awardScore(m.claimedBy,m.points);
+  } else {
+    await update(r,{confirmedBy:cb});
+  }
+}
+
+// === SOLO GAMES ===
+function startSolo(type){
+  const area=$("soloArea");
+  area.classList.remove("hidden");
+  if(type==="math") soloMath(area);
+  else if(type==="estimate") soloEstimate(area);
+  else if(type==="reaction") soloReaction(area);
+}
+function soloMath(area){
+  let score=0,endTime=Date.now()+30000,current=null;
+  const gen=()=>{
+    const a=Math.floor(Math.random()*20+2),b=Math.floor(Math.random()*12+2),op=["+","-","*"][Math.floor(Math.random()*3)];
+    current={q:`${a} ${op} ${b}`,a:eval(`${a}${op}${b}`)};
+  };
+  const render=()=>{
+    const left=Math.max(0,Math.ceil((endTime-Date.now())/1000));
+    if(left<=0){
+      clearTimers();
+      const casualPts=Math.max(1,Math.floor(score/2));
+      awardScore(user,casualPts,true);
+      area.innerHTML=`<h2>🧮 Ende!</h2><div class="q-big">${score} richtig</div><div class="flash">+${casualPts} Casual-Punkte</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
+      $("soloClose").onclick=()=>area.classList.add("hidden");
+      return;
+    }
+    area.innerHTML=`<h2>🧮 Kopfrechnen Sprint</h2>
+      <div class="timer">⏳ ${left}s · ${score} richtig</div>
+      <div class="q-big">${current.q} = ?</div>
+      <input id="mathAns" type="number" autofocus>
+      <button class="btn-green" id="mathOK">OK</button>`;
+    const inp=$("mathAns"); inp.focus();
+    const submit=()=>{
+      if(Number(inp.value)===current.a) score++;
+      gen(); render();
+    };
+    inp.onkeydown=e=>{if(e.key==="Enter")submit()};
+    $("mathOK").onclick=submit;
+  };
+  gen();
+  render();
+  clearTimers();
+  timers.push(setInterval(()=>{
+    const left=Math.max(0,Math.ceil((endTime-Date.now())/1000));
+    const t=area.querySelector(".timer");
+    if(t) t.innerText=`⏳ ${left}s · ${score} richtig`;
+    if(left<=0){ render(); }
+  },500));
+}
+function soloEstimate(area){
+  const qs=shuffle(SCHAETZ).slice(0,5);
+  let i=0,totalDiff=0;
+  const next=()=>{
+    if(i>=qs.length){
+      const avgPct=totalDiff/qs.length;
+      const score=Math.max(1,Math.round(30-avgPct/3));
+      awardScore(user,score,true);
+      area.innerHTML=`<h2>🎯 Ende!</h2><div class="flash">Durchschnittsabweichung: ${avgPct.toFixed(0)}%<br>+${score} Casual-Punkte</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
+      $("soloClose").onclick=()=>area.classList.add("hidden");
+      return;
+    }
+    const q=qs[i];
+    area.innerHTML=`<h2>🎯 Schätzen ${i+1}/5</h2>
+      <div class="q-big">${q.q}</div>
+      <input id="estAns" type="number">
+      <button class="btn-green" id="estOK">Antwort</button>`;
+    $("estAns").focus();
+    const submit=()=>{
+      const v=Number($("estAns").value);
+      const pct=Math.abs(v-q.a)/q.a*100;
+      totalDiff+=Math.min(200,pct);
+      i++;
+      area.innerHTML=`<div class="flash">Richtig: <b>${q.a}</b> · Deine: ${v} · Abweichung: ${pct.toFixed(0)}%</div>
+        <button class="btn-blue" id="estNext">Weiter</button>`;
+      $("estNext").onclick=next;
+    };
+    $("estAns").onkeydown=e=>{if(e.key==="Enter")submit()};
+    $("estOK").onclick=submit;
+  };
+  next();
+}
+function soloReaction(area){
+  area.innerHTML=`<h2>⚡ Reaktions-Test</h2><div class="sub">Warte bis es grün wird, dann sofort tippen!</div>
+    <div id="reactBox" style="background:var(--red);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;cursor:pointer">WARTEN...</div>`;
+  const box=$("reactBox");
+  const wait=1500+Math.random()*3000;
+  let started=false,startTs=0;
+  const to=setTimeout(()=>{
+    box.style.background="var(--green)";
+    box.innerText="JETZT!";
+    started=true;
+    startTs=Date.now();
+  },wait);
+  box.onclick=()=>{
+    if(!started){
+      clearTimeout(to);
+      area.innerHTML=`<div class="flash warn">Zu früh! 😅</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
+      $("soloClose").onclick=()=>area.classList.add("hidden");
+      return;
+    }
+    const ms=Date.now()-startTs;
+    const pts=Math.max(1,Math.round(50-ms/10));
+    awardScore(user,pts,true);
+    area.innerHTML=`<h2>⚡ ${ms}ms</h2><div class="flash">+${pts} Casual-Punkte</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
+    $("soloClose").onclick=()=>area.classList.add("hidden");
+  };
+}
+
+// === RESET ===
+async function resetScores(){
+  if(!isHost) return;
+  if(!confirm("Alle Scores auf 0?")) return;
+  const upd={};
+  Object.keys(players).forEach(p=>{upd[`${p}/score`]=0;upd[`${p}/casual`]=0});
+  await update(ref(db,`rooms/${room}/players`),upd);
+}
+async function fullReset(){
+  if(!isHost) return;
+  if(!confirm("ALLES löschen (Spieler, Scores, Bingo, Städte, Missionen)?")) return;
+  await remove(ref(db,`rooms/${room}`));
+  location.reload();
 }
 </script>
 </body>
