@@ -36,7 +36,17 @@ function renderOfficialPanel(){
   // Official und quizMulti/duelSession werden von official.js gerendert
   // Hier nur wenn Turnier aktiv
   if(setup){ panel.classList.remove("hidden"); renderSetup(); return; }
-  if(t&&t.active){ panel.classList.remove("hidden"); renderTournament(t); return; }
+  if(t&&t.active){
+    panel.classList.remove("hidden");
+    renderTournament(t);
+    setTimeout(()=>{
+      document.querySelectorAll("[data-spect]").forEach(b=>b.onclick=()=>{
+        A._spectIdx=parseInt(b.dataset.spect);
+        renderTournament(A.state.tournament);
+      });
+    },0);
+    return;
+  }
   // else lassen wir official.js uebernehmen
 }
 
@@ -75,18 +85,35 @@ function renderSetup(){
 
 function buildBracket(participants){
   const shuffled=shuffle(participants);
+  // Round 1
   const matches=[];
-  let r1=[];
+  let prevRound=[];
   for(let i=0;i<shuffled.length;i+=2){
-    if(i+1<shuffled.length) r1.push({round:1,p1:shuffled[i],p2:shuffled[i+1],winner:null});
-    else r1.push({round:1,p1:shuffled[i],p2:null,winner:shuffled[i],bye:true});
+    if(i+1<shuffled.length){
+      const m={round:1,p1:shuffled[i],p2:shuffled[i+1],winner:null};
+      matches.push(m); prevRound.push(m);
+    } else {
+      const m={round:1,p1:shuffled[i],p2:null,winner:shuffled[i],bye:true};
+      matches.push(m); prevRound.push(m);
+    }
   }
-  matches.push(...r1);
-  let prevCount=r1.length, round=2;
-  while(prevCount>1){
-    const cnt=Math.ceil(prevCount/2);
-    for(let i=0;i<cnt;i++) matches.push({round,p1:null,p2:null,winner:null});
-    prevCount=cnt; round++;
+  // Folgerunden: erstelle leere Slots, propagate Bye-Sieger sofort
+  let round=2;
+  while(prevRound.length>1){
+    const next=[];
+    for(let i=0;i<prevRound.length;i+=2){
+      const m={round,p1:null,p2:null,winner:null};
+      if(prevRound[i] && prevRound[i].winner) m.p1=prevRound[i].winner;
+      if(prevRound[i+1] && prevRound[i+1].winner) m.p2=prevRound[i+1].winner;
+      else if(!prevRound[i+1]){
+        // ungerade Anzahl: kein Gegner → Bye fuer p1 falls schon gesetzt
+        if(m.p1){ m.bye=true; m.winner=m.p1; }
+      }
+      // Wenn beide Slots gefuellt UND beide aus Bye → Match ist nicht Bye, muss gespielt werden
+      // (das passiert wenn beide Vorgaenger Bye-Sieger sind)
+      matches.push(m); next.push(m);
+    }
+    prevRound=next; round++;
   }
   return matches;
 }
@@ -110,23 +137,90 @@ function findFirstUnplayed(matches){
   return -1;
 }
 
+function findMatchForUser(t){
+  // 1. Eigenes aktives Match (noch nicht gewonnen)
+  for(let i=0;i<t.matches.length;i++){
+    const m=t.matches[i];
+    if(m.winner||m.bye) continue;
+    if(m.p1===A.user||m.p2===A.user) return i;
+  }
+  // 2. Manuell gewaehltes Spectator-Match aus localStorage
+  const spectIdx=A._spectIdx;
+  if(spectIdx!==undefined && t.matches[spectIdx] && !t.matches[spectIdx].winner) return spectIdx;
+  // 3. Erstes laufendes Match in der niedrigsten Runde mit beiden Spielern
+  let minRound=Infinity;
+  for(const m of t.matches) if(!m.winner && !m.bye && m.p1 && m.p2 && m.round<minRound) minRound=m.round;
+  for(let i=0;i<t.matches.length;i++){
+    const m=t.matches[i];
+    if(!m.winner && !m.bye && m.round===minRound && m.p1 && m.p2) return i;
+  }
+  // 4. Fallback
+  return findFirstUnplayed(t.matches);
+}
+
+function renderMatchPicker(t,bh){
+  // Liste aller laufenden Matches in der aktuellen Runde
+  let minRound=Infinity;
+  for(const m of t.matches) if(!m.winner && !m.bye && m.p1 && m.p2 && m.round<minRound) minRound=m.round;
+  const live=t.matches.map((m,i)=>({m,i})).filter(x=>!x.m.winner && !x.m.bye && x.m.round===minRound && x.m.p1 && x.m.p2);
+  if(live.length<=1) return "";
+  let html=`<hr><div class="sub">Mehrere Matches laufen parallel - waehle was du sehen willst:</div>`;
+  live.forEach(({m,i})=>{
+    html+=`<button class="btn-ghost btn-sm" data-spect="${i}">${m.p1} vs ${m.p2}</button> `;
+  });
+  return html;
+}
+
 async function advanceTournament(idx,winner){
   const t=(await get(ref(db,`rooms/${A.room}/tournament`))).val();
   if(!t) return;
-  const updated=[...t.matches];
+  const updated=t.matches.map(m=>({...m}));
+  const wasAlreadyDone=updated[idx].winner&&!updated[idx].bye;
   if(!updated[idx].winner) updated[idx].winner=winner;
-  // Position in runde ermitteln fuer promotion
+
+  // Punkte fuer gewonnenen Match (nicht fuer Byes!) - nur einmal
+  if(!wasAlreadyDone && winner && !updated[idx].bye && !updated[idx].pointsAwarded){
+    await awardScore(winner,5);
+    updated[idx].pointsAwarded=true;
+    if(A._toastedMatchPoints!==idx){
+      A._toastedMatchPoints=idx;
+      toast(`+5 Pkt fuer ${winner} (Match-Sieg)`);
+    }
+  }
+
+  // Promotion in naechste Runde via Position innerhalb der Runde
   const myRound=updated[idx].round;
-  const sameRound=updated.map((m,i)=>({m,i})).filter(x=>x.m.round===myRound);
-  const posInRound=sameRound.findIndex(x=>x.i===idx);
-  const nextPosInRound=Math.floor(posInRound/2);
-  const nextRoundMatches=updated.map((m,i)=>({m,i})).filter(x=>x.m.round===myRound+1);
-  if(nextRoundMatches[nextPosInRound]){
-    const nextMatch=nextRoundMatches[nextPosInRound].m;
-    if(posInRound%2===0) nextMatch.p1=updated[idx].winner;
-    else nextMatch.p2=updated[idx].winner;
+  const sameRoundIdx=updated.map((m,i)=>m.round===myRound?i:-1).filter(i=>i>=0);
+  const posInRound=sameRoundIdx.indexOf(idx);
+  const nextRoundIdx=updated.map((m,i)=>m.round===myRound+1?i:-1).filter(i=>i>=0);
+  const nextPos=Math.floor(posInRound/2);
+  const nextMatchGlobalIdx=nextRoundIdx[nextPos];
+  if(nextMatchGlobalIdx!==undefined){
+    const nm=updated[nextMatchGlobalIdx];
+    if(posInRound%2===0) nm.p1=updated[idx].winner;
+    else nm.p2=updated[idx].winner;
+    // Wenn der naechste Match jetzt nur einen Spieler hat aber kein Gegner mehr kommt → Bye
+    const siblingPos=posInRound%2===0?posInRound+1:posInRound-1;
+    const siblingExists=sameRoundIdx[siblingPos]!==undefined;
+    if(!siblingExists && nm.p1 && !nm.p2 && !nm.winner){
+      nm.bye=true; nm.winner=nm.p1;
+      // Bye in Runde > 1 verdient KEINE Punkte
+      // Rekursiv weiter promoten
+      setTimeout(()=>advanceTournament(nextMatchGlobalIdx,nm.p1),100);
+    }
   }
   await update(ref(db,`rooms/${A.room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayed(updated)});
+
+  // Tournament finished?
+  const lastMatch=updated[updated.length-1];
+  if(lastMatch.winner && findFirstUnplayed(updated)<0){
+    // +5 Bonus fuer Turniersieger (zusaetzlich)
+    if(!t.finalAwarded){
+      await awardScore(lastMatch.winner,5);
+      await update(ref(db,`rooms/${A.room}/tournament`),{finalAwarded:true});
+      toast(`🏆 ${lastMatch.winner} gewinnt das Turnier! +5 Bonus`);
+    }
+  }
 }
 
 function bracketHtml(t){
@@ -144,18 +238,18 @@ function bracketHtml(t){
 
 function renderTournament(t){
   const body=$("officialBody");
-  const idx=t.currentMatchIdx;
+  // Reaktion bleibt seriell. Schiffe + TicTacToe parallel.
+  const parallelMode=(t.gameType==="battleship"||t.gameType==="tictactoe");
+  const idx=parallelMode?findMatchForUser(t):t.currentMatchIdx;
   const bh=bracketHtml(t);
+  const picker=parallelMode?renderMatchPicker(t,bh):"";
 
   if(idx<0){
     const winner=t.matches[t.matches.length-1].winner;
-    let html=`<div class="q-big">🏆 Sieger: ${winner}</div>${bh}`;
-    if(A.isHost){
-      html+='<hr><button class="btn-green" id="rewardScore">+5 Pkt</button><button class="btn-blue" id="rewardVote">+1 Bonus-Stimme</button><button class="btn-ghost" id="closeTour">Schliessen</button>';
-    }
+    let html=`<div class="q-big">🏆 ${winner} gewinnt das Turnier!</div>
+      <div class="flash gold">Punkte automatisch verteilt: <br>+5 pro gewonnenem Match · +5 Bonus fuer Turniersieger</div>${bh}`;
+    if(A.isHost) html+='<button class="btn-ghost" id="closeTour">Schliessen</button>';
     body.innerHTML=html;
-    const rs=$("rewardScore"); if(rs) rs.onclick=async()=>{await awardScore(winner,5);toast(`+5 Pkt fuer ${winner}`);remove(ref(db,`rooms/${A.room}/tournament`));};
-    const rv=$("rewardVote"); if(rv) rv.onclick=async()=>{const r=ref(db,`rooms/${A.room}/players/${winner}/bonusVotes`);const c=(await get(r)).val()||0;await set(r,c+1);toast("Bonus-Stimme!");remove(ref(db,`rooms/${A.room}/tournament`));};
     const cl=$("closeTour"); if(cl) cl.onclick=()=>remove(ref(db,`rooms/${A.room}/tournament`));
     return;
   }
@@ -167,8 +261,8 @@ function renderTournament(t){
     return;
   }
   if(t.gameType==="reaction") return renderReaction(t,idx,m,bh);
-  if(t.gameType==="battleship") return renderBattleship(t,idx,m,bh);
-  if(t.gameType==="tictactoe") return renderTicTacToe(t,idx,m,bh);
+  if(t.gameType==="battleship") return renderBattleship(t,idx,m,bh+picker);
+  if(t.gameType==="tictactoe") return renderTicTacToe(t,idx,m,bh+picker);
 }
 
 // === REACTION (First-Click-Wins via Transaction) ===
@@ -248,9 +342,17 @@ function renderReaction(t,idx,m,bh){
 function placeShipsRandom(){
   const grid=Array(BS_SIZE*BS_SIZE).fill(null);
   const ships=[];
+  const isOccupiedOrAdjacent=(r,c)=>{
+    for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+      const rr=r+dr,cc=c+dc;
+      if(rr<0||cc<0||rr>=BS_SIZE||cc>=BS_SIZE) continue;
+      if(grid[rr*BS_SIZE+cc]!==null) return true;
+    }
+    return false;
+  };
   for(const s of BS_SHIPS){
     let placed=false,tries=0;
-    while(!placed&&tries<200){
+    while(!placed&&tries<500){
       tries++;
       const horiz=Math.random()<0.5;
       const r=Math.floor(Math.random()*BS_SIZE), c=Math.floor(Math.random()*BS_SIZE);
@@ -258,9 +360,9 @@ function placeShipsRandom(){
       for(let i=0;i<s.len;i++){
         const rr=horiz?r:r+i, cc=horiz?c+i:c;
         if(rr>=BS_SIZE||cc>=BS_SIZE){ok=false;break}
-        const ix=rr*BS_SIZE+cc;
-        if(grid[ix]!==null){ok=false;break}
-        cells.push(ix);
+        // Buffer-Zone: kein Schiff darf direkt anliegen (auch diagonal)
+        if(isOccupiedOrAdjacent(rr,cc)){ok=false;break}
+        cells.push(rr*BS_SIZE+cc);
       }
       if(ok){ cells.forEach(ix=>grid[ix]=ships.length); ships.push({name:s.name,cells,hits:[]}); placed=true; }
     }
@@ -270,10 +372,24 @@ function placeShipsRandom(){
 
 async function initBattleship(idx,m){
   if(!A.isHost) return;
-  await set(ref(db,`rooms/${A.room}/tournament/battleship/${idx}`),{
-    boards:{[m.p1]:placeShipsRandom(),[m.p2]:placeShipsRandom()},
-    turn:m.p1, phase:"play", startedAt:Date.now()
+  // Initialisiere ALLE laufenden Matches der aktuellen Runde gleichzeitig (parallel mode)
+  const t=(await get(ref(db,`rooms/${A.room}/tournament`))).val();
+  if(!t) return;
+  const myRound=t.matches[idx].round;
+  const updates={};
+  t.matches.forEach((mt,i)=>{
+    if(mt.round===myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2){
+      const existing=t.battleship&&t.battleship[i];
+      if(!existing){
+        updates[i]={
+          boards:{[mt.p1]:placeShipsRandom(),[mt.p2]:placeShipsRandom()},
+          turn:mt.p1, phase:"play", startedAt:Date.now()
+        };
+      }
+    }
   });
+  await update(ref(db,`rooms/${A.room}/tournament/battleship`),updates);
+  toast(`${Object.keys(updates).length} Match(es) gestartet`);
 }
 async function bsFire(idx,target,cellIdx){
   const r=ref(db,`rooms/${A.room}/tournament/battleship/${idx}`);
@@ -339,7 +455,27 @@ function renderBattleship(t,idx,m,bh){
       html+=`<div class="${cls}" data-bs="${i}"></div>`;
     }
     html+='</div>';
-  } else html+='<div class="sub">Zuschauer-Modus</div>';
+  } else {
+    // Zuschauer-Modus: zeige beide Boards in klein, ohne Schiffe zu verraten
+    html+='<div class="bs-label">Zuschauer-Modus:</div>';
+    [m.p1,m.p2].forEach(p=>{
+      const b=md.boards[p]; if(!b) return;
+      html+=`<div class="bs-label" style="margin-top:8px"><b>${p}</b></div><div class="bs-grid">`;
+      const sc={};
+      b.ships.forEach((s,si)=>s.cells.forEach(c=>sc[c]=si));
+      for(let i=0;i<BS_SIZE*BS_SIZE;i++){
+        const wasShot=(b.shotsAt||[]).includes(i);
+        let cls="bs-cell";
+        if(wasShot && sc[i]!==undefined){
+          const sh=b.ships[sc[i]];
+          cls+=sh.cells.every(c=>(sh.hits||[]).includes(c))?" sunk":" hit";
+        } else if(wasShot) cls+=" miss";
+        // Schiffe NICHT verraten
+        html+=`<div class="${cls}"></div>`;
+      }
+      html+='</div>';
+    });
+  }
 
   html+=bh;
   body.innerHTML=html;
@@ -353,10 +489,23 @@ function renderBattleship(t,idx,m,bh){
 // === TIC-TAC-TOE mit 3-Stein-Regel ===
 async function initTTT(idx,m){
   if(!A.isHost) return;
-  await set(ref(db,`rooms/${A.room}/tournament/tictactoe/${idx}`),{
-    board:Array(9).fill(null), // jede Zelle: null oder {p:player, seq:number}
-    turn:m.p1, phase:"play", moveCounter:0, startedAt:Date.now()
+  const t=(await get(ref(db,`rooms/${A.room}/tournament`))).val();
+  if(!t) return;
+  const myRound=t.matches[idx].round;
+  const updates={};
+  t.matches.forEach((mt,i)=>{
+    if(mt.round===myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2){
+      const existing=t.tictactoe&&t.tictactoe[i];
+      if(!existing){
+        updates[i]={
+          board:Array(9).fill(null),
+          turn:mt.p1, phase:"play", moveCounter:0, startedAt:Date.now()
+        };
+      }
+    }
   });
+  await update(ref(db,`rooms/${A.room}/tournament/tictactoe`),updates);
+  toast(`${Object.keys(updates).length} Match(es) gestartet`);
 }
 async function tttMove(idx,cellIdx,m){
   const r=ref(db,`rooms/${A.room}/tournament/tictactoe/${idx}`);
