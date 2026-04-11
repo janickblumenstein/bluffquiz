@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mallorca 2026 V6</title>
+<title>Mallorca 2026 V7</title>
 <style>
 :root{--gold:#ffcc00;--dark:#0f0f12;--bg:#14141a;--card:#1e1e26;--card2:#2a2a34;--muted:#8a8a95;--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--purple:#9b59b6;--orange:#e67e22;--border:#2e2e38}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -33,10 +33,46 @@ button:disabled{opacity:.4}
 .btn-gold{background:var(--gold);color:#000;border:2px solid #fff}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:#fff}
 .btn-sm{padding:8px 12px;font-size:.8rem;width:auto;margin:2px}
-.row{display:flex;gap:8px}
-.row>*{flex:1}
+.row{display:flex;gap:8px}.row>*{flex:1}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hidden{display:none!important}
 
+/* === LANDINGPAGE === */
+#login{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at top,#2d1f0a,var(--bg) 60%);
+  padding:20px;text-align:center;position:relative;overflow:hidden;
+}
+#login::before{
+  content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:radial-gradient(circle,rgba(255,204,0,.05) 0%,transparent 40%);
+  animation:rotate 30s linear infinite;pointer-events:none;
+}
+@keyframes rotate{to{transform:rotate(360deg)}}
+.landing-logo{
+  font-size:2.6rem;font-weight:900;letter-spacing:2px;
+  background:linear-gradient(120deg,#ffcc00,#ffaa00,#ffcc00);
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shine 3s ease-in-out infinite;
+  cursor:pointer;user-select:none;margin-bottom:4px;
+  text-shadow:0 0 30px rgba(255,204,0,.2);
+}
+@keyframes shine{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.landing-sub{opacity:.7;font-size:.85rem;letter-spacing:3px;margin-bottom:40px;text-transform:uppercase}
+.landing-card{
+  background:rgba(30,30,38,.85);backdrop-filter:blur(10px);
+  padding:24px;border-radius:20px;border:1px solid rgba(255,204,0,.15);
+  max-width:360px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.5);
+  position:relative;z-index:1;
+}
+.landing-emoji{font-size:3rem;margin-bottom:10px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.landing-card h2{color:var(--gold);font-size:1.3rem;margin-bottom:4px}
+.landing-card .sub{margin-bottom:16px}
+.host-hint{position:absolute;bottom:20px;font-size:.65rem;opacity:.25}
+
+/* === TABBAR === */
 .tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:6px 4px 10px;z-index:100}
 .tab{flex:1;background:none;border:none;color:var(--muted);padding:8px 2px;font-size:.62rem;text-align:center;cursor:pointer;border-radius:10px;margin:0;position:relative}
 .tab.active{color:var(--gold);background:rgba(255,204,0,.1)}
@@ -44,11 +80,13 @@ button:disabled{opacity:.4}
 .tab .pulse{position:absolute;top:4px;right:8px;width:8px;height:8px;background:var(--red);border-radius:50%;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.6}}
 
+/* === SCORE === */
 .score-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:10px;margin:5px 0;background:var(--card2)}
 .score-row.me{background:rgba(255,204,0,.15);border:1px solid var(--gold)}
 .score-row.top{border-left:4px solid var(--gold)}
 .score-row .casual{opacity:.5;font-size:.75rem;margin-left:6px}
 
+/* === BINGO === */
 .bingo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:10px 0}
 .bingo-cell{aspect-ratio:1;background:var(--card2);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.6rem;padding:3px;cursor:pointer;position:relative;line-height:1.1;border:2px solid transparent;word-break:break-word}
 .bingo-cell.marked{background:rgba(255,204,0,.25);border-color:var(--gold)}
@@ -57,46 +95,44 @@ button:disabled{opacity:.4}
 .bingo-cell .conf{position:absolute;bottom:1px;right:3px;font-size:.55rem;opacity:.8}
 .bingo-cell.winrow{box-shadow:0 0 0 3px var(--gold) inset}
 
-.city-row{display:flex;align-items:center;justify-content:space-between;padding:11px;background:var(--card2);border-radius:10px;margin:5px 0}
+/* === CITIES === */
+.city-row{display:flex;align-items:center;justify-content:space-between;padding:11px;background:var(--card2);border-radius:10px;margin:5px 0;transition:all .3s}
 .city-row.elim{opacity:.35;text-decoration:line-through}
+.city-row.flash-up{animation:flashUp .6s}
+@keyframes flashUp{0%{background:rgba(46,204,113,.4)}100%{background:var(--card2)}}
+.city-meta{font-size:.7rem;opacity:.6;margin-top:3px}
 .vote-pill{background:var(--green);color:#000;padding:3px 9px;border-radius:10px;font-size:.75rem;font-weight:bold}
 .vote-pill.neg{background:var(--red);color:#fff}
 
+/* === MISSIONS === */
 .mission{background:var(--card2);padding:12px;border-radius:10px;margin:6px 0;border-left:4px solid var(--purple)}
 .mission.done{border-left-color:var(--green);opacity:.7}
 .mission.group{border-left-color:var(--orange)}
 .mission .pts{float:right;background:var(--gold);color:#000;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:bold}
 .mission .desc{font-size:.8rem;opacity:.75;margin:4px 0}
-.mission .meta{font-size:.7rem;opacity:.6;margin-top:4px}
 .mission .type-tag{display:inline-block;font-size:.65rem;padding:2px 6px;border-radius:8px;background:#444;margin-right:4px}
 .mission .type-tag.group{background:var(--orange);color:#fff}
 .mission .type-tag.solo{background:var(--purple);color:#fff}
 
+/* === MISC === */
 .flash{padding:10px;border-radius:8px;background:rgba(46,204,113,.15);border-left:3px solid var(--green);margin:8px 0;font-size:.85rem}
 .flash.warn{background:rgba(231,76,60,.15);border-left-color:var(--red)}
 .flash.info{background:rgba(52,152,219,.15);border-left-color:var(--blue)}
 .flash.gold{background:rgba(255,204,0,.15);border-left-color:var(--gold)}
-
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
 .overlay.show{display:flex}
 .spin{font-size:5rem;animation:spin 2s infinite linear}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:12px 20px;border-radius:25px;font-weight:bold;z-index:200;animation:toastIn .3s;max-width:90%;text-align:center}
 @keyframes toastIn{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
-
 .q-big{font-size:1.4rem;color:var(--gold);text-align:center;margin:15px 0;font-weight:bold;min-height:40px;line-height:1.3}
 .timer{font-size:1.8rem;color:var(--gold);text-align:center;font-weight:bold;margin:8px 0}
-.hidden{display:none!important}
 .token{display:inline-block;background:var(--purple);color:#fff;padding:2px 8px;border-radius:10px;font-size:.7rem;margin:2px;font-weight:bold}
 .token.bonus{background:var(--gold);color:#000}
-
 .result-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card2);border-radius:8px;margin:4px 0;font-size:.85rem}
 .result-row.winner{background:rgba(46,204,113,.2);border-left:3px solid var(--green)}
 .result-bar{flex:1;height:20px;background:#1a1a22;border-radius:4px;margin:0 8px;overflow:hidden;position:relative}
 .result-bar-fill{height:100%;background:var(--green);transition:width .5s}
-.result-bar-fill.lose{background:var(--red)}
-
 .bracket{padding:10px;background:var(--card2);border-radius:8px;margin:6px 0;font-size:.85rem}
 .bracket .match{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #444}
 .bracket .match:last-child{border:none}
@@ -109,21 +145,28 @@ button:disabled{opacity:.4}
 .bs-cell.sunk{background:#000;color:var(--gold)}
 .bs-cell.disabled{cursor:not-allowed;opacity:.7}
 .bs-label{font-size:.75rem;opacity:.7;margin-bottom:3px}
+.plus{color:var(--green);font-weight:bold}
 </style>
 </head>
 <body>
 
-<div id="login" class="wrap">
-  <div class="card" style="margin-top:40px;text-align:center">
-    <h1 style="color:var(--gold);font-size:1.6rem;margin-bottom:4px">BIERKULTUR</h1>
-    <div class="sub" style="margin-bottom:20px">Mallorca 26 · V6</div>
+<!-- ===== LANDINGPAGE ===== -->
+<div id="login">
+  <div class="landing-logo" id="landingLogo">BIERKULTUR</div>
+  <div class="landing-sub">Mallorca · 2026</div>
+  <div class="landing-card">
+    <div class="landing-emoji">🍻</div>
+    <h2>Willkommen</h2>
+    <div class="sub">Gib deinen Namen ein und tritt der Runde bei</div>
     <input id="nameInp" placeholder="Dein Name" maxlength="20">
     <input id="roomInp" placeholder="Code" value="MALLE26">
     <button id="btnJoin">Beitreten</button>
-    <button id="btnHost" class="btn-blue">Als Host starten</button>
+    <button id="btnHost" class="btn-blue hidden">Als Host starten</button>
   </div>
+  <div class="host-hint">v7</div>
 </div>
 
+<!-- ===== APP ===== -->
 <div id="app" class="wrap hidden">
   <div class="topbar">
     <h1>Mallorca 26</h1>
@@ -134,10 +177,10 @@ button:disabled{opacity:.4}
     <div class="card">
       <h2>Wochenend-Stand</h2>
       <div id="leaderboard"></div>
-      <div class="sub" style="margin-top:10px">Casual-Punkte (klein, c) zaehlen 10% zum Gesamtscore</div>
+      <div class="sub" style="margin-top:10px">Casual-Punkte (c) zaehlen 10% zum Gesamtscore</div>
     </div>
     <div class="card">
-      <h3>Deine Tokens</h3>
+      <h3>Tokens & Punkte verschenken</h3>
       <div id="myTokens"></div>
     </div>
   </div>
@@ -177,12 +220,16 @@ button:disabled{opacity:.4}
       <div id="citiesList"></div>
       <div id="citiesAction"></div>
     </div>
+    <div id="cityEditPanel" class="card hidden">
+      <h3>Stadt bearbeiten</h3>
+      <div id="cityEditBody"></div>
+    </div>
   </div>
 
   <div id="tabMissions" class="tabPane hidden">
     <div class="card">
       <h2>Missionen</h2>
-      <div class="sub">Einmalig = nur eine Person. Mehrmalig = jeder kann sie einmal erfuellen. 2 Bestaetigungen noetig.</div>
+      <div class="sub">Einmalig = nur eine Person. Mehrmalig = jeder einmal. 2 Bestaetigungen noetig.</div>
       <div id="missionsList"></div>
     </div>
     <div class="card">
@@ -192,7 +239,7 @@ button:disabled{opacity:.4}
       <div class="row">
         <select id="newMissionType">
           <option value="once">Einmalig (erste Person)</option>
-          <option value="multi">Mehrmalig (jeder kann sie einmal erfuellen)</option>
+          <option value="multi">Mehrmalig (jeder einmal)</option>
         </select>
         <select id="newMissionPoints">
           <option value="2">2 Pkt</option>
@@ -209,7 +256,7 @@ button:disabled{opacity:.4}
     <div class="card">
       <h2>Host-Panel</h2>
       <div id="hostStatus"></div>
-      <button id="btnTakeHost" class="btn-blue">Host uebernehmen</button>
+      <button id="btnTakeHost" class="btn-blue">Host uebernehmen (mit Bestaetigung)</button>
     </div>
     <div id="hostControls" class="hidden">
       <div class="card">
@@ -220,8 +267,9 @@ button:disabled{opacity:.4}
         <button class="btn-blue" data-start="duel-math">Duell: Kopfrechnen</button>
         <button class="btn-blue" data-start="duel-estimate">Duell: Schaetzen</button>
         <button class="btn-orange" data-start="group-estimate">Gruppe vs Gruppe: Schaetzen</button>
-        <button class="btn-red" data-start="reaction-tournament">Reaktions-Turnier</button>
+        <button class="btn-red" data-start="reaction-tournament">⚡ Reaktions-Turnier</button>
         <button class="btn-red" data-start="battleship-tournament">⚓ Schiffeversenken-Turnier</button>
+        <button class="btn-red" data-start="tictactoe-tournament">⭕ TicTacToe-3 Turnier</button>
       </div>
       <div class="card">
         <h3>Bingo</h3>
@@ -229,18 +277,23 @@ button:disabled{opacity:.4}
       </div>
       <div class="card">
         <h3>Staedte-Voting starten</h3>
-        <button class="btn-green" data-cityvote="pos3">Modus: 3 Punkte vergeben</button>
-        <button class="btn-red" data-cityvote="neg1">Modus: 1 Negativ-Stimme</button>
-        <button class="btn-orange" data-cityvote="duel">Modus: Duell (waehle 2)</button>
-        <button class="btn-purple" data-cityvote="ko">Modus: K.O. (eine fliegt)</button>
-        <button id="endCityVote" class="btn-purple">Voting beenden &amp; auswerten</button>
+        <button class="btn-green" data-cityvote="pos3">3 Punkte (verteilt)</button>
+        <button class="btn-green" data-cityvote="pos3stack">3 Punkte (mehrfach fuer gleiche Stadt)</button>
+        <button class="btn-red" data-cityvote="neg1">1 Negativ-Stimme</button>
+        <button class="btn-orange" data-cityvote="duel">Duell (waehle 2)</button>
+        <button class="btn-purple" data-cityvote="ko">K.O. (eine fliegt)</button>
+        <button class="btn-blue" data-cityvote="score">Aus Wochenend-Score (Top3 +2, Bottom3 -1)</button>
+        <button id="endCityVote" class="btn-purple">Voting beenden & auswerten</button>
         <hr>
         <input id="newCity" placeholder="Stadt hinzufuegen...">
         <button id="addCity" class="btn-green">Stadt hinzufuegen</button>
+        <hr>
+        <button class="btn-orange" id="cityLowestOut">Schwaechste(n) rauswerfen</button>
+        <button class="btn-ghost" id="cityResetVotes">Alle Votes auf 0 (Liste behalten)</button>
+        <button class="btn-ghost" id="cityReactivateAll">Alle wieder aktivieren</button>
       </div>
       <div class="card">
-        <h3>Tokens &amp; Punkte verteilen</h3>
-        <div class="sub">Host kann Bonus-Stimmen oder direkte Punkte vergeben (z.B. fuer Off-App-Siege)</div>
+        <h3>Tokens & Punkte verteilen</h3>
         <select id="tokenPlayer"></select>
         <button class="btn-green" id="giveBonusVote">+1 Bonus-Stadt-Stimme</button>
         <div class="row">
@@ -250,7 +303,7 @@ button:disabled{opacity:.4}
       </div>
       <div class="card">
         <h3>Sonstiges</h3>
-        <button class="btn-red" id="btnDrinkEvent">Trink-Event ausloesen</button>
+        <button class="btn-red" id="btnDrinkEvent">Trink-Event</button>
         <button class="btn-ghost" id="btnResetScores">Scores zuruecksetzen</button>
         <button class="btn-red" id="btnFullReset">KOMPLETT-RESET</button>
       </div>
@@ -275,1726 +328,12 @@ button:disabled{opacity:.4}
 
 <div id="toastContainer"></div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSy...", // HIER EINSETZEN
-  authDomain: "bierkultur-d2fea.firebaseapp.com",
-  databaseURL: "https://bierkultur-d2fea-default-rtdb.europe-west1.firebasedatabase.app/",
-  projectId: "bierkultur-d2fea"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// === DATA ===
-const BIER_POOL = [
-  "Estrella Damm","Mahou","San Miguel","Cruzcampo","Alhambra","Rosa Blanca",
-  "Moritz","Voll-Damm","Ambar","Estrella Galicia","1906 Reserva","Inedit",
-  "Turia","Amstel","Heineken","Feldschloesschen","Calanda","Quoellfrisch",
-  "Eichhof","Chopfab","Cardinal","Mueller Braeu","Radler","Sangria-Bier",
-  "Clara","Shandy","Tinto de Verano","Cana klein","Doble gross","Cerveza sin"
-];
-const QUIZ_WHO = [
-  "Wer eskaliert heute als Erster?",
-  "Wer hat morgen den schlimmsten Kater?",
-  "Wer verschlaeft das Fruehstueck?",
-  "Wer flirtet am meisten auf dem Trip?",
-  "Wer bezahlt am oeftesten die Runde?",
-  "Wer verliert zuerst sein Handy?",
-  "Wer hat den schlimmsten Sonnenbrand?",
-  "Wer rauscht als Erster ab?",
-  "Wer traegt die schraegste Badehose?",
-  "Wer faellt als Erster ins Wasser angezogen?",
-  "Wer ist der heimliche Chef der Truppe?",
-  "Wer schnarcht am lautesten?",
-  "Wer verliert die Wette als Erster?",
-  "Wer macht die meisten Selfies?",
-  "Wer wird am meisten von Kellnerinnen angeflirtet?"
-];
-const QUIZ_TEXT = [
-  "Was ist das Motto des Trips in 3 Woertern?",
-  "Beschreibe Mallorca mit einem Emoji-Kombo",
-  "Was ist der beste Drink auf der Insel?",
-  "Welcher Song beschreibt diesen Trip?",
-  "Worueber wurde heute am meisten gelacht?"
-];
-const SCHAETZ = [
-  {q:"Einwohner Palma de Mallorca?",a:416065},
-  {q:"Hoehe der Kathedrale La Seu in Metern?",a:44},
-  {q:"Laenge Mallorcas Kueste in km?",a:550},
-  {q:"Anzahl Inseln der Balearen?",a:151},
-  {q:"Durchschnittstemperatur Palma April Celsius?",a:18},
-  {q:"Wie viele km Palma-Barcelona Luftlinie?",a:230},
-  {q:"Sonnenstunden Mallorca pro Jahr?",a:2800},
-  {q:"Hoechster Berg Mallorcas in Metern?",a:1445},
-  {q:"Touristen pro Jahr in Millionen?",a:14},
-  {q:"Preis eines Estrella am Ballermann (Euro)?",a:5}
-];
-const DRINK_RULES = [
-  "ALLE TRINKEN!",
-  "Letzter trinkt 2 Schlucke",
-  "Brillentraeger trinken",
-  "Top 3 der Rangliste trinken",
-  "Letzter der Rangliste verteilt 3 Schlucke",
-  "Host trinkt und bestimmt einen Mittrinker",
-  "Wer als letztes Salud sagt trinkt"
-];
-const DEFAULT_MISSIONS = [
-  {title:"Gruppenfoto mit Einheimischem",desc:"Charmant fragen ob er aufs Foto will",points:10,type:"once"},
-  {title:"Paella zusammen essen",desc:"Mind. ein Teller pro Person geteilt",points:5,type:"once"},
-  {title:"Bestellen komplett auf Spanisch",desc:"Ohne ein englisches Wort",points:5,type:"multi"},
-  {title:"3 verschiedene Bars an einem Tag",desc:"Alle zusammen",points:10,type:"once"},
-  {title:"Sonnenuntergangs-Gruppenfoto",desc:"Am Meer, alle drauf",points:5,type:"once"},
-  {title:"Barkeeper zum Lachen gebracht",desc:"Joke, Story, egal wie",points:5,type:"multi"},
-  {title:"Alle mit Hut gleichzeitig",desc:"Foto als Beweis",points:10,type:"once"},
-  {title:"Tanzen im Club",desc:"Die ganze Gruppe auf der Tanzflaeche",points:10,type:"once"},
-  {title:"Im Meer baden",desc:"Komplett rein, nicht nur Fuesse",points:5,type:"multi"},
-  {title:"Nachtschwimmen",desc:"Nach Mitternacht im Meer",points:20,type:"once"},
-  {title:"Kuriose Sehenswuerdigkeit besucht",desc:"Etwas Untouristisches",points:10,type:"once"},
-  {title:"Mit Einheimischen angestossen",desc:"Salud!",points:5,type:"multi"}
-];
-const DEFAULT_CITIES = ["Lissabon","Prag","Krakau","Budapest","Valencia","Porto","Sevilla","Neapel","Belgrad"];
-
-// === STATE ===
-let user,room,state={},players={},isHost=false,lastEventTs=0,lastOfficialId=null;
-let currentTab="Score";
-let timers=[];
-function clearTimers(){timers.forEach(t=>{clearInterval(t);clearTimeout(t)});timers=[];}
-const $=id=>document.getElementById(id);
-
-function toast(text,duration=2500){
-  const c=$("toastContainer");
-  const t=document.createElement("div");
-  t.className="toast"; t.innerText=text;
-  c.appendChild(t);
-  setTimeout(()=>t.remove(),duration);
-}
-
-// === LOGIN ===
-$("btnJoin").onclick=()=>start(false);
-$("btnHost").onclick=()=>start(true);
-$("overlayClose").onclick=()=>$("overlay").classList.remove("show");
-
-async function start(takeHost){
-  user=$("nameInp").value.trim();
-  room=($("roomInp").value.trim()||"MALLE26").toUpperCase();
-  if(!user) return alert("Name eingeben!");
-  const metaSnap=await get(ref(db,`rooms/${room}/meta`));
-  if(!metaSnap.exists()){
-    await set(ref(db,`rooms/${room}/meta`),{host:user,created:Date.now()});
-    await seedDefaults();
-  } else if(takeHost){
-    await update(ref(db,`rooms/${room}/meta`),{host:user});
-  }
-  const pRef=ref(db,`rooms/${room}/players/${user}`);
-  if(!(await get(pRef)).exists()){
-    await set(pRef,{score:0,casual:0,bonusVotes:0,bribes:0,joined:Date.now()});
-  }
-  $("login").classList.add("hidden");
-  $("app").classList.remove("hidden");
-  $("tabbar").classList.remove("hidden");
-  attach();
-  bindUI();
-}
-
-async function seedDefaults(){
-  const cityObj={};
-  DEFAULT_CITIES.forEach((n,i)=>{cityObj["c_"+i]={name:n,status:"active",votes:0}});
-  await set(ref(db,`rooms/${room}/cities/list`),cityObj);
-  const mObj={};
-  DEFAULT_MISSIONS.forEach((m,i)=>{
-    // structure:
-    //  once: claimedBy=string|null, confirmedBy=[], done=bool
-    //  multi: completed={player:{confirmedBy:[],done:bool}}
-    if(m.type==="multi"){
-      mObj["m_"+i]={...m,createdBy:"System",completed:{}};
-    } else {
-      mObj["m_"+i]={...m,createdBy:"System",done:false,claimedBy:null,confirmedBy:[],vetoedBy:[]};
-    }
-  });
-  await set(ref(db,`rooms/${room}/missions`),mObj);
-}
-
-// === LISTENERS ===
-function attach(){
-  onValue(ref(db,`rooms/${room}/meta`),snap=>{
-    const m=snap.val()||{}; isHost=(m.host===user);
-    $("userBadge").innerHTML = user + (isHost?' <span class="badge host">(Host)</span>':'');
-    $("hostStatus").innerHTML = `Aktueller Host: <b>${m.host||'-'}</b>`;
-    $("btnTakeHost").style.display = isHost?"none":"block";
-    $("hostControls").classList.toggle("hidden",!isHost);
-  });
-  onValue(ref(db,`rooms/${room}/players`),snap=>{
-    players=snap.val()||{};
-    renderLeaderboard();
-    renderTokens();
-    renderTokenSelect();
-    if(state.official) renderOfficial();
-  });
-  onValue(ref(db,`rooms/${room}/official`),snap=>{
-    const newO=snap.val();
-    // detect new round
-    if(newO && newO.startedAt && newO.startedAt!==lastOfficialId){
-      lastOfficialId=newO.startedAt;
-      switchTab("Games");
-      toast("⭐ Offizielle Runde gestartet!");
-    }
-    if(!newO) lastOfficialId=null;
-    state.official=newO;
-    renderOfficial();
-    updateTabPulse();
-  });
-  onValue(ref(db,`rooms/${room}/bingo`),snap=>{
-    state.bingo=snap.val()||{};
-    renderBingo();
-  });
-  onValue(ref(db,`rooms/${room}/cities`),snap=>{
-    state.cities=snap.val()||{};
-    renderCities();
-  });
-  onValue(ref(db,`rooms/${room}/missions`),snap=>{
-    state.missions=snap.val()||{};
-    renderMissions();
-  });
-  onValue(ref(db,`rooms/${room}/event`),snap=>{
-    const e=snap.val(); if(!e||e.ts===lastEventTs) return;
-    lastEventTs=e.ts;
-    $("overlayText").innerText=e.text;
-    $("overlay").classList.add("show");
-  });
-  onValue(ref(db,`rooms/${room}/notifications`),snap=>{
-    const n=snap.val()||{};
-    for(const [key,notif] of Object.entries(n)){
-      if(notif.to!==user) continue;
-      if(notif.shown) continue;
-      toast(notif.text,4000);
-      set(ref(db,`rooms/${room}/notifications/${key}/shown`),true);
-      // cleanup after 10s
-      setTimeout(()=>remove(ref(db,`rooms/${room}/notifications/${key}`)),10000);
-    }
-  });
-  onValue(ref(db,`rooms/${room}/hostRequest`),snap=>{
-    const req=snap.val(); if(!req||req.from===user) return;
-    if(!isHost) return;
-    if(confirm(`${req.from} moechte Host uebernehmen. Erlauben?`)){
-      update(ref(db,`rooms/${room}/meta`),{host:req.from}).then(()=>{
-        remove(ref(db,`rooms/${room}/hostRequest`));
-        toast(`Host an ${req.from} uebergeben`);
-      });
-    } else {
-      remove(ref(db,`rooms/${room}/hostRequest`));
-    }
-  });
-  onValue(ref(db,`rooms/${room}/tournamentSetup`),snap=>{
-    state.tournamentSetup=snap.val();
-    if(state.tournamentSetup) {
-      switchTab("Games");
-      renderTournamentSetup();
-    }
-  });
-  onValue(ref(db,`rooms/${room}/tournament`),snap=>{
-    const wasActive=state.tournament&&state.tournament.active;
-    state.tournament=snap.val();
-    if(state.tournament&&state.tournament.active){
-      if(!wasActive){
-        switchTab("Games");
-        toast("⚔️ Turnier gestartet!");
-      }
-      renderOfficial();
-    }
-  });
-}
-
-function updateTabPulse(){
-  const games=document.querySelector('[data-tab="Games"]');
-  const old=games.querySelector(".pulse");
-  if(old) old.remove();
-  if(state.official && state.official.phase!=="done"){
-    const p=document.createElement("span");
-    p.className="pulse";
-    games.appendChild(p);
-  }
-}
-
-// === TABS ===
-function switchTab(name){
-  currentTab=name;
-  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));
-  document.querySelectorAll(".tabPane").forEach(p=>p.classList.add("hidden"));
-  $("tab"+name).classList.remove("hidden");
-}
-document.querySelectorAll(".tab").forEach(t=>{
-  t.onclick=()=>switchTab(t.dataset.tab);
-});
-
-// === UI BINDINGS ===
-function bindUI(){
-  document.querySelectorAll("[data-start]").forEach(b=>{
-    b.onclick=()=>startOfficial(b.dataset.start);
-  });
-  document.querySelectorAll("[data-cityvote]").forEach(b=>{
-    b.onclick=()=>startCityVote(b.dataset.cityvote);
-  });
-  $("btnTakeHost").onclick=async()=>{
-    if(!confirm("Host-Anfrage senden? Der aktuelle Host muss bestaetigen.")) return;
-    await set(ref(db,`rooms/${room}/hostRequest`),{from:user,ts:Date.now()});
-    toast("Anfrage gesendet");
-  };
-  $("bingoDealAll").onclick=bingoDealAll;
-  $("addCity").onclick=addCity;
-  $("endCityVote").onclick=endCityVote;
-  $("btnDrinkEvent").onclick=()=>set(ref(db,`rooms/${room}/event`),{text:DRINK_RULES[Math.floor(Math.random()*DRINK_RULES.length)],ts:Date.now()});
-  $("btnResetScores").onclick=resetScores;
-  $("btnFullReset").onclick=fullReset;
-  $("addMission").onclick=addMission;
-  $("bingoGetCard").onclick=requestNewBingoCard;
-  $("giveBonusVote").onclick=()=>giveToken("bonusVotes");
-  const ghp=$("giveHostPoints");
-  if(ghp) ghp.onclick=async()=>{
-    if(!isHost) return;
-    const p=$("tokenPlayer").value; if(!p) return;
-    const amt=parseInt($("hostPointAmt").value)||0;
-    if(amt===0) return;
-    await awardScore(p,amt);
-    toast(`${amt>0?'+':''}${amt} Pkt an ${p}`);
-  };
-  document.querySelectorAll("[data-solo]").forEach(b=>{
-    b.onclick=()=>startSolo(b.dataset.solo);
-  });
-}
-
-// === LEADERBOARD ===
-function renderLeaderboard(){
-  const sorted=Object.entries(players).sort((a,b)=>{
-    const sa=(a[1].score||0)+((a[1].casual||0)*0.1);
-    const sb=(b[1].score||0)+((b[1].casual||0)*0.1);
-    return sb-sa;
-  });
-  $("leaderboard").innerHTML=sorted.map(([n,d],i)=>{
-    const tot=(d.score||0)+((d.casual||0)*0.1);
-    return `<div class="score-row ${n===user?'me':''} ${i===0?'top':''}">
-      <span>${i===0?'👑 ':(i+1+'. ')}${n}</span>
-      <strong>${tot.toFixed(1)} Pkt<span class="casual">(${d.score||0}+${d.casual||0}c)</span></strong>
-    </div>`;
-  }).join("")||'<div class="sub">Keine Spieler</div>';
-}
-
-function renderTokens(){
-  const me=players[user]||{};
-  const html=[];
-  if(me.bonusVotes) html.push(`<span class="token bonus">⭐ ${me.bonusVotes}x Bonus-Stadt-Stimme</span>`);
-  html.push(`<div style="margin-top:10px"><b>Punkte verschenken:</b><div class="sub">Du kannst deine Punkte an andere Spieler verschenken (z.B. als Bribe).</div></div>`);
-  const others=Object.keys(players).filter(p=>p!==user);
-  html.push(`<div class="row"><select id="giftTarget">${others.map(p=>`<option value="${p}">${p}</option>`).join("")}</select><input id="giftAmount" type="number" placeholder="Pkt" style="max-width:80px"></div>`);
-  html.push(`<button class="btn-purple" id="giftSend">💝 Punkte senden</button>`);
-  if(!me.bonusVotes) html[0]='';
-  $("myTokens").innerHTML=html.filter(Boolean).join(" ");
-  const gs=$("giftSend"); if(gs) gs.onclick=giftPoints;
-}
-
-async function giftPoints(){
-  const target=$("giftTarget").value;
-  const amt=parseInt($("giftAmount").value);
-  if(!target||!amt||amt<=0) return;
-  const me=players[user]||{};
-  if((me.score||0)<amt) return alert("Nicht genug Punkte!");
-  await awardScore(user,-amt);
-  await awardScore(target,amt);
-  // notification
-  await set(ref(db,`rooms/${room}/notifications/${target}_${Date.now()}`),{
-    to:target,from:user,text:`💝 ${user} hat dir ${amt} Punkte geschenkt!`,ts:Date.now()
-  });
-  $("giftAmount").value="";
-  toast(`${amt} Pkt an ${target} geschickt`);
-}
-
-function renderTokenSelect(){
-  const sel=$("tokenPlayer");
-  if(!sel) return;
-  const cur=sel.value;
-  sel.innerHTML=Object.keys(players).map(p=>`<option value="${p}">${p}</option>`).join("");
-  if(cur) sel.value=cur;
-}
-
-async function giveToken(field){
-  if(!isHost) return;
-  const p=$("tokenPlayer").value; if(!p) return;
-  const r=ref(db,`rooms/${room}/players/${p}/${field}`);
-  const cur=(await get(r)).val()||0;
-  await set(r,cur+1);
-  toast(`Token an ${p} vergeben`);
-}
-
-async function awardScore(player,pts,casual=false){
-  const key=casual?"casual":"score";
-  const r=ref(db,`rooms/${room}/players/${player}/${key}`);
-  const cur=(await get(r)).val()||0;
-  await set(r,cur+pts);
-}
-
-// === OFFICIAL ROUND ===
-async function startOfficial(type){
-  if(!isHost) return;
-  if(type==="reaction-tournament") return startTournament("reaction");
-  if(type==="battleship-tournament") return startTournament("battleship");
-  // Quiz multi-question mode
-  if(type.startsWith("quiz-multi-")){
-    const total=parseInt(type.split("-")[2]);
-    await remove(ref(db,`rooms/${room}/tournament`));
-    await set(ref(db,`rooms/${room}/quizMulti`),{
-      total,current:0,scores:{},startedAt:Date.now()
-    });
-    return nextQuizQuestion();
-  }
-  let data={type,startedAt:Date.now(),answers:{},votes:{},phase:"answer",endTime:Date.now()+30000};
-  if(type==="quiz-who") data.q=QUIZ_WHO[Math.floor(Math.random()*QUIZ_WHO.length)];
-  else if(type==="quiz-text") data.q=QUIZ_TEXT[Math.floor(Math.random()*QUIZ_TEXT.length)];
-  else if(type==="duel-math"){
-    const a=Math.floor(Math.random()*40+10),b=Math.floor(Math.random()*20+5),op=["+","-","*"][Math.floor(Math.random()*3)];
-    data.q=`${a} ${op} ${b} = ?`;
-    data.target=eval(`${a}${op}${b}`);
-    data.endTime=Date.now()+20000;
-  } else if(type==="duel-estimate"||type==="group-estimate"){
-    const s=SCHAETZ[Math.floor(Math.random()*SCHAETZ.length)];
-    data.q=s.q; data.target=s.a;
-    data.endTime=Date.now()+45000;
-    if(type==="group-estimate") data.teams={};
-  }
-  // clear tournament if any
-  await remove(ref(db,`rooms/${room}/tournament`));
-  await set(ref(db,`rooms/${room}/official`),data);
-}
-
-function renderOfficial(){
-  clearTimers();
-  const o=state.official;
-  const t=state.tournament;
-  const setup=state.tournamentSetup;
-  const panel=$("officialPanel");
-
-  if(setup){
-    panel.classList.remove("hidden");
-    renderTournamentSetup();
-    return;
-  }
-
-  if(t && t.active){
-    panel.classList.remove("hidden");
-    renderTournament(t);
-    return;
-  }
-
-  if(!o){ panel.classList.add("hidden"); return; }
-  panel.classList.remove("hidden");
-
-  if(o.phase==="done"){
-    $("officialBody").innerHTML=`
-      <div class="q-big">${o.q||""}</div>
-      ${o.resultHtml||`<div class="flash">${o.result||"Runde beendet"}</div>`}
-      ${isHost?`
-        ${(o.type==='quiz-who'||o.type==='quiz-text')?'<button class="btn-purple" id="nextQ">Nächste Frage (gleicher Typ)</button>':''}
-        ${o.quizMulti?'<button class="btn-gold" id="nextMultiQ">Nächste Quiz-Frage</button>':''}
-        <button class="btn-ghost" id="closeOff">Schliessen</button>`:'<div class="sub">Host muss schliessen oder weiter machen</div>'}`;
-    const cb=$("closeOff"); if(cb) cb.onclick=()=>remove(ref(db,`rooms/${room}/official`));
-    const nq=$("nextQ"); if(nq) nq.onclick=()=>startOfficial(o.type);
-    const nmq=$("nextMultiQ"); if(nmq) nmq.onclick=()=>nextQuizQuestion();
-    return;
-  }
-
-  const body=$("officialBody");
-  let html=`<div class="q-big">${o.q}</div><div class="timer" id="offTimer"></div>`;
-  const myAns=(o.answers||{})[user];
-
-  if(o.phase==="answer"){
-    if(myAns!==undefined){
-      html+=`<div class="flash">✅ Deine Antwort: <b>${typeof myAns==='object'?myAns.val:myAns}</b></div>`;
-      // wait counter
-      const answered=Object.keys(o.answers||{}).length;
-      const total=Object.keys(players).length;
-      html+=`<div class="sub">${answered}/${total} haben geantwortet</div>`;
-    } else {
-      if(o.type==="quiz-who"){
-        const opts=Object.keys(players).map(p=>`<option>${p}</option>`).join("");
-        html+=`<select id="offIn"><option value="">-- waehle --</option>${opts}</select>`;
-      } else if(o.type==="quiz-text"){
-        html+=`<input id="offIn" placeholder="Deine Antwort...">`;
-      } else {
-        html+=`<input id="offIn" type="number" placeholder="Zahl...">`;
-      }
-      if(o.type==="group-estimate"){
-        const myTeam=(o.teams||{})[user];
-        html+=`<div class="sub">Team waehlen:</div>
-          <div class="row">
-            <button class="${myTeam==='A'?'btn-green':'btn-ghost'}" data-team="A">Team A</button>
-            <button class="${myTeam==='B'?'btn-green':'btn-ghost'}" data-team="B">Team B</button>
-          </div>`;
-      }
-      html+=`<button id="offSend" class="btn-green">Senden</button>`;
-    }
-  } else if(o.phase==="vote"){
-    const unique=[...new Set(Object.values(o.answers||{}))];
-    const myVote=(o.votes||{})[user];
-    html+=`<h3>Bester Vorschlag?</h3>`+unique.map(t=>`<button class="${myVote===t?'btn-green':'btn-ghost'}" style="text-align:left" data-vote="${t.replace(/"/g,'&quot;')}">${t}</button>`).join("");
-    const voted=Object.keys(o.votes||{}).length;
-    html+=`<div class="sub">${voted}/${Object.keys(players).length} haben gevotet</div>`;
-  }
-
-  if(isHost && o.phase!=="done"){
-    html+=`<hr><h3>Host:</h3>`;
-    if(o.type==="quiz-text" && o.phase==="answer"){
-      html+=`<button class="btn-orange" id="toVote">Zu Voting wechseln</button>`;
-    }
-    html+=`<button class="btn-green" id="evalNow">Jetzt auswerten</button>
-      <button class="btn-red" id="cancelOff">Abbrechen</button>`;
-  }
-
-  body.innerHTML=html;
-
-  const si=$("offSend"); if(si) si.onclick=sendOfficial;
-  const ev=$("evalNow"); if(ev) ev.onclick=evalOfficial;
-  const tv=$("toVote"); if(tv) tv.onclick=()=>update(ref(db,`rooms/${room}/official`),{phase:"vote"});
-  const co=$("cancelOff"); if(co) co.onclick=()=>remove(ref(db,`rooms/${room}/official`));
-  document.querySelectorAll("[data-team]").forEach(b=>b.onclick=()=>set(ref(db,`rooms/${room}/official/teams/${user}`),b.dataset.team));
-  document.querySelectorAll("[data-vote]").forEach(b=>b.onclick=()=>set(ref(db,`rooms/${room}/official/votes/${user}`),b.dataset.vote));
-
-  if(o.endTime){
-    const tick=()=>{
-      const d=Math.max(0,Math.ceil((o.endTime-Date.now())/1000));
-      const tEl=$("offTimer");
-      if(tEl) tEl.innerText=d>0?("⏳ "+d+"s"):"⏱️ Zeit!";
-      if(d<=0){ clearTimers(); }
-    };
-    tick();
-    timers.push(setInterval(tick,500));
-  }
-}
-
-async function sendOfficial(){
-  const i=$("offIn"); if(!i) return;
-  const v=i.value.trim(); if(v==="") return;
-  const o=state.official; if(!o) return;
-  let val=v;
-  if(o.type.startsWith("duel")||o.type==="group-estimate"){
-    val={val:Number(v),ts:Date.now()};
-  }
-  await set(ref(db,`rooms/${room}/official/answers/${user}`),val);
-}
-
-async function evalOfficial(){
-  // ALWAYS read fresh from DB to avoid stale closures (bug fix)
-  const oSnap=await get(ref(db,`rooms/${room}/official`));
-  const o=oSnap.val(); if(!o){ toast("Keine aktive Runde"); return; }
-  let resultHtml="";
-  // local award helper that respects quiz-multi mode
-  const award=async(p,pts)=>{
-    if(o.quizMulti) await awardQuizPoints(p,Math.max(1,Math.round(pts/2)));
-    else await awardScore(p,pts);
-  };
-
-  if(o.type==="quiz-who"){
-    // count votes
-    const counts={};
-    for(const [voter,who] of Object.entries(o.answers||{})){
-      counts[who]=(counts[who]||0)+1;
-    }
-    const max=Math.max(0,...Object.values(counts));
-    const winners=Object.keys(counts).filter(k=>counts[k]===max);
-    // award 2 points to those who voted for winners
-    const awarded={};
-    for(const [voter,who] of Object.entries(o.answers||{})){
-      if(winners.includes(who)){
-        await award(voter,2);
-        awarded[voter]=(awarded[voter]||0)+2;
-      }
-    }
-    // trostpreis: 1 pkt for the named "winner"(s) themselves
-    for(const w of winners){
-      if(players[w]){
-        await award(w,1);
-        awarded[w]=(awarded[w]||0)+1;
-      }
-    }
-    // build result HTML
-    const sortedCounts=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-    const totalVotes=Object.values(counts).reduce((a,b)=>a+b,0)||1;
-    let html='<div class="flash gold"><b>Ergebnis:</b></div>';
-    sortedCounts.forEach(([who,cnt])=>{
-      const pct=Math.round(cnt/totalVotes*100);
-      const isWin=winners.includes(who);
-      html+=`<div class="result-row ${isWin?'winner':''}">
-        <span>${isWin?'👑 ':''}${who}</span>
-        <div class="result-bar"><div class="result-bar-fill" style="width:${pct}%"></div></div>
-        <strong>${cnt}</strong>
-      </div>`;
-    });
-    html+='<h3>Punkte vergeben:</h3>';
-    for(const [p,pts] of Object.entries(awarded)){
-      const reason=winners.includes(p)?(o.answers&&o.answers[p]===p?" (Treffer + Trostpreis)":" Trostpreis"):" (richtig getippt)";
-      html+=`<div class="result-row"><span>${p}</span><span class="plus">+${pts} Pkt${reason}</span></div>`;
-    }
-    resultHtml=html;
-  }
-  else if(o.type==="quiz-text"){
-    if(o.phase==="answer"){
-      await update(ref(db,`rooms/${room}/official`),{phase:"vote"});
-      return;
-    }
-    const counts={};
-    Object.values(o.votes||{}).forEach(v=>{counts[v]=(counts[v]||0)+1});
-    const max=Math.max(0,...Object.values(counts));
-    const winTexts=Object.keys(counts).filter(k=>counts[k]===max);
-    const awarded={};
-    for(const [author,ans] of Object.entries(o.answers||{})){
-      if(winTexts.includes(ans)){
-        await award(author,3);
-        awarded[author]=(awarded[author]||0)+3;
-      }
-    }
-    let html='<div class="flash gold"><b>Beste Antwort:</b></div>';
-    Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([txt,cnt])=>{
-      const isWin=winTexts.includes(txt);
-      // find author
-      const author=Object.entries(o.answers||{}).find(([k,v])=>v===txt);
-      html+=`<div class="result-row ${isWin?'winner':''}">
-        <span>${isWin?'👑 ':''}"${txt}" <small style="opacity:.6">(${author?author[0]:'?'})</small></span>
-        <strong>${cnt}</strong>
-      </div>`;
-    });
-    html+='<h3>Punkte vergeben:</h3>';
-    for(const [p,pts] of Object.entries(awarded)){
-      html+=`<div class="result-row"><span>${p}</span><span class="plus">+${pts} Pkt</span></div>`;
-    }
-    if(!Object.keys(awarded).length) html+='<div class="sub">Keine Punkte vergeben</div>';
-    resultHtml=html;
-  }
-  else if(o.type==="duel-math"||o.type==="duel-estimate"){
-    const entries=Object.entries(o.answers||{}).map(([p,a])=>({
-      p,val:a.val,ts:a.ts,diff:Math.abs((a.val||0)-o.target)
-    })).sort((a,b)=>a.diff-b.diff||a.ts-b.ts);
-    if(entries.length){
-      await award(entries[0].p,3);
-      // 2nd place gets 1 point
-      if(entries.length>1) await award(entries[1].p,1);
-    }
-    let html=`<div class="flash gold">Richtige Antwort: <b>${o.target}</b></div>`;
-    entries.forEach((e,i)=>{
-      const cls=i===0?'winner':'';
-      const pts=i===0?'+3':(i===1?'+1':'');
-      html+=`<div class="result-row ${cls}">
-        <span>${i===0?'🥇 ':(i===1?'🥈 ':(i===2?'🥉 ':(i+1+'. ')))}${e.p}</span>
-        <span>${e.val} (Δ ${e.diff})</span>
-        ${pts?`<strong class="plus">${pts}</strong>`:''}
-      </div>`;
-    });
-    resultHtml=html;
-  }
-  else if(o.type==="group-estimate"){
-    const teamSums={A:{sum:0,n:0,members:[]},B:{sum:0,n:0,members:[]}};
-    for(const [p,a] of Object.entries(o.answers||{})){
-      const t=(o.teams||{})[p]; if(!t||!teamSums[t]) continue;
-      teamSums[t].sum+=a.val; teamSums[t].n++; teamSums[t].members.push(p);
-    }
-    const avgA=teamSums.A.n?teamSums.A.sum/teamSums.A.n:Infinity;
-    const avgB=teamSums.B.n?teamSums.B.sum/teamSums.B.n:Infinity;
-    const dA=Math.abs(avgA-o.target),dB=Math.abs(avgB-o.target);
-    const win=dA<dB?"A":"B";
-    for(const [p,t] of Object.entries(o.teams||{})){
-      if(t===win) await award(p,3);
-    }
-    let html=`<div class="flash gold">Richtige Antwort: <b>${o.target}</b></div>`;
-    html+=`<div class="result-row ${win==='A'?'winner':''}">
-      <span>Team A: ${teamSums.A.members.join(", ")||'-'}</span>
-      <span>⌀ ${avgA===Infinity?'-':avgA.toFixed(1)} (Δ ${dA===Infinity?'-':dA.toFixed(1)})</span>
-    </div>`;
-    html+=`<div class="result-row ${win==='B'?'winner':''}">
-      <span>Team B: ${teamSums.B.members.join(", ")||'-'}</span>
-      <span>⌀ ${avgB===Infinity?'-':avgB.toFixed(1)} (Δ ${dB===Infinity?'-':dB.toFixed(1)})</span>
-    </div>`;
-    html+=`<div class="flash">Team ${win} gewinnt! +3 Pkt pro Mitglied</div>`;
-    resultHtml=html;
-  }
-  await update(ref(db,`rooms/${room}/official`),{phase:"done",resultHtml});
-}
-
-// === QUIZ MULTI ===
-async function nextQuizQuestion(){
-  if(!isHost) return;
-  const qmSnap=await get(ref(db,`rooms/${room}/quizMulti`));
-  const qm=qmSnap.val(); if(!qm) return;
-  if(qm.current>=qm.total){
-    return finalizeQuizMulti();
-  }
-  // pick random question type and content
-  const types=["quiz-who","duel-estimate"];
-  // include text only if first or last to avoid voting fatigue
-  if(qm.current===0||qm.current===qm.total-1) types.push("quiz-text");
-  const type=types[Math.floor(Math.random()*types.length)];
-  let data={type,startedAt:Date.now(),answers:{},votes:{},phase:"answer",endTime:Date.now()+30000,quizMulti:true,qNum:qm.current+1,qTotal:qm.total};
-  if(type==="quiz-who") data.q=`Frage ${qm.current+1}/${qm.total}: ${QUIZ_WHO[Math.floor(Math.random()*QUIZ_WHO.length)]}`;
-  else if(type==="quiz-text") data.q=`Frage ${qm.current+1}/${qm.total}: ${QUIZ_TEXT[Math.floor(Math.random()*QUIZ_TEXT.length)]}`;
-  else if(type==="duel-estimate"){
-    const s=SCHAETZ[Math.floor(Math.random()*SCHAETZ.length)];
-    data.q=`Frage ${qm.current+1}/${qm.total}: ${s.q}`;
-    data.target=s.a;
-    data.endTime=Date.now()+45000;
-  }
-  await update(ref(db,`rooms/${room}/quizMulti`),{current:qm.current+1});
-  await set(ref(db,`rooms/${room}/official`),data);
-}
-
-async function awardQuizPoints(player,pts){
-  // store in quizMulti.scores instead of direct
-  const r=ref(db,`rooms/${room}/quizMulti/scores/${player}`);
-  const cur=(await get(r)).val()||0;
-  await set(r,cur+pts);
-}
-
-async function finalizeQuizMulti(){
-  const snap=await get(ref(db,`rooms/${room}/quizMulti`));
-  const qm=snap.val(); if(!qm) return;
-  const scores=qm.scores||{};
-  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
-  // Award: 20/12/8/3
-  const rewards=[20,12,8];
-  const awarded={};
-  sorted.forEach(([p,s],i)=>{
-    let pts=0;
-    if(i===0) pts=20;
-    else if(i===1) pts=12;
-    else if(i===2) pts=8;
-    else if(s>0) pts=3;
-    if(pts>0){ awardScore(p,pts); awarded[p]=pts; }
-  });
-  let html='<div class="flash gold"><b>🏆 Quiz beendet!</b></div>';
-  sorted.forEach(([p,s],i)=>{
-    const medal=['🥇','🥈','🥉'][i]||((i+1)+'.');
-    const pts=awarded[p]||0;
-    html+=`<div class="result-row ${i===0?'winner':''}"><span>${medal} ${p}</span><span>${s} richtig</span><strong class="plus">${pts?'+'+pts:''}</strong></div>`;
-  });
-  html+='<div class="sub">Quiz-Punkte (1-3 pro Frage) wurden in offizielle Wochenend-Punkte umgewandelt: 20/12/8/3</div>';
-  await set(ref(db,`rooms/${room}/official`),{type:"quiz-done",q:"Quiz Endergebnis",phase:"done",resultHtml:html,startedAt:Date.now()});
-  await remove(ref(db,`rooms/${room}/quizMulti`));
-}
-
-// === REACTION TOURNAMENT ===
-async function startTournament(gameType="reaction"){
-  if(!isHost) return;
-  // Step 1: open participant picker
-  await set(ref(db,`rooms/${room}/tournamentSetup`),{
-    gameType, picks:{}, startedAt:Date.now()
-  });
-  switchTab("Games");
-}
-
-function buildBracket(participants){
-  // Proper single-elimination: only first round has real pairs.
-  // Following rounds have placeholder p1/p2 = null, filled by advanceTournament.
-  const shuffled=shuffle(participants);
-  const matches=[];
-  // Round 1: pair them up
-  let r1=[];
-  for(let i=0;i<shuffled.length;i+=2){
-    if(i+1<shuffled.length){
-      r1.push({round:1,p1:shuffled[i],p2:shuffled[i+1],winner:null});
-    } else {
-      // odd one out gets a bye - winner is set immediately
-      r1.push({round:1,p1:shuffled[i],p2:null,winner:shuffled[i],bye:true});
-    }
-  }
-  matches.push(...r1);
-  // Build subsequent rounds as empty placeholders
-  let prevCount=r1.length;
-  let round=2;
-  while(prevCount>1){
-    const cnt=Math.ceil(prevCount/2);
-    for(let i=0;i<cnt;i++){
-      matches.push({round,p1:null,p2:null,winner:null});
-    }
-    prevCount=cnt;
-    round++;
-  }
-  // Pre-fill bye winners into round 2
-  // (handled automatically by the auto-advance in render)
-  return matches;
-}
-
-async function actuallyStartTournament(){
-  if(!isHost) return;
-  const setupSnap=await get(ref(db,`rooms/${room}/tournamentSetup`));
-  const setup=setupSnap.val(); if(!setup) return;
-  const participants=Object.keys(setup.picks||{}).filter(p=>setup.picks[p]);
-  if(participants.length<2) return alert("Mindestens 2 Teilnehmer waehlen!");
-  const matches=buildBracket(participants);
-  await remove(ref(db,`rooms/${room}/official`));
-  await remove(ref(db,`rooms/${room}/tournamentSetup`));
-  await set(ref(db,`rooms/${room}/tournament`),{
-    active:true,gameType:setup.gameType,matches,
-    currentMatchIdx:findFirstUnplayedMatch(matches),
-    startedAt:Date.now()
-  });
-}
-
-function findFirstUnplayedMatch(matches){
-  for(let i=0;i<matches.length;i++){
-    if(!matches[i].winner) return i;
-  }
-  return -1;
-}
-
-let reactionState={};
-function renderTournamentSetup(){
-  const setup=state.tournamentSetup; if(!setup) return;
-  const body=$("officialBody");
-  const gameLabel=setup.gameType==="battleship"?"⚓ Schiffeversenken":"⚡ Reaktions-Test";
-  let html=`<div class="q-big">${gameLabel} Turnier</div>`;
-  html+=`<h3>Teilnehmer waehlen:</h3><div class="sub">${isHost?'Tippe Spieler an die mitmachen':'Host waehlt die Teilnehmer...'}</div>`;
-  const picks=setup.picks||{};
-  Object.keys(players).forEach(p=>{
-    const sel=picks[p];
-    html+=`<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-pick="${p}" ${isHost?'':'disabled'}>${sel?'✓ ':''}${p}</button>`;
-  });
-  const cnt=Object.values(picks).filter(Boolean).length;
-  html+=`<div class="sub">${cnt} Teilnehmer ausgewaehlt</div>`;
-  if(isHost){
-    html+=`<button class="btn-green" id="bracketGo" ${cnt<2?'disabled':''}>Turnier starten!</button>`;
-    html+=`<button class="btn-red" id="bracketCancel">Abbrechen</button>`;
-  }
-  body.innerHTML=html;
-  document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=async()=>{
-    const p=b.dataset.pick;
-    const cur=(setup.picks||{})[p];
-    await set(ref(db,`rooms/${room}/tournamentSetup/picks/${p}`),!cur);
-  });
-  const bg=$("bracketGo"); if(bg) bg.onclick=actuallyStartTournament;
-  const bc=$("bracketCancel"); if(bc) bc.onclick=()=>remove(ref(db,`rooms/${room}/tournamentSetup`));
-}
-
-function renderTournament(t){
-  if(t.gameType==="battleship") return renderBattleshipTournament(t);
-  const body=$("officialBody");
-  const idx=t.currentMatchIdx;
-
-  // build bracket display
-  let bracketHtml='<h3>Bracket</h3><div class="bracket">';
-  const byRound={};
-  t.matches.forEach((m,i)=>{
-    if(!byRound[m.round]) byRound[m.round]=[];
-    byRound[m.round].push({...m,idx:i});
-  });
-  Object.keys(byRound).sort().forEach(r=>{
-    bracketHtml+=`<div style="font-size:.7rem;opacity:.6;margin-top:6px">Runde ${r}</div>`;
-    byRound[r].forEach(m=>{
-      const p1cls=m.winner===m.p1?'winner':'';
-      const p2cls=m.winner===m.p2?'winner':'';
-      bracketHtml+=`<div class="match">
-        <span class="${p1cls}">${m.p1||'?'}${m.times&&m.times[m.p1]?` (${m.times[m.p1]}ms)`:''}</span>
-        <span>vs</span>
-        <span class="${p2cls}">${m.p2||(m.bye?'(Freilos)':'?')}${m.times&&m.times[m.p2]?` (${m.times[m.p2]}ms)`:''}</span>
-      </div>`;
-    });
-  });
-  bracketHtml+='</div>';
-
-  if(idx<0){
-    // tournament done
-    const winner=t.matches[t.matches.length-1].winner;
-    let html=`<div class="q-big">🏆 Turniersieger: ${winner}</div>${bracketHtml}`;
-    if(isHost){
-      html+='<hr><div class="sub">Belohnung waehlen:</div>';
-      html+=`<button class="btn-green" id="rewardScore">+5 Wochenend-Punkte</button>`;
-      html+=`<button class="btn-blue" id="rewardVote">+1 Bonus-Stadt-Stimme</button>`;
-      html+=`<button class="btn-ghost" id="closeTour">Schliessen</button>`;
-    }
-    body.innerHTML=html;
-    const rs=$("rewardScore"); if(rs) rs.onclick=async()=>{await awardScore(winner,5); toast(`+5 Pkt fuer ${winner}`); remove(ref(db,`rooms/${room}/tournament`));};
-    const rv=$("rewardVote"); if(rv) rv.onclick=async()=>{const r=ref(db,`rooms/${room}/players/${winner}/bonusVotes`);const c=(await get(r)).val()||0;await set(r,c+1);toast(`Bonus-Stimme fuer ${winner}`);remove(ref(db,`rooms/${room}/tournament`));};
-    const cl=$("closeTour"); if(cl) cl.onclick=()=>remove(ref(db,`rooms/${room}/tournament`));
-    return;
-  }
-
-  const m=t.matches[idx];
-  if(m.bye){
-    setTimeout(()=>advanceTournament(idx,m.p1),800);
-    body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bracketHtml}`;
-    return;
-  }
-
-  const isPlayer=user===m.p1||user===m.p2;
-  const matchData=Object.assign({phase:"waiting",ready:{}},(t.reaction&&t.reaction[idx])||{});
-
-  let html=`<div class="q-big">⚔️ ${m.p1} vs ${m.p2}</div>`;
-
-  if(matchData.phase==="waiting"){
-    if(isPlayer){
-      const ready=matchData.ready&&matchData.ready[user];
-      html+=`<div class="sub" style="text-align:center">Beide Spieler druecken Bereit</div>`;
-      html+=`<button class="${ready?'btn-green':'btn-blue'}" id="reactReady">${ready?'✓ Bereit':'Bereit'}</button>`;
-    } else {
-      html+=`<div class="sub" style="text-align:center">Warte auf Spieler...</div>`;
-    }
-    html+=`<div class="sub">Bereit: ${Object.keys(matchData.ready||{}).join(", ")||'-'}</div>`;
-  } else if(matchData.phase==="countdown"){
-    html+=`<div id="reactBox" style="background:var(--red);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;cursor:pointer;margin:10px 0">WARTEN...</div>`;
-  } else if(matchData.phase==="go"){
-    html+=`<div id="reactBox" style="background:var(--green);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;cursor:pointer;color:#000;margin:10px 0">JETZT!</div>`;
-  } else if(matchData.phase==="done"){
-    const t1=matchData.times&&matchData.times[m.p1];
-    const t2=matchData.times&&matchData.times[m.p2];
-    html+=`<div class="result-row ${matchData.winner===m.p1?'winner':''}"><span>${m.p1}</span><span>${t1||'-'}ms</span></div>`;
-    html+=`<div class="result-row ${matchData.winner===m.p2?'winner':''}"><span>${m.p2}</span><span>${t2||'-'}ms</span></div>`;
-    html+=`<div class="flash">${matchData.winner} gewinnt!</div>`;
-    if(isHost) html+=`<button class="btn-green" id="nextMatch">Naechstes Match</button>`;
-  }
-  html+=bracketHtml;
-
-  if(isHost && matchData.phase==="waiting"){
-    html+=`<hr><button class="btn-orange" id="forceStart">Match jetzt starten</button>`;
-  }
-  body.innerHTML=html;
-
-  // server-time based phase: when both ready, set goAt to future timestamp; clients poll
-  const rd=$("reactReady"); if(rd) rd.onclick=async()=>{
-    await set(ref(db,`rooms/${room}/tournament/reaction/${idx}/ready/${user}`),true);
-    const snap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}/ready`));
-    const r=snap.val()||{};
-    if(r[m.p1]&&r[m.p2]){
-      const wait=1500+Math.random()*3000;
-      await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
-    }
-  };
-  const fs=$("forceStart"); if(fs) fs.onclick=async()=>{
-    const wait=1500+Math.random()*3000;
-    await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
-  };
-  // client-side timer: if in countdown and goAt passed, switch phase to go
-  if(matchData.phase==="countdown" && matchData.goAt){
-    const remaining=matchData.goAt-Date.now();
-    if(remaining<=0){
-      update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
-    } else {
-      timers.push(setTimeout(()=>{
-        update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
-      },remaining));
-    }
-  }
-  const rb=$("reactBox"); if(rb && isPlayer){
-    rb.onclick=async()=>{
-      const tap=Date.now();
-      // read fresh state to avoid stale closures
-      const freshSnap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}`));
-      const fresh=freshSnap.val()||{};
-      if(fresh.phase==="countdown"){
-        // too early - opponent wins
-        const opp=user===m.p1?m.p2:m.p1;
-        await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"done",winner:opp,times:{[user]:"FRUEH"}});
-        await advanceTournament(idx,opp);
-        return;
-      }
-      if(fresh.phase==="go"){
-        const reactionTime=tap-(fresh.goAt||tap);
-        await set(ref(db,`rooms/${room}/tournament/reaction/${idx}/times/${user}`),reactionTime);
-        const snap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}/times`));
-        const tt=snap.val()||{};
-        if(tt[m.p1]!==undefined && tt[m.p2]!==undefined){
-          const winner=tt[m.p1]<tt[m.p2]?m.p1:m.p2;
-          await update(ref(db,`rooms/${room}/tournament/reaction/${idx}`),{phase:"done",winner});
-          setTimeout(()=>advanceTournament(idx,winner),3000);
-        }
-      }
-    };
-  }
-  const nm=$("nextMatch"); if(nm) nm.onclick=()=>advanceTournament(idx,matchData.winner);
-}
-
-async function advanceTournament(idx,winner){
-  const snap=await get(ref(db,`rooms/${room}/tournament`));
-  const t=snap.val(); if(!t) return;
-  const updated=[...t.matches];
-  if(updated[idx].winner && !updated[idx].bye) {
-    // already advanced; only refresh idx
-  } else {
-    if(!updated[idx].winner) updated[idx].winner=winner;
-    // store reaction times if any
-    const rsnap=await get(ref(db,`rooms/${room}/tournament/reaction/${idx}/times`));
-    if(rsnap.val()) updated[idx].times=rsnap.val();
-  }
-  // Find this match's position in its round
-  const myRound=updated[idx].round;
-  const sameRound=updated.filter(x=>x.round===myRound);
-  const posInRound=sameRound.indexOf(updated[idx]);
-  // Each pair (pos 0+1, 2+3, ...) feeds into one match in next round
-  const nextPosInRound=Math.floor(posInRound/2);
-  const nextRound=updated.find(x=>x.round===myRound+1 && updated.filter(y=>y.round===myRound+1).indexOf(x)===nextPosInRound);
-  if(nextRound){
-    // p1 if even, p2 if odd
-    if(posInRound%2===0) nextRound.p1=updated[idx].winner;
-    else nextRound.p2=updated[idx].winner;
-  }
-  await update(ref(db,`rooms/${room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayedMatch(updated)});
-}
-
-// === BATTLESHIP ===
-const BS_SIZE=6, BS_SHIPS=[{name:"Estrella-Frachter",len:3},{name:"Mahou-Boot",len:2},{name:"Caña-Kahn",len:2},{name:"Shot-Glas",len:1}];
-
-function placeShipsRandom(){
-  const grid=Array(BS_SIZE*BS_SIZE).fill(null);
-  const ships=[];
-  for(const s of BS_SHIPS){
-    let placed=false,tries=0;
-    while(!placed && tries<200){
-      tries++;
-      const horiz=Math.random()<0.5;
-      const r=Math.floor(Math.random()*BS_SIZE);
-      const c=Math.floor(Math.random()*BS_SIZE);
-      const cells=[];
-      let ok=true;
-      for(let i=0;i<s.len;i++){
-        const rr=horiz?r:r+i, cc=horiz?c+i:c;
-        if(rr>=BS_SIZE||cc>=BS_SIZE){ok=false;break;}
-        const idx=rr*BS_SIZE+cc;
-        if(grid[idx]!==null){ok=false;break;}
-        cells.push(idx);
-      }
-      if(ok){
-        cells.forEach(i=>grid[i]=ships.length);
-        ships.push({name:s.name,cells,hits:[]});
-        placed=true;
-      }
-    }
-  }
-  return {ships,shotsAt:[]};
-}
-
-async function initBattleshipMatch(idx,m){
-  // host initializes both players' boards
-  if(!isHost) return;
-  const data={
-    boards:{[m.p1]:placeShipsRandom(),[m.p2]:placeShipsRandom()},
-    turn:m.p1,
-    phase:"play",
-    startedAt:Date.now()
-  };
-  await set(ref(db,`rooms/${room}/tournament/battleship/${idx}`),data);
-}
-
-async function bsFire(idx,target,cellIdx){
-  const r=ref(db,`rooms/${room}/tournament/battleship/${idx}`);
-  const snap=await get(r); const d=snap.val(); if(!d||d.phase!=="play") return;
-  if(d.turn!==user) return;
-  const board=d.boards[target]; if(!board) return;
-  if((board.shotsAt||[]).includes(cellIdx)) return;
-  const shotsAt=[...(board.shotsAt||[]),cellIdx];
-  // check hit
-  let hitShipIdx=-1;
-  board.ships.forEach((s,si)=>{if(s.cells.includes(cellIdx)) hitShipIdx=si;});
-  if(hitShipIdx>=0){
-    board.ships[hitShipIdx].hits=[...(board.ships[hitShipIdx].hits||[]),cellIdx];
-  }
-  board.shotsAt=shotsAt;
-  // check win
-  const allSunk=board.ships.every(s=>s.cells.every(c=>(s.hits||[]).includes(c)));
-  const updates={[`boards/${target}`]:board};
-  if(allSunk){
-    updates.phase="done";
-    updates.winner=user;
-  } else {
-    // switch turn only on miss; hit = same player again
-    if(hitShipIdx<0) updates.turn=target;
-  }
-  await update(r,updates);
-  if(allSunk){
-    setTimeout(()=>advanceTournament(idx,user),3000);
-  }
-}
-
-function renderBattleshipTournament(t){
-  const body=$("officialBody");
-  const idx=t.currentMatchIdx;
-  // bracket
-  let bracketHtml='<h3>Bracket</h3><div class="bracket">';
-  const byRound={};
-  t.matches.forEach((m,i)=>{(byRound[m.round]=byRound[m.round]||[]).push({...m,idx:i})});
-  Object.keys(byRound).sort().forEach(r=>{
-    bracketHtml+=`<div style="font-size:.7rem;opacity:.6;margin-top:6px">Runde ${r}</div>`;
-    byRound[r].forEach(m=>{
-      bracketHtml+=`<div class="match"><span class="${m.winner===m.p1?'winner':''}">${m.p1||'?'}</span><span>vs</span><span class="${m.winner===m.p2?'winner':''}">${m.p2||(m.bye?'(Freilos)':'?')}</span></div>`;
-    });
-  });
-  bracketHtml+='</div>';
-
-  if(idx<0){
-    const winner=t.matches[t.matches.length-1].winner;
-    let html=`<div class="q-big">⚓ Sieger: ${winner}</div>${bracketHtml}`;
-    if(isHost){
-      html+='<hr><button class="btn-green" id="rewardScore">+5 Pkt</button><button class="btn-blue" id="rewardVote">+1 Bonus-Stimme</button><button class="btn-ghost" id="closeTour">Schliessen</button>';
-    }
-    body.innerHTML=html;
-    const rs=$("rewardScore"); if(rs) rs.onclick=async()=>{await awardScore(winner,5);toast(`+5 Pkt fuer ${winner}`);remove(ref(db,`rooms/${room}/tournament`));};
-    const rv=$("rewardVote"); if(rv) rv.onclick=async()=>{const r=ref(db,`rooms/${room}/players/${winner}/bonusVotes`);const c=(await get(r)).val()||0;await set(r,c+1);toast("Bonus-Stimme!");remove(ref(db,`rooms/${room}/tournament`));};
-    const cl=$("closeTour"); if(cl) cl.onclick=()=>remove(ref(db,`rooms/${room}/tournament`));
-    return;
-  }
-  const m=t.matches[idx];
-  if(m.bye){
-    setTimeout(()=>advanceTournament(idx,m.p1),800);
-    body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bracketHtml}`;
-    return;
-  }
-
-  const matchData=(t.battleship&&t.battleship[idx]);
-  if(!matchData){
-    body.innerHTML=`<div class="q-big">⚓ ${m.p1} vs ${m.p2}</div>${isHost?'<button class="btn-orange" id="bsInit">Match starten (Schiffe verteilen)</button>':'<div class="sub">Warte auf Host...</div>'}${bracketHtml}`;
-    const bi=$("bsInit"); if(bi) bi.onclick=()=>initBattleshipMatch(idx,m);
-    return;
-  }
-
-  // play / done
-  const isP1=user===m.p1, isP2=user===m.p2, isPlayer=isP1||isP2;
-  const me=isP1?m.p1:(isP2?m.p2:null);
-  const opp=isP1?m.p2:(isP2?m.p1:null);
-
-  let html=`<div class="q-big">⚓ ${m.p1} vs ${m.p2}</div>`;
-  if(matchData.phase==="done"){
-    html+=`<div class="flash">🏆 ${matchData.winner} gewinnt!</div>`;
-    if(isHost) html+=`<button class="btn-green" id="bsNext">Nächstes Match</button>`;
-  } else {
-    html+=`<div class="sub" style="text-align:center">Am Zug: <b>${matchData.turn}</b></div>`;
-  }
-
-  if(isPlayer){
-    // own board
-    html+='<div class="bs-label">Deine Schiffe (Gegner schiesst hier):</div><div class="bs-grid" id="bsMine">';
-    const myBoard=matchData.boards[me];
-    const myShipsByCell={};
-    myBoard.ships.forEach((s,si)=>s.cells.forEach(c=>myShipsByCell[c]=si));
-    for(let i=0;i<BS_SIZE*BS_SIZE;i++){
-      const isShip=myShipsByCell[i]!==undefined;
-      const wasShot=(myBoard.shotsAt||[]).includes(i);
-      let cls="bs-cell";
-      if(isShip && !wasShot) cls+=" ship";
-      else if(isShip && wasShot){
-        const ship=myBoard.ships[myShipsByCell[i]];
-        const sunk=ship.cells.every(c=>(ship.hits||[]).includes(c));
-        cls+=sunk?" sunk":" hit";
-      } else if(wasShot) cls+=" miss";
-      html+=`<div class="${cls}"></div>`;
-    }
-    html+='</div>';
-    // opponent board (shoot here)
-    html+=`<div class="bs-label">Gegner-Feld (klick zum Schiessen):</div><div class="bs-grid" id="bsOpp">`;
-    const oppBoard=matchData.boards[opp];
-    const myTurn=matchData.turn===me && matchData.phase==="play";
-    const oppShipsByCell={};
-    oppBoard.ships.forEach((s,si)=>s.cells.forEach(c=>oppShipsByCell[c]=si));
-    for(let i=0;i<BS_SIZE*BS_SIZE;i++){
-      const wasShot=(oppBoard.shotsAt||[]).includes(i);
-      const isShip=oppShipsByCell[i]!==undefined;
-      let cls="bs-cell";
-      if(wasShot && isShip){
-        const ship=oppBoard.ships[oppShipsByCell[i]];
-        const sunk=ship.cells.every(c=>(ship.hits||[]).includes(c));
-        cls+=sunk?" sunk":" hit";
-      } else if(wasShot) cls+=" miss";
-      if(!myTurn||wasShot) cls+=" disabled";
-      html+=`<div class="${cls}" data-bs="${i}"></div>`;
-    }
-    html+='</div>';
-  } else {
-    // spectator: show both boards small without ships hidden
-    html+='<div class="sub">Zuschauer-Modus</div>';
-    [m.p1,m.p2].forEach(p=>{
-      const b=matchData.boards[p]; if(!b) return;
-      html+=`<div class="bs-label">${p}:</div><div class="bs-grid">`;
-      const sc={};
-      b.ships.forEach((s,si)=>s.cells.forEach(c=>sc[c]=si));
-      for(let i=0;i<BS_SIZE*BS_SIZE;i++){
-        const wasShot=(b.shotsAt||[]).includes(i);
-        let cls="bs-cell";
-        if(wasShot && sc[i]!==undefined) cls+=" hit";
-        else if(wasShot) cls+=" miss";
-        html+=`<div class="${cls}"></div>`;
-      }
-      html+='</div>';
-    });
-  }
-
-  html+=bracketHtml;
-  body.innerHTML=html;
-
-  document.querySelectorAll("#bsOpp .bs-cell[data-bs]").forEach(c=>{
-    if(c.classList.contains("disabled")) return;
-    c.onclick=()=>bsFire(idx,opp,parseInt(c.dataset.bs));
-  });
-  const bn=$("bsNext"); if(bn) bn.onclick=()=>advanceTournament(idx,matchData.winner);
-}
-
-// === BINGO ===
-function shuffle(a){return [...a].sort(()=>Math.random()-0.5)}
-function makeCard(){
-  const picks=shuffle(BIER_POOL).slice(0,24);
-  const grid=[];
-  for(let i=0;i<25;i++){
-    if(i===12) grid.push({beer:"FREI",free:true,marked:true,confirmedBy:[]});
-    else grid.push({beer:picks[i>12?i-1:i],marked:false,confirmedBy:[]});
-  }
-  return {grid,won:false,dealt:Date.now()};
-}
-async function bingoDealAll(){
-  if(!isHost) return;
-  if(!confirm("Allen neue Karten austeilen? Aktuelle Spielstaende gehen verloren.")) return;
-  const cards={};
-  Object.keys(players).forEach(p=>{cards[p]=makeCard()});
-  await set(ref(db,`rooms/${room}/bingo/cards`),cards);
-  toast("Neue Karten ausgeteilt");
-}
-async function requestNewBingoCard(){
-  const cards=(state.bingo&&state.bingo.cards)||{};
-  if(cards[user]){
-    if(!confirm("Aktuelle Karte und alle Bestaetigungen gehen verloren. Sicher?")) return;
-  }
-  await set(ref(db,`rooms/${room}/bingo/cards/${user}`),makeCard());
-  toast("Neue Karte!");
-}
-
-function renderBingo(){
-  const cards=(state.bingo&&state.bingo.cards)||{};
-  const myCard=cards[user];
-  const grid=$("bingoGrid");
-  grid.innerHTML="";
-  if(!myCard){
-    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px" class="sub">Noch keine Karte. Tippe unten "Neue Karte holen".</div>';
-    $("bingoStatus").innerHTML="";
-  } else {
-    const winCells=findWinLine(myCard.grid);
-    myCard.grid.forEach((cell,i)=>{
-      const div=document.createElement("div");
-      const conf=(cell.confirmedBy||[]).length;
-      const isConfirmed=conf>=2||cell.free;
-      div.className="bingo-cell"+(cell.marked?" marked":"")+(isConfirmed?" confirmed":"")+(cell.free?" free":"")+(winCells.includes(i)?" winrow":"");
-      div.innerHTML=`<span>${cell.beer}</span>${conf>0&&!cell.free?`<span class="conf">${conf}/2</span>`:""}`;
-      div.onclick=()=>bingoToggle(i);
-      grid.appendChild(div);
-    });
-    const marked=myCard.grid.filter(c=>c.marked).length;
-    if(winCells.length && !myCard.won){
-      $("bingoStatus").innerHTML='<div class="flash">🎉 BINGO! +10 Pkt!</div>';
-      update(ref(db,`rooms/${room}/bingo/cards/${user}`),{won:true});
-      awardScore(user,10);
-      toast("🎉 BINGO! +10 Pkt");
-    } else if(winCells.length){
-      $("bingoStatus").innerHTML='<div class="flash">🎉 BINGO erreicht! Hol dir eine neue Karte fuer noch mehr Punkte.</div>';
-    } else {
-      $("bingoStatus").innerHTML=`<div class="sub">${marked}/25 markiert</div>`;
-    }
-  }
-  const list=$("bingoConfirmList");
-  list.innerHTML="";
-  let any=false;
-  for(const [p,card] of Object.entries(cards)){
-    if(p===user) continue;
-    const pending=card.grid.map((c,i)=>({...c,i})).filter(c=>c.marked&&!c.free&&(c.confirmedBy||[]).length<2&&!(c.confirmedBy||[]).includes(user));
-    if(pending.length===0) continue;
-    any=true;
-    const div=document.createElement("div");
-    div.style.cssText="background:var(--card2);padding:10px;border-radius:8px;margin:5px 0";
-    div.innerHTML=`<b>${p}</b><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${pending.map(c=>`<button class="btn-green btn-sm" data-p="${p}" data-i="${c.i}">✓ ${c.beer}</button>`).join("")}</div>`;
-    list.appendChild(div);
-  }
-  if(!any) list.innerHTML='<div class="sub">Nichts zu bestaetigen</div>';
-  list.querySelectorAll("button[data-p]").forEach(b=>b.onclick=async()=>{
-    const p=b.dataset.p,i=parseInt(b.dataset.i);
-    const r=ref(db,`rooms/${room}/bingo/cards/${p}/grid/${i}/confirmedBy`);
-    const cur=(await get(r)).val()||[];
-    if(!cur.includes(user)) cur.push(user);
-    await set(r,cur);
-  });
-}
-
-async function bingoToggle(i){
-  const cards=(state.bingo&&state.bingo.cards)||{};
-  const myCard=cards[user]; if(!myCard) return;
-  const cell=myCard.grid[i]; if(!cell||cell.free) return;
-  const r=ref(db,`rooms/${room}/bingo/cards/${user}/grid/${i}`);
-  await update(r,{marked:!cell.marked,confirmedBy:cell.marked?[]:(cell.confirmedBy||[])});
-}
-function findWinLine(grid){
-  const ok=i=>grid[i].free||(grid[i].marked&&(grid[i].confirmedBy||[]).length>=2);
-  const lines=[];
-  for(let r=0;r<5;r++) lines.push([0,1,2,3,4].map(c=>r*5+c));
-  for(let c=0;c<5;c++) lines.push([0,1,2,3,4].map(r=>r*5+c));
-  lines.push([0,6,12,18,24]);
-  lines.push([4,8,12,16,20]);
-  for(const ln of lines) if(ln.every(ok)) return ln;
-  return [];
-}
-
-// === CITIES ===
-function renderCities(){
-  const c=state.cities||{};
-  const list=c.list||{};
-  const round=c.round;
-  const entries=Object.entries(list).sort((a,b)=>{
-    if(a[1].status!==b[1].status) return a[1].status==="active"?-1:1;
-    return (b[1].votes||0)-(a[1].votes||0);
-  });
-  $("citiesList").innerHTML=entries.map(([k,city])=>`
-    <div class="city-row ${city.status==='eliminated'?'elim':''}">
-      <span style="flex:1;font-weight:bold">${city.name}</span>
-      ${city.votes?`<span class="vote-pill ${city.votes<0?'neg':''}">${city.votes>0?'+':''}${city.votes}</span>`:''}
-    </div>`).join("")||'<div class="sub">Keine Staedte</div>';
-
-  const aa=$("citiesAction"); aa.innerHTML="";
-  if(round&&round.type){
-    const myV=(round.votes||{})[user];
-    const me=players[user]||{};
-    const activeOnly=entries.filter(e=>e[1].status==="active");
-
-    if(round.type==="pos3"){
-      const bonusUsed=(round.bonusUsed||{})[user]||0;
-      const canBonus=(me.bonusVotes||0)>bonusUsed;
-      aa.innerHTML=`<hr><h3>Vergib 3 Punkte (max. 3 Staedte):</h3>`+activeOnly.map(([k,city])=>{
-        const sel=myV&&myV.includes(k);
-        return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
-      }).join("")
-      +(canBonus?`<hr><div class="sub">Du hast Bonus-Stimmen! +1 fuer:</div>`+activeOnly.map(([k,city])=>`<button class="btn-purple btn-sm" data-bonus="${k}">⭐ +1 ${city.name}</button>`).join(""):"");
-    } else if(round.type==="neg1"){
-      aa.innerHTML=`<hr><h3>Welche Stadt soll WEG?</h3>`+activeOnly.map(([k,city])=>{
-        const sel=myV===k;
-        return `<button class="${sel?'btn-red':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✗ ':''}${city.name}</button>`;
-      }).join("");
-    } else if(round.type==="duel"){
-      const duelCities=round.duelCities||[];
-      if(duelCities.length<2 && isHost){
-        aa.innerHTML=`<hr><div class="sub">Waehle 2 Staedte fuers Duell:</div>`+activeOnly.map(([k,city])=>{
-          const sel=duelCities.includes(k);
-          return `<button class="${sel?'btn-orange':'btn-ghost'}" style="text-align:left" data-duelpick="${k}">${sel?'⚔️ ':''}${city.name}</button>`;
-        }).join("");
-      } else if(duelCities.length===2){
-        aa.innerHTML=`<hr><h3>⚔️ Duell - waehle die Gewinner-Stadt:</h3>`+duelCities.map(k=>{
-          const city=list[k]; if(!city) return"";
-          const sel=myV===k;
-          return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left;font-size:1.1rem;padding:18px" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
-        }).join("");
-      }
-    } else if(round.type==="ko"){
-      aa.innerHTML=`<hr><h3>K.O.-Modus: Welche soll bleiben? (Stadt mit den wenigsten Stimmen fliegt)</h3>`+activeOnly.map(([k,city])=>{
-        const sel=myV===k;
-        return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
-      }).join("");
-    } else if(round.type==="bribe"){
-      aa.innerHTML=`<hr><h3>Bribe-Modus: Stimme fuer eine Stadt</h3>
-        <div class="sub">Du kannst Bribe-Tokens an andere Spieler geben um sie zu beeinflussen (Vertrauenssache!)</div>`
-        +activeOnly.map(([k,city])=>{
-          const sel=myV===k;
-          return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
-        }).join("");
-      if((me.bribes||0)>0){
-        aa.innerHTML+=`<hr><div class="sub">Du hast ${me.bribes} Bribe-Token. Verschenken an:</div>`;
-        aa.innerHTML+=Object.keys(players).filter(p=>p!==user).map(p=>`<button class="btn-purple btn-sm" data-bribetarget="${p}">💰 → ${p}</button>`).join("");
-      }
-    }
-    aa.querySelectorAll("[data-city]").forEach(b=>b.onclick=async()=>{
-      const k=b.dataset.city;
-      if(round.type==="pos3"){
-        let cur=myV||[];
-        if(cur.includes(k)) cur=cur.filter(x=>x!==k);
-        else if(cur.length<3) cur.push(k);
-        await set(ref(db,`rooms/${room}/cities/round/votes/${user}`),cur);
-      } else {
-        await set(ref(db,`rooms/${room}/cities/round/votes/${user}`),k);
-      }
-    });
-    aa.querySelectorAll("[data-bonus]").forEach(b=>b.onclick=async()=>{
-      const k=b.dataset.bonus;
-      // increment bonus used and add a marker vote
-      const cur=(round.bonusUsed||{})[user]||0;
-      await set(ref(db,`rooms/${room}/cities/round/bonusUsed/${user}`),cur+1);
-      await set(ref(db,`rooms/${room}/cities/round/bonusVotes/${user}_${cur}`),k);
-      // also deduct from player
-      const r=ref(db,`rooms/${room}/players/${user}/bonusVotes`);
-      const v=(await get(r)).val()||0;
-      await set(r,Math.max(0,v-1));
-      toast("Bonus-Stimme eingesetzt");
-    });
-    aa.querySelectorAll("[data-duelpick]").forEach(b=>b.onclick=async()=>{
-      if(!isHost) return;
-      const k=b.dataset.duelpick;
-      let cur=round.duelCities||[];
-      if(cur.includes(k)) cur=cur.filter(x=>x!==k);
-      else if(cur.length<2) cur.push(k);
-      await set(ref(db,`rooms/${room}/cities/round/duelCities`),cur);
-    });
-    aa.querySelectorAll("[data-bribetarget]").forEach(b=>b.onclick=async()=>{
-      const target=b.dataset.bribetarget;
-      const myR=ref(db,`rooms/${room}/players/${user}/bribes`);
-      const myC=(await get(myR)).val()||0;
-      if(myC<=0) return;
-      await set(myR,myC-1);
-      const tR=ref(db,`rooms/${room}/players/${target}/bribes`);
-      const tC=(await get(tR)).val()||0;
-      await set(tR,tC+1);
-      toast(`Bribe an ${target} verschickt`);
-    });
-  }
-}
-async function addCity(){
-  if(!isHost) return;
-  const v=$("newCity").value.trim(); if(!v) return;
-  await set(ref(db,`rooms/${room}/cities/list/c_${Date.now()}`),{name:v,status:"active",votes:0});
-  $("newCity").value="";
-}
-async function startCityVote(type){
-  if(!isHost) return;
-  await set(ref(db,`rooms/${room}/cities/round`),{type,votes:{},startedAt:Date.now()});
-  toast(`Voting-Modus: ${type}`);
-}
-async function endCityVote(){
-  if(!isHost) return;
-  const c=state.cities||{},r=c.round; if(!r) return;
-  const list=c.list||{}; const tally={};
-  if(r.type==="pos3"){
-    Object.values(r.votes||{}).forEach(arr=>{(arr||[]).forEach(k=>tally[k]=(tally[k]||0)+1)});
-    // add bonus votes
-    Object.values(r.bonusVotes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
-    for(const [k,v] of Object.entries(tally)) await set(ref(db,`rooms/${room}/cities/list/${k}/votes`),((list[k].votes)||0)+v);
-  } else if(r.type==="neg1"){
-    Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
-    for(const [k,v] of Object.entries(tally)) await set(ref(db,`rooms/${room}/cities/list/${k}/votes`),((list[k].votes)||0)-v);
-  } else if(r.type==="duel"){
-    const duel=r.duelCities||[];
-    if(duel.length===2){
-      Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
-      const [a,b]=duel;
-      const va=tally[a]||0, vb=tally[b]||0;
-      const loser=va<vb?a:(vb<va?b:null);
-      if(loser){
-        await update(ref(db,`rooms/${room}/cities/list/${loser}`),{status:"eliminated"});
-        toast(`${list[loser].name} fliegt raus!`);
-      } else {
-        toast("Unentschieden - keine Aenderung");
-      }
-    }
-  } else if(r.type==="ko"){
-    Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
-    // find lowest among active
-    const active=Object.entries(list).filter(e=>e[1].status==="active");
-    let lowest=null,minV=Infinity;
-    active.forEach(([k,v])=>{
-      const t=tally[k]||0;
-      if(t<minV){minV=t;lowest=k;}
-    });
-    if(lowest){
-      await update(ref(db,`rooms/${room}/cities/list/${lowest}`),{status:"eliminated"});
-      toast(`${list[lowest].name} fliegt raus (${minV} Stimmen)`);
-    }
-  } else if(r.type==="bribe"){
-    Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
-    for(const [k,v] of Object.entries(tally)) await set(ref(db,`rooms/${room}/cities/list/${k}/votes`),((list[k].votes)||0)+v);
-  }
-  await remove(ref(db,`rooms/${room}/cities/round`));
-}
-
-// === MISSIONS ===
-function renderMissions(){
-  const list=$("missionsList");
-  const missions=state.missions||{};
-  // sort: once-done last; within categories by points desc
-  const entries=Object.entries(missions).sort((a,b)=>{
-    const aDone=a[1].type==="once"?a[1].done:false;
-    const bDone=b[1].type==="once"?b[1].done:false;
-    if(aDone!==bDone) return aDone?1:-1;
-    return (b[1].points||0)-(a[1].points||0);
-  });
-  list.innerHTML=entries.map(([id,m])=>{
-    const isMulti=m.type==="multi";
-    const typeTag=isMulti?'<span class="type-tag group">MEHRMALIG</span>':'<span class="type-tag solo">EINMALIG</span>';
-    let actions="";
-
-    if(isMulti){
-      // per-player tracking
-      const completed=m.completed||{};
-      const myEntry=completed[user];
-      const doneList=Object.entries(completed).filter(([p,e])=>e&&e.done).map(([p])=>p);
-      // my action
-      if(myEntry && myEntry.done){
-        actions+=`<div class="sub">✅ Du hast es erledigt (+${m.points} Pkt)</div>`;
-      } else if(myEntry && !myEntry.done){
-        const cb=(myEntry.confirmedBy||[]).length;
-        actions+=`<div class="sub">Dein Anspruch: ${cb}/2 Bestaetigungen</div>`;
-        actions+=`<button class="btn-ghost btn-sm" data-leavemulti="${id}">Zuruecknehmen</button>`;
-      } else {
-        actions+=`<button class="btn-green btn-sm" data-joinmulti="${id}">Ich habs!</button>`;
-      }
-      // pending claims of others needing my confirmation
-      const pendingOthers=Object.entries(completed).filter(([p,e])=>p!==user && e && !e.done && !(e.confirmedBy||[]).includes(user));
-      if(pendingOthers.length){
-        actions+='<div class="sub" style="margin-top:6px">Bestaetigen:</div>';
-        pendingOthers.forEach(([p,e])=>{
-          const cb=(e.confirmedBy||[]).length;
-          actions+=`<button class="btn-blue btn-sm" data-confirmmulti="${id}" data-target="${p}">✓ ${p} (${cb}/2)</button> `;
-          actions+=`<button class="btn-red btn-sm" data-vetomulti="${id}" data-target="${p}">✗</button> `;
-        });
-      }
-      if(doneList.length){
-        actions+=`<div class="sub" style="margin-top:6px">Erledigt: ${doneList.join(", ")}</div>`;
-      }
-      return `<div class="mission ${isMulti?'group':''}">
-        <span class="pts">${m.points} Pkt</span>
-        ${typeTag}<b>${m.title}</b>
-        ${m.desc?`<div class="desc">${m.desc}</div>`:""}
-        ${actions}
-      </div>`;
-    }
-
-    // ONCE mode
-    const conf=(m.confirmedBy||[]).length;
-    const claimed=m.claimedBy;
-    const iClaimed=claimed===user;
-    const iConfirmed=(m.confirmedBy||[]).includes(user);
-    if(m.done){
-      actions=`<div class="sub">✅ Erledigt von ${claimed} · +${m.points} Pkt</div>`;
-    } else {
-      if(!claimed){
-        actions+=`<button class="btn-green btn-sm" data-join="${id}">Ich habs!</button> `;
-      } else if(iClaimed){
-        actions+=`<div class="sub">Dein Anspruch: ${conf}/2 Bestaetigungen</div>`;
-        actions+=`<button class="btn-ghost btn-sm" data-leave="${id}">Zuruecknehmen</button>`;
-      } else {
-        actions+=`<div class="sub">Beansprucht von: ${claimed} (${conf}/2)</div>`;
-        if(!iConfirmed){
-          actions+=`<button class="btn-blue btn-sm" data-confirm="${id}">✓ Bestaetigen</button> `;
-          actions+=`<button class="btn-red btn-sm" data-veto="${id}">✗ Quatsch</button>`;
-        } else {
-          actions+=`<div class="sub">Du hast bestaetigt</div>`;
-        }
-      }
-    }
-    return `<div class="mission ${m.done?'done':''}">
-      <span class="pts">${m.points} Pkt</span>
-      ${typeTag}<b>${m.title}</b>
-      ${m.desc?`<div class="desc">${m.desc}</div>`:""}
-      ${actions}
-    </div>`;
-  }).join("")||'<div class="sub">Keine Missionen</div>';
-
-  // once handlers
-  list.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinOnce(b.dataset.join));
-  list.querySelectorAll("[data-leave]").forEach(b=>b.onclick=()=>leaveOnce(b.dataset.leave));
-  list.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>confirmOnce(b.dataset.confirm));
-  list.querySelectorAll("[data-veto]").forEach(b=>b.onclick=()=>vetoOnce(b.dataset.veto));
-  // multi handlers
-  list.querySelectorAll("[data-joinmulti]").forEach(b=>b.onclick=()=>joinMulti(b.dataset.joinmulti));
-  list.querySelectorAll("[data-leavemulti]").forEach(b=>b.onclick=()=>leaveMulti(b.dataset.leavemulti));
-  list.querySelectorAll("[data-confirmmulti]").forEach(b=>b.onclick=()=>confirmMulti(b.dataset.confirmmulti,b.dataset.target));
-  list.querySelectorAll("[data-vetomulti]").forEach(b=>b.onclick=()=>vetoMulti(b.dataset.vetomulti,b.dataset.target));
-}
-
-async function addMission(){
-  const t=$("newMissionTitle").value.trim(); if(!t) return;
-  const d=$("newMissionDesc").value.trim();
-  const p=parseInt($("newMissionPoints").value);
-  const type=$("newMissionType").value;
-  const base={title:t,desc:d,points:p,type,createdBy:user};
-  if(type==="multi") base.completed={};
-  else { base.done=false; base.claimedBy=null; base.confirmedBy=[]; base.vetoedBy=[]; }
-  await set(ref(db,`rooms/${room}/missions/m_${Date.now()}`),base);
-  $("newMissionTitle").value=""; $("newMissionDesc").value="";
-  toast("Mission hinzugefuegt");
-}
-
-// ONCE handlers
-async function joinOnce(id){
-  const r=ref(db,`rooms/${room}/missions/${id}`);
-  const m=(await get(r)).val(); if(!m||m.done) return;
-  if(m.claimedBy) return;
-  await update(r,{claimedBy:user,confirmedBy:[],vetoedBy:[]});
-}
-async function leaveOnce(id){
-  const r=ref(db,`rooms/${room}/missions/${id}`);
-  const m=(await get(r)).val(); if(!m||m.done) return;
-  if(m.claimedBy===user) await update(r,{claimedBy:null,confirmedBy:[],vetoedBy:[]});
-}
-async function confirmOnce(id){
-  const r=ref(db,`rooms/${room}/missions/${id}`);
-  const m=(await get(r)).val(); if(!m||m.done||!m.claimedBy) return;
-  const cb=m.confirmedBy||[];
-  if(cb.includes(user)||m.claimedBy===user) return;
-  cb.push(user);
-  if(cb.length>=2){
-    await update(r,{confirmedBy:cb,done:true});
-    await awardScore(m.claimedBy,m.points);
-    toast(`Mission "${m.title}" abgeschlossen!`);
-  } else {
-    await update(r,{confirmedBy:cb});
-  }
-}
-async function vetoOnce(id){
-  const r=ref(db,`rooms/${room}/missions/${id}`);
-  const m=(await get(r)).val(); if(!m||m.done) return;
-  if(!confirm("Veto einlegen? Der Anspruch wird zurueckgesetzt.")) return;
-  await update(r,{claimedBy:null,confirmedBy:[],vetoedBy:[user]});
-  toast("Veto - Anspruch zurueckgesetzt");
-}
-
-// MULTI handlers
-async function joinMulti(id){
-  const r=ref(db,`rooms/${room}/missions/${id}/completed/${user}`);
-  const cur=(await get(r)).val();
-  if(cur) return;
-  await set(r,{confirmedBy:[],done:false,claimedAt:Date.now()});
-}
-async function leaveMulti(id){
-  const r=ref(db,`rooms/${room}/missions/${id}/completed/${user}`);
-  const cur=(await get(r)).val();
-  if(cur && !cur.done) await remove(r);
-}
-async function confirmMulti(id,target){
-  if(target===user) return;
-  const r=ref(db,`rooms/${room}/missions/${id}/completed/${target}`);
-  const entry=(await get(r)).val();
-  if(!entry||entry.done) return;
-  const cb=entry.confirmedBy||[];
-  if(cb.includes(user)) return;
-  cb.push(user);
-  if(cb.length>=2){
-    const msnap=await get(ref(db,`rooms/${room}/missions/${id}`));
-    const m=msnap.val();
-    await update(r,{confirmedBy:cb,done:true});
-    await awardScore(target,m.points);
-    toast(`${target} hat "${m.title}" erfuellt`);
-  } else {
-    await update(r,{confirmedBy:cb});
-  }
-}
-async function vetoMulti(id,target){
-  if(!confirm(`Veto gegen ${target}? Sein Anspruch wird geloescht.`)) return;
-  const r=ref(db,`rooms/${room}/missions/${id}/completed/${target}`);
-  await remove(r);
-  toast(`Veto gegen ${target}`);
-}
-
-// === SOLO GAMES ===
-function startSolo(type){
-  const area=$("soloArea");
-  area.classList.remove("hidden");
-  if(type==="math") soloMath(area);
-  else if(type==="estimate") soloEstimate(area);
-  else if(type==="reaction") soloReaction(area);
-}
-function soloMath(area){
-  let score=0,endTime=Date.now()+30000,current=null;
-  const gen=()=>{
-    const a=Math.floor(Math.random()*20+2),b=Math.floor(Math.random()*12+2),op=["+","-","*"][Math.floor(Math.random()*3)];
-    current={q:`${a} ${op} ${b}`,a:eval(`${a}${op}${b}`)};
-  };
-  const render=()=>{
-    const left=Math.max(0,Math.ceil((endTime-Date.now())/1000));
-    if(left<=0){
-      clearTimers();
-      const casualPts=Math.max(1,Math.floor(score/2));
-      awardScore(user,casualPts,true);
-      area.innerHTML=`<h2>Ende!</h2><div class="q-big">${score} richtig</div><div class="flash">+${casualPts} Casual-Punkte</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
-      $("soloClose").onclick=()=>area.classList.add("hidden");
-      return;
-    }
-    area.innerHTML=`<h2>Kopfrechnen Sprint</h2>
-      <div class="timer">⏳ ${left}s · ${score} richtig</div>
-      <div class="q-big">${current.q} = ?</div>
-      <input id="mathAns" type="number" autofocus>
-      <button class="btn-green" id="mathOK">OK</button>`;
-    const inp=$("mathAns"); inp.focus();
-    const submit=()=>{
-      if(Number(inp.value)===current.a) score++;
-      gen(); render();
-    };
-    inp.onkeydown=e=>{if(e.key==="Enter")submit()};
-    $("mathOK").onclick=submit;
-  };
-  gen();
-  render();
-  clearTimers();
-  timers.push(setInterval(()=>{
-    const left=Math.max(0,Math.ceil((endTime-Date.now())/1000));
-    const t=area.querySelector(".timer");
-    if(t) t.innerText=`⏳ ${left}s · ${score} richtig`;
-    if(left<=0){ render(); }
-  },500));
-}
-function soloEstimate(area){
-  const qs=shuffle(SCHAETZ).slice(0,5);
-  let i=0,totalDiff=0;
-  const next=()=>{
-    if(i>=qs.length){
-      const avgPct=totalDiff/qs.length;
-      const score=Math.max(1,Math.round(30-avgPct/3));
-      awardScore(user,score,true);
-      area.innerHTML=`<h2>Ende!</h2><div class="flash">Durchschnittsabweichung: ${avgPct.toFixed(0)}%<br>+${score} Casual-Punkte</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
-      $("soloClose").onclick=()=>area.classList.add("hidden");
-      return;
-    }
-    const q=qs[i];
-    area.innerHTML=`<h2>Schaetzen ${i+1}/5</h2>
-      <div class="q-big">${q.q}</div>
-      <input id="estAns" type="number">
-      <button class="btn-green" id="estOK">Antwort</button>`;
-    $("estAns").focus();
-    const submit=()=>{
-      const v=Number($("estAns").value);
-      const pct=Math.abs(v-q.a)/q.a*100;
-      totalDiff+=Math.min(200,pct);
-      i++;
-      area.innerHTML=`<div class="flash">Richtig: <b>${q.a}</b> · Deine: ${v} · Abweichung: ${pct.toFixed(0)}%</div>
-        <button class="btn-blue" id="estNext">Weiter</button>`;
-      $("estNext").onclick=next;
-    };
-    $("estAns").onkeydown=e=>{if(e.key==="Enter")submit()};
-    $("estOK").onclick=submit;
-  };
-  next();
-}
-function soloReaction(area){
-  area.innerHTML=`<h2>Reaktions-Test</h2><div class="sub">Warte bis es gruen wird, dann sofort tippen!</div>
-    <div id="reactBox" style="background:var(--red);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;cursor:pointer">WARTEN...</div>`;
-  const box=$("reactBox");
-  const wait=1500+Math.random()*3000;
-  let started=false,startTs=0;
-  const to=setTimeout(()=>{
-    box.style.background="var(--green)";
-    box.innerText="JETZT!";
-    started=true;
-    startTs=Date.now();
-  },wait);
-  box.onclick=()=>{
-    if(!started){
-      clearTimeout(to);
-      area.innerHTML=`<div class="flash warn">Zu frueh! 😅</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
-      $("soloClose").onclick=()=>area.classList.add("hidden");
-      return;
-    }
-    const ms=Date.now()-startTs;
-    const pts=Math.max(1,Math.round(50-ms/10));
-    awardScore(user,pts,true);
-    area.innerHTML=`<h2>${ms}ms</h2><div class="flash">+${pts} Casual-Punkte</div><button class="btn-ghost" id="soloClose">Schliessen</button>`;
-    $("soloClose").onclick=()=>area.classList.add("hidden");
-  };
-}
-
-// === RESET ===
-async function resetScores(){
-  if(!isHost) return;
-  if(!confirm("Alle Scores auf 0?")) return;
-  const upd={};
-  Object.keys(players).forEach(p=>{upd[`${p}/score`]=0;upd[`${p}/casual`]=0;upd[`${p}/bonusVotes`]=0;upd[`${p}/bribes`]=0});
-  await update(ref(db,`rooms/${room}/players`),upd);
-}
-async function fullReset(){
-  if(!isHost) return;
-  if(!confirm("ALLES loeschen?")) return;
-  await remove(ref(db,`rooms/${room}`));
-  location.reload();
-}
-</script>
+<script type="module" src="./js/core.js"></script>
+<script type="module" src="./js/cities.js"></script>
+<script type="module" src="./js/missions.js"></script>
+<script type="module" src="./js/bingo.js"></script>
+<script type="module" src="./js/solo.js"></script>
+<script type="module" src="./js/official.js"></script>
+<script type="module" src="./js/tournament.js"></script>
 </body>
 </html>
