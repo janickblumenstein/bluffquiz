@@ -733,42 +733,56 @@ async function bdResolveRound(idx) {
   if (!matchRef) return;
   const p1 = matchRef.p1, p2 = matchRef.p2;
   
-  // Sicherer Zugriff auf Picks
   const picks = d.picks || {};
   const pick1 = picks[p1], pick2 = picks[p2];
   if (!pick1 || !pick2) return;
   
   const winner = bierWinner(pick1, pick2);
   
-  // Scores sicher auslesen und updaten
   const newScores = { ...(d.scores || {}) };
   if (winner) newScores[winner] = (newScores[winner] || 0) + 1;
   
-  // Used-Arrays sicher erweitern
   const newUsed = { ...(d.used || {}) };
   newUsed[p1] = [...(newUsed[p1] || []), pick1];
   newUsed[p2] = [...(newUsed[p2] || []), pick2];
   
-  // Historie sicher erweitern
+  const currentRound = d.round || 1;
   const newHistory = [...(d.history || []), {
-      round: d.round || 1, 
+      round: currentRound, 
       p1, p2, pick1, pick2, winner
   }];
   
-  // Wer zuerst 3 hat, gewinnt (Best of 5)
-  const matchWinner = newScores[p1] >= 3 ? p1 : (newScores[p2] >= 3 ? p2 : null);
+  // --- NEUE REGELN: Zuerst 5 Punkte ODER Max 9 Runden ---
+  let matchWinner = null;
+  let isDraw = false;
+
+  if (newScores[p1] >= 5) {
+      matchWinner = p1;
+  } else if (newScores[p2] >= 5) {
+      matchWinner = p2;
+  } else if (currentRound >= 9) {
+      // Wenn 9 Runden gespielt wurden, wird abgerechnet!
+      if (newScores[p1] > newScores[p2]) matchWinner = p1;
+      else if (newScores[p2] > newScores[p1]) matchWinner = p2;
+      else {
+          // Gleichstand nach 9 Runden -> Das Los entscheidet!
+          matchWinner = Math.random() > 0.5 ? p1 : p2;
+          isDraw = true; // Damit wir im UI anzeigen können, dass das Los entschieden hat
+      }
+  }
   
   const updates = {
     scores: newScores, 
     used: newUsed, 
     history: newHistory,
-    picks: null, // Setzen wir auf null statt {}, damit Firebase es sauber leert
-    round: (d.round || 1) + 1
+    picks: null,
+    round: currentRound + 1
   };
   
   if (matchWinner) { 
       updates.phase = "done"; 
-      updates.winner = matchWinner; 
+      updates.winner = matchWinner;
+      updates.isDraw = isDraw; 
   }
   
   await update(r, updates);
@@ -790,14 +804,14 @@ function renderBierDuel(t,idx,m,bh){
   const used=(md.used||{})[A.user]||[];
   const score1=(md.scores||{})[m.p1]||0, score2=(md.scores||{})[m.p2]||0;
 
-  let html=`<div class="q-big">🍺 ${m.p1} vs ${m.p2}</div>`;
   html+=`<div class="flash gold" style="text-align:center;font-size:1.2rem">
     <b>${m.p1}</b> ${score1} : ${score2} <b>${m.p2}</b>
-    <div class="sub">Best of 5 · Runde ${md.round||1}</div>
+    <div class="sub">Wer zuerst 5 Pkt hat (Max. 9 Runden) · Runde ${md.round||1}</div>
   </div>`;
 
   if(md.phase==="done"){
-    html+=`<div class="flash">🏆 ${md.winner} gewinnt das Match!</div>`;
+    const drawText = md.isDraw ? " <br><small>(Durch Losentscheid nach 9 Runden)</small>" : "";
+    html+=`<div class="flash">🏆 <b>${md.winner}</b> gewinnt das Match!${drawText}</div>`;
     // Historie zeigen
     if(md.history&&md.history.length){
       html+='<h3>Verlauf:</h3>';
