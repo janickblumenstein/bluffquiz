@@ -699,41 +699,80 @@ async function initBierDuel(idx,m){
   toast(`${Object.keys(updates).length} Match(es) gestartet`);
 }
 
-async function bdPick(idx,bierId){
-  const r=ref(db,`rooms/${A.room}/tournament/bierduel/${idx}`);
-  const d=(await get(r)).val(); if(!d||d.phase!=="play") return;
-  if(d.picks&&d.picks[A.user]) return;
-  if((d.used[A.user]||[]).includes(bierId)) return;
-  await set(ref(db,`rooms/${A.room}/tournament/bierduel/${idx}/picks/${A.user}`),bierId);
+async function bdPick(idx, bierId) {
+  const r = ref(db, `rooms/${A.room}/tournament/bierduel/${idx}`);
+  const d = (await get(r)).val(); 
+  if (!d || d.phase !== "play") return;
+
+  // SICHERER ZUGRIFF: Falls Firebase 'picks' oder 'used' gelöscht hat,
+  // tun wir so, als wären es leere Objekte/Arrays.
+  const picks = d.picks || {};
+  const used = d.used || {};
+  const myUsed = used[A.user] || [];
+
+  // Abbrechen, wenn schon gewählt oder Bier schon verbraucht
+  if (picks[A.user]) return;
+  if (myUsed.includes(bierId)) return;
+
+  await set(ref(db, `rooms/${A.room}/tournament/bierduel/${idx}/picks/${A.user}`), bierId);
+  
   // Pruefen ob beide gewaehlt haben
-  const d2=(await get(r)).val();
-  const picks=d2.picks||{};
-  if(Object.keys(picks).length>=2) await bdResolveRound(idx);
+  const d2 = (await get(r)).val();
+  const currentPicks = d2.picks || {};
+  if (Object.keys(currentPicks).length >= 2) {
+      await bdResolveRound(idx);
+  }
 }
 
-async function bdResolveRound(idx){
-  const r=ref(db,`rooms/${A.room}/tournament/bierduel/${idx}`);
-  const d=(await get(r)).val(); if(!d||d.phase!=="play") return;
-  const matchRef=(await get(ref(db,`rooms/${A.room}/tournament/matches/${idx}`))).val();
-  if(!matchRef) return;
-  const p1=matchRef.p1, p2=matchRef.p2;
-  const pick1=d.picks[p1], pick2=d.picks[p2];
-  if(!pick1||!pick2) return;
-  const winner=bierWinner(pick1,pick2);
-  const newScores={...d.scores};
-  if(winner) newScores[winner]=(newScores[winner]||0)+1;
-  const newUsed={...d.used};
-  newUsed[p1]=[...(newUsed[p1]||[]),pick1];
-  newUsed[p2]=[...(newUsed[p2]||[]),pick2];
-  const newHistory=[...(d.history||[]),{round:d.round,p1,p2,pick1,pick2,winner}];
-  const matchWinner=newScores[p1]>=3?p1:(newScores[p2]>=3?p2:null);
-  const updates={
-    scores:newScores, used:newUsed, history:newHistory,
-    picks:{}, round:(d.round||1)+1
+async function bdResolveRound(idx) {
+  const r = ref(db, `rooms/${A.room}/tournament/bierduel/${idx}`);
+  const d = (await get(r)).val(); 
+  if (!d || d.phase !== "play") return;
+  
+  const matchRef = (await get(ref(db, `rooms/${A.room}/tournament/matches/${idx}`))).val();
+  if (!matchRef) return;
+  const p1 = matchRef.p1, p2 = matchRef.p2;
+  
+  // Sicherer Zugriff auf Picks
+  const picks = d.picks || {};
+  const pick1 = picks[p1], pick2 = picks[p2];
+  if (!pick1 || !pick2) return;
+  
+  const winner = bierWinner(pick1, pick2);
+  
+  // Scores sicher auslesen und updaten
+  const newScores = { ...(d.scores || {}) };
+  if (winner) newScores[winner] = (newScores[winner] || 0) + 1;
+  
+  // Used-Arrays sicher erweitern
+  const newUsed = { ...(d.used || {}) };
+  newUsed[p1] = [...(newUsed[p1] || []), pick1];
+  newUsed[p2] = [...(newUsed[p2] || []), pick2];
+  
+  // Historie sicher erweitern
+  const newHistory = [...(d.history || []), {
+      round: d.round || 1, 
+      p1, p2, pick1, pick2, winner
+  }];
+  
+  // Wer zuerst 3 hat, gewinnt (Best of 5)
+  const matchWinner = newScores[p1] >= 3 ? p1 : (newScores[p2] >= 3 ? p2 : null);
+  
+  const updates = {
+    scores: newScores, 
+    used: newUsed, 
+    history: newHistory,
+    picks: null, // Setzen wir auf null statt {}, damit Firebase es sauber leert
+    round: (d.round || 1) + 1
   };
-  if(matchWinner){ updates.phase="done"; updates.winner=matchWinner; }
-  await update(r,updates);
-  if(matchWinner) setTimeout(()=>advanceTournament(idx,matchWinner),3500);
+  
+  if (matchWinner) { 
+      updates.phase = "done"; 
+      updates.winner = matchWinner; 
+  }
+  
+  await update(r, updates);
+  if (matchWinner) setTimeout(() => advanceTournament(idx, matchWinner), 3500);
 }
 
 function renderBierDuel(t,idx,m,bh){
