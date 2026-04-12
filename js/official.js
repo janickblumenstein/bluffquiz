@@ -250,22 +250,47 @@ async function finalizeDuelSession(){
   const ds=(await get(ref(db,`rooms/${A.room}/duelSession`))).val();
   if(!ds) return;
   const scores=ds.scores||{};
-  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const awarded={};
-  sorted.forEach(([p,s],i)=>{
-    let pts=0;
-    if(i===0) pts=15;
-    else if(i===1) pts=8;
-    else if(i===2) pts=4;
-    else if(s>0) pts=2;
-    if(pts>0){ awardScore(p,pts); awarded[p]=pts; }
-  });
   let html='<div class="flash gold"><b>🏆 Session beendet!</b></div>';
-  sorted.forEach(([p,s],i)=>{
-    const medal=['🥇','🥈','🥉'][i]||((i+1)+'.');
-    html+=`<div class="result-row ${i===0?'winner':''}"><span>${medal} ${p}</span><span>${s} Pkt intern</span><strong class="plus">${awarded[p]?'+'+awarded[p]:''}</strong></div>`;
-  });
-  html+='<div class="sub">Session-Punkte umgerechnet: 15/8/4/2</div>';
+
+  if(ds.type==="group-estimate"){
+    // Team-basierte Punktevergabe: Sieger-Team +10 pro Mitglied, Verlierer-Team 0
+    const teams=ds.teams||{};
+    const teamScores={A:0,B:0};
+    const teamMembers={A:[],B:[]};
+    for(const [p,t] of Object.entries(teams)){
+      if(t!=="A"&&t!=="B") continue;
+      teamScores[t]+=(scores[p]||0);
+      teamMembers[t].push(p);
+    }
+    const winTeam=teamScores.A>teamScores.B?"A":(teamScores.B>teamScores.A?"B":null);
+    html+=`<div class="result-row ${winTeam==='A'?'winner':''}"><span>Team A: ${teamMembers.A.join(", ")||'-'}</span><strong>${teamScores.A} Pkt</strong></div>`;
+    html+=`<div class="result-row ${winTeam==='B'?'winner':''}"><span>Team B: ${teamMembers.B.join(", ")||'-'}</span><strong>${teamScores.B} Pkt</strong></div>`;
+    if(winTeam){
+      for(const p of teamMembers[winTeam]){ await awardScore(p,10); awarded[p]=10; }
+      html+=`<div class="flash">🏆 Team ${winTeam} gewinnt! Jedes Mitglied +10 Pkt.</div>`;
+      html+='<h3>Punkte vergeben:</h3>';
+      for(const [p,pts] of Object.entries(awarded)) html+=`<div class="result-row"><span>${p}</span><span class="plus">+${pts}</span></div>`;
+    } else {
+      html+=`<div class="flash warn">Unentschieden – keine Punkte vergeben</div>`;
+    }
+  } else {
+    // Duell-Modus: individuelle Rangliste 15/8/4/2
+    const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+    sorted.forEach(([p,s],i)=>{
+      let pts=0;
+      if(i===0) pts=15;
+      else if(i===1) pts=8;
+      else if(i===2) pts=4;
+      else if(s>0) pts=2;
+      if(pts>0){ awardScore(p,pts); awarded[p]=pts; }
+    });
+    sorted.forEach(([p,s],i)=>{
+      const medal=['🥇','🥈','🥉'][i]||((i+1)+'.');
+      html+=`<div class="result-row ${i===0?'winner':''}"><span>${medal} ${p}</span><span>${s} Pkt intern</span><strong class="plus">${awarded[p]?'+'+awarded[p]:''}</strong></div>`;
+    });
+    html+='<div class="sub">Session-Punkte umgerechnet: 15/8/4/2</div>';
+  }
   await set(ref(db,`rooms/${A.room}/official`),{type:"session-done",q:"Session Endergebnis",phase:"done",resultHtml:html,startedAt:Date.now()});
   await remove(ref(db,`rooms/${A.room}/duelSession`));
 }
