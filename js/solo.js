@@ -38,7 +38,7 @@ const SCHAETZ_FAKTEN = [
   {q:"Durchschnittliche Biermenge pro Tourist/Woche (Liter, geschätzt)?",a:15}
 ];
 // Exportiere fuer andere Module
-A.SCHAETZ=SCHAETZ;
+A.SCHAETZ=SCHAETZ_FAKTEN;
 
 const prevReady=A.listeners.onReady;
 A.listeners.onReady=()=>{
