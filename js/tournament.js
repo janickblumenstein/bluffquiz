@@ -752,22 +752,21 @@ async function bdResolveRound(idx) {
       p1, p2, pick1, pick2, winner
   }];
   
-  // --- NEUE REGELN: Zuerst 5 Punkte ODER Max 9 Runden ---
   let matchWinner = null;
   let isDraw = false;
 
+  // --- REGELN: Zuerst 5 Pkt ODER Max 9 Runden ---
   if (newScores[p1] >= 5) {
       matchWinner = p1;
   } else if (newScores[p2] >= 5) {
       matchWinner = p2;
   } else if (currentRound >= 9) {
-      // Wenn 9 Runden gespielt wurden, wird abgerechnet!
       if (newScores[p1] > newScores[p2]) matchWinner = p1;
       else if (newScores[p2] > newScores[p1]) matchWinner = p2;
       else {
-          // Gleichstand nach 9 Runden -> Das Los entscheidet!
+          // Gleichstand -> Losentscheid!
           matchWinner = Math.random() > 0.5 ? p1 : p2;
-          isDraw = true; // Damit wir im UI anzeigen können, dass das Los entschieden hat
+          isDraw = true; 
       }
   }
   
@@ -786,80 +785,95 @@ async function bdResolveRound(idx) {
   }
   
   await update(r, updates);
-  if (matchWinner) setTimeout(() => advanceTournament(idx, matchWinner), 3500);
+
+  // Turnier automatisch weiterschalten
+  if (matchWinner) {
+      // Wenn das Los entschieden hat, markieren wir das Match als "Punkte schon vergeben", 
+      // damit der Spieler zwar weiterkommt, aber keine 5 Punkte kassiert!
+      if (isDraw) {
+          await update(ref(db, `rooms/${A.room}/tournament/matches/${idx}`), { pointsAwarded: true });
+      }
+      setTimeout(() => advanceTournament(idx, matchWinner), 3500);
+  }
 }
 
-function renderBierDuel(t,idx,m,bh){
-  const body=$("officialBody");
-  const md=(t.bierduel&&t.bierduel[idx]);
-  if(!md){
-    body.innerHTML=`<div class="q-big">🍺 ${m.p1} vs ${m.p2}</div>${A.isHost?'<button class="btn-orange" id="bdInit">Match starten</button>':'<div class="sub">Warte auf Host...</div>'}${bh}`;
-    const bi=$("bdInit"); if(bi) bi.onclick=()=>initBierDuel(idx,m);
+function renderBierDuel(t, idx, m, bh) {
+  const body = $("officialBody");
+  const md = (t.bierduel && t.bierduel[idx]);
+  
+  if (!md) {
+    body.innerHTML = `<div class="q-big">🍺 ${m.p1} vs ${m.p2}</div>${A.isHost ? '<button class="btn-orange" id="bdInit">Match starten</button>' : '<div class="sub">Warte auf Host...</div>'}${bh}`;
+    const bi = $("bdInit"); if (bi) bi.onclick = () => initBierDuel(idx, m);
     return;
   }
-  const isPlayer=A.user===m.p1||A.user===m.p2;
-  const opp=A.user===m.p1?m.p2:m.p1;
-  const myPick=(md.picks||{})[A.user];
-  const oppPicked=!!(md.picks||{})[opp];
-  const used=(md.used||{})[A.user]||[];
-  const score1=(md.scores||{})[m.p1]||0, score2=(md.scores||{})[m.p2]||0;
+  
+  const isPlayer = A.user === m.p1 || A.user === m.p2;
+  const opp = A.user === m.p1 ? m.p2 : m.p1;
+  const myPick = (md.picks || {})[A.user];
+  const oppPicked = !!(md.picks || {})[opp];
+  const used = (md.used || {})[A.user] || [];
+  const score1 = (md.scores || {})[m.p1] || 0;
+  const score2 = (md.scores || {})[m.p2] || 0;
 
-  html+=`<div class="flash gold" style="text-align:center;font-size:1.2rem">
+  // HIER FEHLTE VORHIN DAS 'let':
+  let html = `<div class="q-big">🍺 ${m.p1} vs ${m.p2}</div>`;
+  
+  html += `<div class="flash gold" style="text-align:center;font-size:1.2rem">
     <b>${m.p1}</b> ${score1} : ${score2} <b>${m.p2}</b>
-    <div class="sub">Wer zuerst 5 Pkt hat (Max. 9 Runden) · Runde ${md.round||1}</div>
+    <div class="sub">Wer zuerst 5 Pkt hat (Max. 9 Runden) · Runde ${md.round || 1}</div>
   </div>`;
 
-  if(md.phase==="done"){
+  if (md.phase === "done") {
     const drawText = md.isDraw ? " <br><small>(Durch Losentscheid nach 9 Runden)</small>" : "";
-    html+=`<div class="flash">🏆 <b>${md.winner}</b> gewinnt das Match!${drawText}</div>`;
-    // Historie zeigen
-    if(md.history&&md.history.length){
-      html+='<h3>Verlauf:</h3>';
-      md.history.forEach(h=>{
-        const b1=BIER_MAP[h.pick1], b2=BIER_MAP[h.pick2];
-        const winStr=h.winner?`→ 🏆 ${h.winner}`:`→ 🤝 Unentschieden`;
-        html+=`<div class="result-row"><span>R${h.round}: ${h.p1} ${b1.emoji} ${b1.name}(${b1.type}) vs ${b2.emoji} ${b2.name}(${b2.type}) ${h.p2}</span><span>${winStr}</span></div>`;
+    html += `<div class="flash">🏆 <b>${md.winner}</b> gewinnt das Match!${drawText}</div>`;
+    
+    if (md.history && md.history.length) {
+      html += '<h3>Verlauf:</h3>';
+      md.history.forEach(h => {
+        const b1 = BIER_MAP[h.pick1], b2 = BIER_MAP[h.pick2];
+        const winStr = h.winner ? `→ 🏆 ${h.winner}` : `→ 🤝 Unentschieden`;
+        html += `<div class="result-row"><span>R${h.round}: ${h.p1} ${b1.emoji} ${b1.name}(${b1.type}) vs ${b2.emoji} ${b2.name}(${b2.type}) ${h.p2}</span><span>${winStr}</span></div>`;
       });
     }
-    if(A.isHost) html+=`<button class="btn-green" id="bdNext">Naechstes Match</button>`;
-  } else if(isPlayer){
-    if(myPick){
-      const mb=BIER_MAP[myPick];
-      html+=`<div class="flash">✅ Du hast gewaehlt: ${mb.emoji} <b>${mb.name}</b> (${mb.type})</div>`;
-      html+=`<div class="sub">${oppPicked?'Auswertung laeuft...':'Warte auf '+opp+'...'}</div>`;
+    if (A.isHost) html += `<button class="btn-green" id="bdNext">Naechstes Match</button>`;
+    
+  } else if (isPlayer) {
+    if (myPick) {
+      const mb = BIER_MAP[myPick];
+      html += `<div class="flash">✅ Du hast gewaehlt: ${mb.emoji} <b>${mb.name}</b> (${mb.type})</div>`;
+      html += `<div class="sub">${oppPicked ? 'Auswertung laeuft...' : 'Warte auf ' + opp + '...'}</div>`;
     } else {
-      html+=`<h3>Waehle dein Bier:</h3>`;
-      html+='<div class="grid2">';
-      BIERE.forEach(b=>{
-        const isUsed=used.includes(b.id);
-        const beatsStr=b.beats.join(", ");
-        html+=`<button class="${isUsed?'btn-ghost':'btn-gold'}" ${isUsed?'disabled':''} data-bier="${b.id}" style="text-align:left;padding:10px;font-size:.75rem">
+      html += `<h3>Waehle dein Bier:</h3><div class="grid2">`;
+      BIERE.forEach(b => {
+        const isUsed = used.includes(b.id);
+        const beatsStr = b.beats.join(", ");
+        html += `<button class="${isUsed ? 'btn-ghost' : 'btn-gold'}" ${isUsed ? 'disabled' : ''} data-bier="${b.id}" style="text-align:left;padding:10px;font-size:.75rem">
           <div style="font-size:1.1rem">${b.emoji} ${b.name}</div>
           <div style="opacity:.7;font-weight:normal">${b.type}</div>
           <div style="opacity:.5;font-size:.7rem;font-weight:normal">schlaegt: ${beatsStr}</div>
         </button>`;
       });
-      html+='</div>';
-      if(oppPicked) html+='<div class="sub" style="margin-top:8px">⏳ Gegner hat schon gewaehlt, du bist dran!</div>';
+      html += `</div>`;
+      if (oppPicked) html += `<div class="sub" style="margin-top:8px">⏳ Gegner hat schon gewaehlt, du bist dran!</div>`;
     }
   } else {
-    // Zuschauer
-    const p1Picked=!!(md.picks||{})[m.p1], p2Picked=!!(md.picks||{})[m.p2];
-    html+=`<div class="sub">Runde laeuft: ${m.p1}:${p1Picked?'✓':'⏳'} · ${m.p2}:${p2Picked?'✓':'⏳'}</div>`;
+    const p1Picked = !!(md.picks || {})[m.p1];
+    const p2Picked = !!(md.picks || {})[m.p2];
+    html += `<div class="sub">Runde laeuft: ${m.p1}:${p1Picked ? '✓' : '⏳'} · ${m.p2}:${p2Picked ? '✓' : '⏳'}</div>`;
   }
 
-  // Letzte Runde anzeigen
-  if(md.history&&md.history.length&&md.phase!=="done"){
-    const last=md.history[md.history.length-1];
-    const b1=BIER_MAP[last.pick1], b2=BIER_MAP[last.pick2];
-    const winStr=last.winner?` → 🏆 <b>${last.winner}</b>`:` → 🤝 Unentschieden`;
-    html+=`<hr><div class="sub">Letzte Runde: ${last.p1} spielte ${b1.emoji} ${b1.name} vs ${b2.emoji} ${b2.name} ${last.p2}${winStr}</div>`;
+  if (md.history && md.history.length && md.phase !== "done") {
+    const last = md.history[md.history.length - 1];
+    const b1 = BIER_MAP[last.pick1], b2 = BIER_MAP[last.pick2];
+    const winStr = last.winner ? ` → 🏆 <b>${last.winner}</b>` : ` → 🤝 Unentschieden`;
+    html += `<hr><div class="sub">Letzte Runde: ${last.p1} spielte ${b1.emoji} ${b1.name} vs ${b2.emoji} ${b2.name} ${last.p2}${winStr}</div>`;
   }
 
-  html+=bh;
-  body.innerHTML=html;
-  document.querySelectorAll("[data-bier]").forEach(b=>b.onclick=()=>bdPick(idx,b.dataset.bier));
-  const bn=$("bdNext"); if(bn) bn.onclick=()=>advanceTournament(idx,md.winner);
+  html += bh;
+  body.innerHTML = html;
+  
+  document.querySelectorAll("[data-bier]").forEach(b => b.onclick = () => bdPick(idx, b.dataset.bier));
+  const bn = $("bdNext"); if (bn) bn.onclick = () => advanceTournament(idx, md.winner);
 }
 
 console.log("✅ tournament.js loaded");
