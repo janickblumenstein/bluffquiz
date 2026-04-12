@@ -122,9 +122,16 @@ function renderVoteAction(aa,round,list,entries){
       return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
     }).join("");
   }
-  else if(round.type==="score"){
-    // Automatisch: Top 3 bekommen +2, Bottom 3 -1. Keine Interaktion noetig.
-    aa.innerHTML=`<hr><div class="flash info">Modus "Aus Wochenend-Score": Host klickt "Voting beenden & auswerten" → Top 3 Spieler bekommen +2 Stimmen fuer ihre aktuelle Wahl, Bottom 3 −1. Jeder waehlt unten <b>eine</b> Lieblingsstadt:</div>`+activeOnly.map(([k,city])=>{
+  else if(round.type==="weighted"){
+    // Zeige dem User sein Stimmengewicht
+    const sortedP=Object.entries(A.players).sort((a,b)=>{
+      const sa=(a[1].score||0)+((a[1].casual||0)*0.1);
+      const sb=(b[1].score||0)+((b[1].casual||0)*0.1);
+      return sb-sa;
+    });
+    const myRank=sortedP.findIndex(([n])=>n===A.user);
+    const myWeight=myRank===0?3:(myRank<=2?2:1);
+    aa.innerHTML=`<hr><div class="flash gold">Modus "Gewichtet nach Rang"<br>Dein Rang: <b>${myRank+1}.</b> → Deine Stimme zaehlt <b>${myWeight}x</b><br><small style="opacity:.7">1. Platz = 3x · 2.-3. Platz = 2x · Rest = 1x</small></div><h3>Deine Lieblingsstadt:</h3>`+activeOnly.map(([k,city])=>{
       const sel=myV===k;
       return `<button class="${sel?'btn-gold':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'★ ':''}${city.name}</button>`;
     }).join("");
@@ -276,24 +283,26 @@ async function endCityVote(){
     active.forEach(([k])=>{const t=tally[k]||0; if(t<minV){minV=t;lowest=k;}});
     if(lowest){ await update(ref(db,`rooms/${A.room}/cities/list/${lowest}`),{status:"eliminated"}); toast(`${list[lowest].name} fliegt raus`); }
   }
-  else if(r.type==="score"){
-    // Top 3 Spieler (nach Wochenend-Score) bekommen +2 fuer ihre Wahl, Bottom 3 -1
+  else if(r.type==="weighted"){
+    // Stimmen gewichtet nach Rang: 1. Platz = 3x, 2.-3. Platz = 2x, Rest = 1x
     const sortedP=Object.entries(A.players).sort((a,b)=>{
       const sa=(a[1].score||0)+((a[1].casual||0)*0.1);
       const sb=(b[1].score||0)+((b[1].casual||0)*0.1);
       return sb-sa;
     });
-    const topN=Math.min(3,Math.floor(sortedP.length/2));
-    const top=sortedP.slice(0,topN).map(([n])=>n);
-    const bot=sortedP.slice(-topN).map(([n])=>n);
+    const weightOf=name=>{
+      const i=sortedP.findIndex(([n])=>n===name);
+      if(i<0) return 1;
+      if(i===0) return 3;
+      if(i<=2) return 2;
+      return 1;
+    };
     for(const [player,cityKey] of Object.entries(r.votes||{})){
-      let delta=0;
-      if(top.includes(player)) delta=2;
-      else if(bot.includes(player)) delta=-1;
-      if(delta!==0) tally[cityKey]=(tally[cityKey]||0)+delta;
+      const w=weightOf(player);
+      tally[cityKey]=(tally[cityKey]||0)+w;
     }
     for(const [k,v] of Object.entries(tally)) await set(ref(db,`rooms/${A.room}/cities/list/${k}/votes`),((list[k].votes)||0)+v);
-    toast(`Top ${topN}: +2, Bottom ${topN}: −1`);
+    toast("Gewichtete Stimmen vergeben");
   }
   await remove(ref(db,`rooms/${A.room}/cities/round`));
 }

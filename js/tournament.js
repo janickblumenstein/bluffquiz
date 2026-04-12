@@ -44,6 +44,10 @@ function renderOfficialPanel(){
         A._spectIdx=parseInt(b.dataset.spect);
         renderTournament(A.state.tournament);
       });
+      document.querySelectorAll("[data-spect-clear]").forEach(b=>b.onclick=()=>{
+        A._spectIdx=null;
+        renderTournament(A.state.tournament);
+      });
     },0);
     return;
   }
@@ -83,39 +87,27 @@ function renderSetup(){
   const bc=$("bracketCancel"); if(bc) bc.onclick=()=>remove(ref(db,`rooms/${A.room}/tournamentSetup`));
 }
 
-function buildBracket(participants){
-  const shuffled=shuffle(participants);
-  // Round 1
+function buildBracketRound(players, alreadyByed){
+  // Paare bilden. Bei ungerader Anzahl: Bye an Spieler der noch nie Bye hatte.
+  const shuffled=shuffle([...players]);
   const matches=[];
-  let prevRound=[];
-  for(let i=0;i<shuffled.length;i+=2){
-    if(i+1<shuffled.length){
-      const m={round:1,p1:shuffled[i],p2:shuffled[i+1],winner:null};
-      matches.push(m); prevRound.push(m);
-    } else {
-      const m={round:1,p1:shuffled[i],p2:null,winner:shuffled[i],bye:true};
-      matches.push(m); prevRound.push(m);
-    }
+  let working=shuffled;
+  if(working.length%2===1){
+    const candidates=working.filter(p=>!alreadyByed.includes(p));
+    const pool=candidates.length?candidates:working;
+    const byeP=pool[Math.floor(Math.random()*pool.length)];
+    working=working.filter(p=>p!==byeP);
+    matches.push({p1:byeP,p2:null,winner:byeP,bye:true});
   }
-  // Folgerunden: erstelle leere Slots, propagate Bye-Sieger sofort
-  let round=2;
-  while(prevRound.length>1){
-    const next=[];
-    for(let i=0;i<prevRound.length;i+=2){
-      const m={round,p1:null,p2:null,winner:null};
-      if(prevRound[i] && prevRound[i].winner) m.p1=prevRound[i].winner;
-      if(prevRound[i+1] && prevRound[i+1].winner) m.p2=prevRound[i+1].winner;
-      else if(!prevRound[i+1]){
-        // ungerade Anzahl: kein Gegner → Bye fuer p1 falls schon gesetzt
-        if(m.p1){ m.bye=true; m.winner=m.p1; }
-      }
-      // Wenn beide Slots gefuellt UND beide aus Bye → Match ist nicht Bye, muss gespielt werden
-      // (das passiert wenn beide Vorgaenger Bye-Sieger sind)
-      matches.push(m); next.push(m);
-    }
-    prevRound=next; round++;
+  for(let i=0;i<working.length;i+=2){
+    matches.push({p1:working[i],p2:working[i+1],winner:null});
   }
   return matches;
+}
+
+function buildBracket(participants){
+  // Speichere als flaches Array mit round-Property, und eine Liste alreadyByed
+  return { matches: buildBracketRound(participants,[]).map(m=>({...m,round:1})), byedHistory:[] };
 }
 
 async function actuallyStart(){
@@ -124,11 +116,15 @@ async function actuallyStart(){
   if(!setup) return;
   const participants=Object.keys(setup.picks||{}).filter(p=>setup.picks[p]);
   if(participants.length<2) return alert("Mindestens 2 Teilnehmer waehlen!");
-  const matches=buildBracket(participants);
+  const bracket=buildBracket(participants);
   await remove(ref(db,`rooms/${A.room}/tournamentSetup`));
   await set(ref(db,`rooms/${A.room}/tournament`),{
-    active:true, gameType:setup.gameType, matches,
-    currentMatchIdx:findFirstUnplayed(matches), startedAt:Date.now()
+    active:true, gameType:setup.gameType,
+    matches:bracket.matches,
+    byedHistory:bracket.byedHistory,
+    currentRound:1,
+    currentMatchIdx:findFirstUnplayed(bracket.matches),
+    startedAt:Date.now()
   });
 }
 
@@ -138,29 +134,41 @@ function findFirstUnplayed(matches){
 }
 
 function findMatchForUser(t){
-  // 1. Eigenes aktives Match (noch nicht gewonnen)
+  // 1. Manuell gewaehltes Spectator-Match hat HOECHSTE Prioritaet (wenn gesetzt)
+  const spectIdx=A._spectIdx;
+  if(spectIdx!==undefined && spectIdx!==null && t.matches[spectIdx] && !t.matches[spectIdx].winner) return spectIdx;
+  // 2. Eigenes aktives Match
   for(let i=0;i<t.matches.length;i++){
     const m=t.matches[i];
     if(m.winner||m.bye) continue;
     if(m.p1===A.user||m.p2===A.user) return i;
   }
-  // 2. Manuell gewaehltes Spectator-Match aus localStorage
-  const spectIdx=A._spectIdx;
-  if(spectIdx!==undefined && t.matches[spectIdx] && !t.matches[spectIdx].winner) return spectIdx;
-  // 3. Erstes laufendes Match in der niedrigsten Runde mit beiden Spielern
+  // 3. Erstes laufendes Match
   let minRound=Infinity;
   for(const m of t.matches) if(!m.winner && !m.bye && m.p1 && m.p2 && m.round<minRound) minRound=m.round;
   for(let i=0;i<t.matches.length;i++){
     const m=t.matches[i];
     if(!m.winner && !m.bye && m.round===minRound && m.p1 && m.p2) return i;
   }
-  // 4. Fallback
   return findFirstUnplayed(t.matches);
 }
 
 function renderMatchPicker(t,bh){
   // Liste aller laufenden Matches in der aktuellen Runde
   let minRound=Infinity;
+  for(const m of t.matches) if(!m.winner && !m.bye && m.p1 && m.p2 && m.round<minRound) minRound=m.round;
+  const live=t.matches.map((m,i)=>({m,i})).filter(x=>!x.m.winner && !x.m.bye && x.m.p1 && x.m.p2 && x.m.round===minRound);
+  if(live.length<=1) return "";
+  let html=`<hr><div class="sub">Mehrere Matches laufen parallel - waehle was du sehen willst:</div>`;
+  live.forEach(({m,i})=>{
+    const sel=A._spectIdx===i?"btn-gold":"btn-ghost";
+    html+=`<button class="${sel} btn-sm" data-spect="${i}">${m.p1} vs ${m.p2}</button> `;
+  });
+  if(A._spectIdx!==undefined && A._spectIdx!==null){
+    html+=`<button class="btn-red btn-sm" data-spect-clear="1">🚪 Zu meinem Match</button>`;
+  }
+  return html;
+}
   for(const m of t.matches) if(!m.winner && !m.bye && m.p1 && m.p2 && m.round<minRound) minRound=m.round;
   const live=t.matches.map((m,i)=>({m,i})).filter(x=>!x.m.winner && !x.m.bye && x.m.round===minRound && x.m.p1 && x.m.p2);
   if(live.length<=1) return "";
@@ -178,47 +186,43 @@ async function advanceTournament(idx,winner){
   const wasAlreadyDone=updated[idx].winner&&!updated[idx].bye;
   if(!updated[idx].winner) updated[idx].winner=winner;
 
-  // Punkte fuer gewonnenen Match (nicht fuer Byes!) - nur einmal
+  // Punkte fuer gewonnenen Match (nicht Byes)
   if(!wasAlreadyDone && winner && !updated[idx].bye && !updated[idx].pointsAwarded){
     await awardScore(winner,5);
     updated[idx].pointsAwarded=true;
-    if(A._toastedMatchPoints!==idx){
-      A._toastedMatchPoints=idx;
-      toast(`+5 Pkt fuer ${winner} (Match-Sieg)`);
-    }
+    toast(`+5 Pkt fuer ${winner}`);
   }
 
-  // Promotion in naechste Runde via Position innerhalb der Runde
-  const myRound=updated[idx].round;
-  const sameRoundIdx=updated.map((m,i)=>m.round===myRound?i:-1).filter(i=>i>=0);
-  const posInRound=sameRoundIdx.indexOf(idx);
-  const nextRoundIdx=updated.map((m,i)=>m.round===myRound+1?i:-1).filter(i=>i>=0);
-  const nextPos=Math.floor(posInRound/2);
-  const nextMatchGlobalIdx=nextRoundIdx[nextPos];
-  if(nextMatchGlobalIdx!==undefined){
-    const nm=updated[nextMatchGlobalIdx];
-    if(posInRound%2===0) nm.p1=updated[idx].winner;
-    else nm.p2=updated[idx].winner;
-    // Wenn der naechste Match jetzt nur einen Spieler hat aber kein Gegner mehr kommt → Bye
-    const siblingPos=posInRound%2===0?posInRound+1:posInRound-1;
-    const siblingExists=sameRoundIdx[siblingPos]!==undefined;
-    if(!siblingExists && nm.p1 && !nm.p2 && !nm.winner){
-      nm.bye=true; nm.winner=nm.p1;
-      // Bye in Runde > 1 verdient KEINE Punkte
-      // Rekursiv weiter promoten
-      setTimeout(()=>advanceTournament(nextMatchGlobalIdx,nm.p1),100);
-    }
-  }
-  await update(ref(db,`rooms/${A.room}/tournament`),{matches:updated,currentMatchIdx:findFirstUnplayed(updated)});
+  // Pruefen ob aktuelle Runde komplett fertig
+  const currentRound=updated[idx].round;
+  const roundMatches=updated.filter(m=>m.round===currentRound);
+  const allDone=roundMatches.every(m=>m.winner);
+  const winnersOfRound=roundMatches.map(m=>m.winner).filter(w=>w);
+  const byedHistory=(t.byedHistory||[]).slice();
+  // Bye-Spieler in Runde tracken
+  roundMatches.forEach(m=>{if(m.bye&&m.p1&&!byedHistory.includes(m.p1)) byedHistory.push(m.p1);});
 
-  // Tournament finished?
-  const lastMatch=updated[updated.length-1];
-  if(lastMatch.winner && findFirstUnplayed(updated)<0){
-    // +5 Bonus fuer Turniersieger (zusaetzlich)
+  let updates={matches:updated,byedHistory};
+  if(allDone && winnersOfRound.length>1){
+    // Naechste Runde dynamisch bauen
+    const nextRoundMatches=buildBracketRound(winnersOfRound,byedHistory).map(m=>({...m,round:currentRound+1}));
+    // Bye-Player in der neuen Runde auch in history
+    nextRoundMatches.forEach(m=>{if(m.bye&&m.p1&&!byedHistory.includes(m.p1)) byedHistory.push(m.p1);});
+    updates.matches=[...updated,...nextRoundMatches];
+    updates.byedHistory=byedHistory;
+    updates.currentRound=currentRound+1;
+    // Bye-Punkte in neuen Runden: NULL Punkte (damit sich keiner mit Byes hochspielt)
+  }
+  updates.currentMatchIdx=findFirstUnplayed(updates.matches);
+  await update(ref(db,`rooms/${A.room}/tournament`),updates);
+
+  // Turnier beendet?
+  if(winnersOfRound.length===1){
+    // Das war das Finale
     if(!t.finalAwarded){
-      await awardScore(lastMatch.winner,5);
+      await awardScore(winnersOfRound[0],5);
       await update(ref(db,`rooms/${A.room}/tournament`),{finalAwarded:true});
-      toast(`🏆 ${lastMatch.winner} gewinnt das Turnier! +5 Bonus`);
+      toast(`🏆 ${winnersOfRound[0]} gewinnt das Turnier! +5 Bonus`);
     }
   }
 }
@@ -313,25 +317,29 @@ function renderReaction(t,idx,m,bh){
   // Box click (FIRST-CLICK-WINS via transaction)
   const rb=$("reactBox"); if(rb&&isPlayer){
     rb.onclick=async()=>{
+      if(A._reactClicking) return; // Doppelklick-Guard
+      A._reactClicking=true;
       const tap=Date.now();
-      const fresh=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val()||{};
-      if(fresh.phase==="countdown"){
-        // Zu frueh - Gegner gewinnt sofort
-        const opp=A.user===m.p1?m.p2:m.p1;
-        await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/winner`),c=>c||opp);
-        await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"done"});
-        setTimeout(()=>advanceTournament(idx,opp),2000);
-        return;
-      }
-      if(fresh.phase==="go"){
-        // ATOMIC: Erster der schreibt gewinnt
-        const res=await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/winner`),c=>c||A.user);
-        if(res.committed&&!res.snapshot.val()){
-          // huh shouldn't happen
+      // INSTANT UI FEEDBACK
+      rb.style.background="#555";
+      rb.innerText="✓ Erfasst...";
+      try {
+        const fresh=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val()||{};
+        if(fresh.phase==="countdown"){
+          const opp=A.user===m.p1?m.p2:m.p1;
+          await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/winner`),c=>c||opp);
+          await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"done",winTime:"FRUEH"});
+          setTimeout(()=>advanceTournament(idx,opp),2000);
+          return;
         }
-        const winner=res.snapshot.val();
-        await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"done",winTime:tap-(fresh.goAt||tap)});
-        setTimeout(()=>advanceTournament(idx,winner),2000);
+        if(fresh.phase==="go"){
+          const res=await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/winner`),c=>c||A.user);
+          const winner=res.snapshot.val();
+          await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"done",winTime:tap-(fresh.goAt||tap)});
+          setTimeout(()=>advanceTournament(idx,winner),2000);
+        }
+      } finally {
+        setTimeout(()=>{A._reactClicking=false;},500);
       }
     };
   }
@@ -352,20 +360,22 @@ function placeShipsRandom(){
   };
   for(const s of BS_SHIPS){
     let placed=false,tries=0;
-    while(!placed&&tries<500){
-      tries++;
+    const tryPlace=(useBuffer)=>{
       const horiz=Math.random()<0.5;
       const r=Math.floor(Math.random()*BS_SIZE), c=Math.floor(Math.random()*BS_SIZE);
       const cells=[]; let ok=true;
       for(let i=0;i<s.len;i++){
         const rr=horiz?r:r+i, cc=horiz?c+i:c;
         if(rr>=BS_SIZE||cc>=BS_SIZE){ok=false;break}
-        // Buffer-Zone: kein Schiff darf direkt anliegen (auch diagonal)
-        if(isOccupiedOrAdjacent(rr,cc)){ok=false;break}
+        if(useBuffer){ if(isOccupiedOrAdjacent(rr,cc)){ok=false;break} }
+        else { if(grid[rr*BS_SIZE+cc]!==null){ok=false;break} }
         cells.push(rr*BS_SIZE+cc);
       }
-      if(ok){ cells.forEach(ix=>grid[ix]=ships.length); ships.push({name:s.name,cells,hits:[]}); placed=true; }
-    }
+      if(ok){ cells.forEach(ix=>grid[ix]=ships.length); ships.push({name:s.name,cells,hits:[]}); return true; }
+      return false;
+    };
+    while(!placed&&tries<500){ tries++; placed=tryPlace(true); }
+    while(!placed&&tries<700){ tries++; placed=tryPlace(false); }
   }
   return {ships,shotsAt:[]};
 }

@@ -63,10 +63,34 @@ async function start(takeHost){
   App.user=App.$("nameInp").value.trim();
   App.room=(App.$("roomInp").value.trim()||"MALLE26").toUpperCase();
   if(!App.user) return alert("Name eingeben!");
+
+  // === DEVICE-ID CHECK ===
+  // Stelle sicher dass wir eine Device-ID haben
+  const deviceKey="malle26_deviceId";
+  let myDeviceId=localStorage.getItem(deviceKey);
+  if(!myDeviceId){
+    myDeviceId="dev_"+Date.now()+"_"+Math.random().toString(36).slice(2,10);
+    localStorage.setItem(deviceKey,myDeviceId);
+  }
+  App.deviceId=myDeviceId;
+
+  // Pruefe ob Username schon mit anderer Device-ID registriert
+  const regRef=ref(db,`rooms/${App.room}/deviceReg/${App.user}`);
+  const regSnap=await get(regRef);
+  if(regSnap.exists()){
+    const registered=regSnap.val();
+    if(registered.deviceId !== myDeviceId){
+      alert(`Der Name "${App.user}" gehoert zu einem anderen Geraet.\n\nWaehle entweder einen anderen Namen, oder bitte den Host dich "freizugeben" (dann kannst du diesen Namen hier neu registrieren).`);
+      return;
+    }
+  } else {
+    // Ersten Login registrieren
+    await set(regRef,{deviceId:myDeviceId,firstLogin:Date.now()});
+  }
+
   const metaSnap=await get(ref(db,`rooms/${App.room}/meta`));
   if(!metaSnap.exists()){
     await set(ref(db,`rooms/${App.room}/meta`),{host:App.user,created:Date.now()});
-    // seed defaults wird in den Submodulen gemacht
     if(App.listeners.seedDefaults) await App.listeners.seedDefaults();
   } else if(takeHost){
     await update(ref(db,`rooms/${App.room}/meta`),{host:App.user});
@@ -80,7 +104,6 @@ async function start(takeHost){
   App.$("tabbar").classList.remove("hidden");
   attachListeners();
   bindCoreUI();
-  // submodule bind
   if(App.listeners.onReady) App.listeners.onReady();
 }
 
@@ -151,6 +174,18 @@ function bindCoreUI(){
     if(!App.isHost||!confirm("ALLES loeschen?")) return;
     await remove(ref(db,`rooms/${App.room}`));
     location.reload();
+  };
+  App.$("btnReleaseDevice").onclick=async()=>{
+    if(!App.isHost) return;
+    const regSnap=await get(ref(db,`rooms/${App.room}/deviceReg`));
+    const reg=regSnap.val()||{};
+    const names=Object.keys(reg);
+    if(!names.length) return alert("Keine Spieler registriert");
+    const name=prompt("Welcher Spielername soll fuers Neu-Registrieren freigegeben werden?\n\nRegistriert:\n"+names.join(", "));
+    if(!name||!reg[name]) return;
+    if(!confirm(`"${name}" wirklich freigeben? Danach kann sich jeder mit diesem Namen neu registrieren.`)) return;
+    await remove(ref(db,`rooms/${App.room}/deviceReg/${name}`));
+    toast(`${name} freigegeben`);
   };
   App.$("btnDrinkEvent").onclick=()=>{
     const rules=["ALLE TRINKEN!","Letzter trinkt 2 Schlucke","Brillentraeger trinken","Top 3 trinken","Host bestimmt wer trinkt"];

@@ -30,6 +30,11 @@ const NUM_QS_PER_DUEL=3; // Mehrere Fragen pro Duell/Gruppe
 const prevReady=A.listeners.onReady;
 A.listeners.onReady=()=>{
   if(prevReady) prevReady();
+  onValue(ref(db,`rooms/${A.room}/duelSetup`),snap=>{
+    A.state.duelSetup=snap.val();
+    if(A.state.duelSetup){ A.switchTab("Games"); renderDuelSetup(); }
+    else renderOfficial();
+  });
   onValue(ref(db,`rooms/${A.room}/official`),snap=>{
     const newO=snap.val();
     if(newO&&newO.startedAt&&newO.startedAt!==A._lastOfficialId){
@@ -70,12 +75,23 @@ async function startOfficial(type){
     return nextQuizQuestion();
   }
   // Duell / Gruppe - startet Multi-Question-Session
-  if(type==="duel-math"||type==="duel-estimate"||type==="group-estimate"){
+  if(type==="duel-math"||type==="duel-estimate"){
     await remove(ref(db,`rooms/${A.room}/tournament`));
+    await remove(ref(db,`rooms/${A.room}/duelSetup`));
     await set(ref(db,`rooms/${A.room}/duelSession`),{
-      type,total:NUM_QS_PER_DUEL,current:0,scores:{},teams:{},startedAt:Date.now()
+      type,total:NUM_QS_PER_DUEL,current:0,scores:{},startedAt:Date.now()
     });
     return nextDuelQuestion();
+  }
+  if(type==="group-estimate"){
+    // Zuerst Team-Picker zeigen
+    await remove(ref(db,`rooms/${A.room}/tournament`));
+    await remove(ref(db,`rooms/${A.room}/duelSession`));
+    await remove(ref(db,`rooms/${A.room}/official`));
+    await set(ref(db,`rooms/${A.room}/duelSetup`),{
+      type:"group-estimate", teams:{}, startedAt:Date.now()
+    });
+    return;
   }
 }
 
@@ -255,12 +271,88 @@ async function finalizeDuelSession(){
 }
 
 // === RENDER ===
+function renderDuelSetup(){
+  const setup=A.state.duelSetup; if(!setup) return;
+  const panel=$("officialPanel");
+  panel.classList.remove("hidden");
+  const body=$("officialBody");
+  const teams=setup.teams||{};
+  const teamA=Object.keys(teams).filter(p=>teams[p]==="A");
+  const teamB=Object.keys(teams).filter(p=>teams[p]==="B");
+  const unassigned=Object.keys(A.players).filter(p=>!teams[p]);
+  let html=`<div class="q-big">🔶 Gruppe vs Gruppe – Teams einteilen</div>`;
+  html+=`<div class="sub">${A.isHost?'Host teilt Spieler Team A oder B zu. Klick auf den Spieler zum Umschalten.':'Host teilt die Teams ein...'}</div>`;
+  html+=`<div class="grid2" style="margin:10px 0">
+    <div class="card" style="margin:0;background:rgba(46,204,113,.1);border:1px solid var(--green)">
+      <h3 style="color:var(--green);margin-top:0">Team A (${teamA.length})</h3>
+      ${teamA.map(p=>`<div class="score-row"><span>${p}</span>${A.isHost?`<button class="btn-sm btn-ghost" data-team-toggle="${p}">→ B</button>`:""}</div>`).join("")||'<div class="sub">Leer</div>'}
+    </div>
+    <div class="card" style="margin:0;background:rgba(231,76,60,.1);border:1px solid var(--red)">
+      <h3 style="color:var(--red);margin-top:0">Team B (${teamB.length})</h3>
+      ${teamB.map(p=>`<div class="score-row"><span>${p}</span>${A.isHost?`<button class="btn-sm btn-ghost" data-team-toggle="${p}">A ←</button>`:""}</div>`).join("")||'<div class="sub">Leer</div>'}
+    </div>
+  </div>`;
+  if(unassigned.length){
+    html+=`<h3>Noch nicht zugeteilt:</h3>`;
+    html+=unassigned.map(p=>`<div class="score-row"><span>${p}</span>${A.isHost?`<div class="row" style="max-width:140px"><button class="btn-sm btn-green" data-team-set="${p}:A">→ A</button><button class="btn-sm btn-red" data-team-set="${p}:B">→ B</button></div>`:""}</div>`).join("");
+  }
+  if(A.isHost){
+    html+=`<hr>
+      <button class="btn-purple" id="duelSetupRandom">🎲 Zufaellig verteilen</button>
+      <button class="btn-ghost" id="duelSetupClear">Alle Zuteilungen loeschen</button>
+      <button class="btn-gold" id="duelSetupStart" ${teamA.length<1||teamB.length<1?'disabled':''}>Session starten!</button>
+      <button class="btn-red" id="duelSetupCancel">Abbrechen</button>`;
+  }
+  body.innerHTML=html;
+
+  if(A.isHost){
+    document.querySelectorAll("[data-team-set]").forEach(b=>b.onclick=async()=>{
+      const [p,t]=b.dataset.teamSet.split(":");
+      await set(ref(db,`rooms/${A.room}/duelSetup/teams/${p}`),t);
+    });
+    document.querySelectorAll("[data-team-toggle]").forEach(b=>b.onclick=async()=>{
+      const p=b.dataset.teamToggle;
+      const cur=teams[p];
+      await set(ref(db,`rooms/${A.room}/duelSetup/teams/${p}`),cur==="A"?"B":"A");
+    });
+    $("duelSetupRandom").onclick=async()=>{
+      const ps=A.shuffle(Object.keys(A.players));
+      const newTeams={};
+      ps.forEach((p,i)=>{newTeams[p]=i%2===0?"A":"B"});
+      await set(ref(db,`rooms/${A.room}/duelSetup/teams`),newTeams);
+      toast("Zufaellig verteilt");
+    };
+    $("duelSetupClear").onclick=()=>remove(ref(db,`rooms/${A.room}/duelSetup/teams`));
+    $("duelSetupStart").onclick=async()=>{
+      // Session mit festen Teams starten
+      await set(ref(db,`rooms/${A.room}/duelSession`),{
+        type:"group-estimate", total:NUM_QS_PER_DUEL, current:0, scores:{}, teams, startedAt:Date.now()
+      });
+      await remove(ref(db,`rooms/${A.room}/duelSetup`));
+      await nextDuelQuestion();
+    };
+    $("duelSetupCancel").onclick=()=>remove(ref(db,`rooms/${A.room}/duelSetup`));
+  }
+}
+
 function renderOfficial(){
   A.clearTimers();
   const o=A.state.official;
   const panel=$("officialPanel");
   if(!o){ panel.classList.add("hidden"); return; }
   panel.classList.remove("hidden");
+
+  // PRESERVE INPUT STATE vor Re-Render
+  const preserveInput=(()=>{
+    const el=document.getElementById("offIn");
+    if(!el) return null;
+    return {
+      value:el.value,
+      hadFocus:document.activeElement===el,
+      selStart:el.selectionStart,
+      selEnd:el.selectionEnd
+    };
+  })();
 
   if(o.phase==="done"){
     $("officialBody").innerHTML=`
@@ -300,9 +392,11 @@ function renderOfficial(){
       }
       if(o.type==="group-estimate"){
         const myTeam=(o.teams||{})[A.user];
-        html+=`<div class="sub">Team:</div><div class="row">
-          <button class="${myTeam==='A'?'btn-green':'btn-ghost'}" data-team="A">Team A</button>
-          <button class="${myTeam==='B'?'btn-green':'btn-ghost'}" data-team="B">Team B</button></div>`;
+        if(myTeam){
+          html+=`<div class="flash ${myTeam==='A'?'gold':'warn'}">Dein Team: <b>${myTeam}</b></div>`;
+        } else {
+          html+=`<div class="flash warn">Du bist keinem Team zugeordnet – deine Antwort zaehlt nicht!</div>`;
+        }
       }
       html+=`<button id="offSend" class="btn-green">Senden</button>`;
     }
@@ -320,6 +414,18 @@ function renderOfficial(){
   }
   body.innerHTML=html;
 
+  // RESTORE INPUT STATE nach Re-Render
+  if(preserveInput){
+    const el=document.getElementById("offIn");
+    if(el){
+      el.value=preserveInput.value;
+      if(preserveInput.hadFocus){
+        el.focus();
+        try{ el.setSelectionRange(preserveInput.selStart,preserveInput.selEnd); }catch(e){}
+      }
+    }
+  }
+
   const si=$("offSend"); if(si) si.onclick=sendAnswer;
   const ev=$("evalNow"); if(ev) ev.onclick=evalOfficial;
   const tv=$("toVote"); if(tv) tv.onclick=()=>update(ref(db,`rooms/${A.room}/official`),{phase:"vote"});
@@ -328,7 +434,6 @@ function renderOfficial(){
     await remove(ref(db,`rooms/${A.room}/quizMulti`));
     await remove(ref(db,`rooms/${A.room}/duelSession`));
   };
-  document.querySelectorAll("[data-team]").forEach(b=>b.onclick=()=>set(ref(db,`rooms/${A.room}/official/teams/${A.user}`),b.dataset.team));
   document.querySelectorAll("[data-vote]").forEach(b=>b.onclick=()=>set(ref(db,`rooms/${A.room}/official/votes/${A.user}`),b.dataset.vote));
 
   if(o.endTime){
