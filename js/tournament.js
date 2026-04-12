@@ -11,22 +11,31 @@ function initRefs(){
 const BS_SIZE=6, BS_SHIPS=[{name:"Estrella-Frachter",len:3},{name:"Mahou-Boot",len:2},{name:"Cana-Kahn",len:2},{name:"Shot-Glas",len:1}];
 
 // === BIER-DUELL Konstanten ===
-const BIERE = [
-  {id:"amsterdam", name:"Amsterdam", type:"IPA",    emoji:"🌿", beats:["Pils","Lager"]},     // hopfig / bitter
-  {id:"berlin",    name:"Berlin",    type:"Pils",   emoji:"🟠", beats:["Weizen","Sauer"]},   // klassisch
-  {id:"zofingen",  name:"Zofingen",  type:"Lager",  emoji:"🍺", beats:["Weizen","Stout"]},   // clean / gold
-  {id:"edinburgh", name:"Edinburgh", type:"Stout",  emoji:"🍫", beats:["IPA","Vienna"]},     // dunkel / schwer
-  {id:"krakau",    name:"Krakau",    type:"Sauer",  emoji:"🐷", beats:["Stout","Vienna"]},   // sauer
-  {id:"wien",      name:"Wien",      type:"Vienna", emoji:"🥨", beats:["Amber","Pils"]},     // malzig / bernstein
-  {id:"damaskus",  name:"Damaskus",  type:"Amber",  emoji:"💣", beats:["IPA","Sauer"]},      // tiefer / karamell
-  {id:"palma",     name:"Palma",     type:"Weizen", emoji:"🍌", beats:["IPA","Stout"]}       // weizig
+onst BIERE = [
+  // Favorit (Stark: schlägt 3 Biere + Wasser)
+  {id:"amsterdam", name:"Amsterdam", type:"IPA",    emoji:"🌿", beats:["berlin","zofingen","edinburgh","wasser"]},
+  
+  // Normal (schlagen 2 Biere + Wasser)
+  {id:"berlin",    name:"Berlin",    type:"Pils",   emoji:"🟠", beats:["zofingen","krakau","wasser"]},
+  {id:"zofingen",  name:"Zofingen",  type:"Lager",  emoji:"🍺", beats:["edinburgh","wien","wasser"]},
+  {id:"edinburgh", name:"Edinburgh", type:"Stout",  emoji:"🍫", beats:["krakau","damaskus","wasser"]},
+  {id:"wien",      name:"Wien",      type:"Vienna", emoji:"🥨", beats:["damaskus","palma","wasser"]},
+  {id:"damaskus",  name:"Damaskus",  type:"Amber",  emoji:"💣", beats:["palma","amsterdam","wasser"]},
+  {id:"palma",     name:"Palma",     type:"Weizen", emoji:"🍌", beats:["berlin","amsterdam","wasser"]},
+  
+  // Schwach (schlägt nur 1 Bier + Wasser)
+  {id:"krakau",    name:"Krakau",    type:"Sauer",  emoji:"🐷", beats:["wien","wasser"]},
+  
+  // SPECIALS
+  {id:"schnaps",   name:"Kraueterschnaps",   type:"Schnaps",emoji:"🥃", beats:["amsterdam","berlin","zofingen","edinburgh","krakau","wien","damaskus","palma"]},
+  {id:"wasser",    name:"Wasser",    type:"Stilles",emoji:"💧", beats:["schnaps"]}
 ];
 const BIER_MAP=Object.fromEntries(BIERE.map(b=>[b.id,b]));
 function bierWinner(idA,idB){
   if(idA===idB) return null; // Draw
   const a=BIER_MAP[idA], b=BIER_MAP[idB];
-  if(a.beats.includes(b.type)) return idA;
-  if(b.beats.includes(a.type)) return idB;
+  if(a.beats.includes(b.id)) return idA;
+  if(b.beats.includes(a.id)) return idB;
   return null; // Wenn keine Dominanz → Draw
 }
 
@@ -763,7 +772,7 @@ async function bdResolveRound(idx) {
       matchWinner = p1;
   } else if (newScores[p2] >= 3) {
       matchWinner = p2;
-  } else if (currentRound >= 8) {
+  } else if (currentRound >= 10) {
       // Nach 8 Runden sind alle Buttons aufgebraucht!
       if (newScores[p1] > newScores[p2]) matchWinner = p1;
       else if (newScores[p2] > newScores[p1]) matchWinner = p2;
@@ -833,7 +842,7 @@ function renderBierDuel(t, idx, m, bh) {
       </div>
     </div>
     <div style="text-align:center; font-size:0.7rem; opacity:0.7; padding-bottom:5px; border-top:1px solid rgba(255,204,0,0.2);">
-      Zuerst 3 Pkt (Max. 8 Runden) · <b>Runde ${Math.min(8, md.round || 1)}</b>
+      Zuerst 3 Pkt (Max. 10 Runden) · <b>Runde ${Math.min(10, md.round || 1)}</b>
     </div>
   </div>`;
 
@@ -863,13 +872,28 @@ function renderBierDuel(t, idx, m, bh) {
       const mb = BIER_MAP[myPick];
       html += `<div class="flash info">✅ Gesetzt: ${mb.emoji} <b>${mb.name}</b><br><small>Warte auf ${opp}...</small></div>`;
     } else {
-      html += `<h3 style="margin-top:0;">Wähle dein Bier:</h3><div class="grid2">`;
+      html += `<h3 style="margin-top:0;">Wähle dein Getränk:</h3><div class="grid2">`;
       BIERE.forEach(b => {
         const isUsed = used.includes(b.id);
-        const beatsStr = b.beats.join(", ");
-        html += `<button class="${isUsed ? 'btn-ghost' : 'btn-gold'}" ${isUsed ? 'disabled' : ''} data-bier="${b.id}" style="text-align:left; padding:8px; height:auto;">
-          <div style="font-size:1rem;">${b.emoji} ${b.name} ${b.type}</div>
-          <div style="font-size:0.6rem; opacity:0.6;">Schlägt: ${beatsStr}</div>
+        
+        // Custom Text für unsere Specials
+        let beatsStr = "";
+        if (b.id === "schnaps") beatsStr = "ALLE Biere 😱";
+        else if (b.id === "wasser") beatsStr = "NUR Schnaps";
+        else {
+            const beatenNames = b.beats.map(targetId => BIER_MAP[targetId].name);
+            beatsStr = beatenNames.join(", ");
+        }
+
+        // Special Styling für Schnaps & Wasser
+        let btnColor = "btn-gold";
+        if (b.id === "schnaps") btnColor = "btn-red";
+        if (b.id === "wasser") btnColor = "btn-blue";
+        if (isUsed) btnColor = "btn-ghost";
+
+        html += `<button class="${btnColor}" ${isUsed ? 'disabled' : ''} data-bier="${b.id}" style="text-align:left; padding:8px; height:auto;">
+          <div style="font-size:1rem;">${b.emoji} ${b.name}</div>
+          <div style="font-size:0.6rem; opacity:0.8;">Schlägt: ${beatsStr}</div>
         </button>`;
       });
       html += `</div>`;
