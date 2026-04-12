@@ -531,9 +531,13 @@ async function initTTT(idx,m){
     if(mt.round===myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2){
       const existing=t.tictactoe&&t.tictactoe[i];
       if(!existing){
-        updates[i]={
-          board:Array(9).fill(null),
-          turn:mt.p1, phase:"play", moveCounter:0, startedAt:Date.now()
+        // In initTTT suchen und diese Zeile anpassen:
+        updates[i] = {
+          board: [0, 0, 0, 0, 0, 0, 0, 0, 0], // Benutze Nullen statt null
+          turn: mt.p1,
+          phase: "play",
+          moveCounter: 0,
+          startedAt: Date.now()
         };
       }
     }
@@ -574,6 +578,13 @@ function renderTicTacToe(t,idx,m,bh){
     const ti=$("tttInit"); if(ti) ti.onclick=()=>initTTT(idx,m);
     return;
   }
+
+  // FALL 2: Das Spiel wurde gestartet, aber das Board-Array ist noch nicht da
+  if (!md.board) {
+    body.innerHTML = `<div class="q-big">Spielfeld wird geladen...</div>${bh}`;
+    return;
+  }
+  
   const isPlayer=A.user===m.p1||A.user===m.p2;
   let html=`<div class="q-big">⭕ ${m.p1} vs ${m.p2}</div>`;
   html+=`<div class="sub" style="text-align:center">Regel: Max. 3 Steine pro Spieler. Beim 4. Zug verschwindet dein aeltester Stein. Nur mit 3 in einer Reihe gewinnst du!</div>`;
@@ -591,7 +602,8 @@ function renderTicTacToe(t,idx,m,bh){
     let content="";
     if(cell){
       // Zeichen: erster Spieler X, zweiter O
-      const symbol=cell.p===m.p1?"✕":"◯";
+      const cellValue = md.board[i];
+      const symbol = cellValue === 0 ? "" : (cellValue.p === m.p1 ? "✕" : "◯");
       // Transparenz je nach Alter (aelteste wird blass, wenn Spieler 3 Steine hat)
       const myOwner=cell.p;
       const ownerStones=md.board.filter(x=>x&&x.p===myOwner).sort((a,b)=>a.seq-b.seq);
