@@ -545,19 +545,24 @@ async function initTTT(idx,m){
   await update(ref(db,`rooms/${A.room}/tournament/tictactoe`),updates);
   toast(`${Object.keys(updates).length} Match(es) gestartet`);
 }
+
 async function tttMove(idx, cellIdx, m) {
   const r = ref(db, `rooms/${A.room}/tournament/tictactoe/${idx}`);
   const d = (await get(r)).val();
   if (!d || d.phase !== "play" || d.turn !== A.user) return;
-  if (d.board[cellIdx] !== 0) return;
+  
+  // Sicherer Check, falls das Array Lücken hat
+  const currentDbBoard = d.board || [];
+  if (currentDbBoard[cellIdx] !== 0 && currentDbBoard[cellIdx] !== undefined) return;
 
- // --- KUGELSICHERES ARRAY BAUEN ---
+  // --- KUGELSICHERES ARRAY BAUEN ---
   const board = [];
   for (let i = 0; i < 9; i++) {
-    // Falls ein Feld undefined oder null ist, mach eine 0 daraus
-    const cell = (d.board && d.board[i]) !== undefined ? d.board[i] : 0;
+    const cell = currentDbBoard[i] !== undefined ? currentDbBoard[i] : 0;
     board.push(cell === null ? 0 : cell); 
   }
+  
+  // Hier wird moveCounter exakt EINMAL deklariert
   const moveCounter = (d.moveCounter || 0) + 1;
 
   // Eigene Steine finden und nach Alter (seq) sortieren
@@ -570,22 +575,6 @@ async function tttMove(idx, cellIdx, m) {
   myStones.sort((a, b) => a.seq - b.seq);
 
   // Wenn man bereits 3 Steine hat, wird der älteste entfernt
-  if (myStones.length >= 3) {
-    board[myStones[0].i] = 0;
-  }
-  const moveCounter = (d.moveCounter || 0) + 1;
-
-  // Eigene Steine finden und nach Alter (seq) sortieren
-  const myStones = [];
-  board.forEach((cell, i) => {
-    if (cell && typeof cell === 'object' && cell.p === A.user) {
-      myStones.push({ i, seq: cell.seq });
-    }
-  });
-  myStones.sort((a, b) => a.seq - b.seq);
-
-  // Wenn man bereits 3 Steine hat, wird der älteste entfernt,
-  // bevor der neue (vierte) gesetzt wird.
   if (myStones.length >= 3) {
     board[myStones[0].i] = 0;
   }
@@ -608,13 +597,13 @@ async function tttMove(idx, cellIdx, m) {
     await update(r, updates);
     setTimeout(() => advanceTournament(idx, A.user), 2000);
   } else if (moveCounter >= 20) {
-    // Unentschieden-Logik
+    // Unentschieden-Logik nach 20 Zügen
     const winner = Math.random() > 0.5 ? m.p1 : m.p2;
     updates.phase = "done";
     updates.winner = winner;
-    updates.isDraw = true; // Flag für "keine Punkte"
+    updates.isDraw = true; // Markiert es als Unentschieden (keine Punkte)
     await update(r, updates);
-    // Turnier weiterschalten ohne awardScore aufzurufen
+    
     setTimeout(async () => {
         const tSnap = await get(ref(db, `rooms/${A.room}/tournament`));
         const t = tSnap.val();
@@ -623,10 +612,12 @@ async function tttMove(idx, cellIdx, m) {
         await update(ref(db, `rooms/${A.room}/tournament`), { matches: updatedMatches });
     }, 2000);
   } else {
+    // Nächster Spieler ist dran
     updates.turn = A.user === m.p1 ? m.p2 : m.p1;
     await update(r, updates);
   }
 }
+
 function renderTicTacToe(t, idx, m, bh) {
   const body = $("officialBody");
   const md = (t.tictactoe && t.tictactoe[idx]);
