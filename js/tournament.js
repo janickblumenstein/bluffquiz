@@ -1,11 +1,18 @@
 // === tournament.js - Turniere: Reaktion, Schiffe, TicTacToe-3 ===
 import { runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore,shuffle}=A;
+const A=window.App;
+// Destructuring wird zur Laufzeit gemacht (nicht bei Import-Zeit)
+// damit core.js sicher schon initialisiert ist.
+let db,ref,set,onValue,update,get,remove,$,toast,awardScore,shuffle;
+function initRefs(){
+  ({db,ref,set,onValue,update,get,remove,$,toast,awardScore,shuffle}=A);
+}
 
 const BS_SIZE=6, BS_SHIPS=[{name:"Estrella-Frachter",len:3},{name:"Mahou-Boot",len:2},{name:"Cana-Kahn",len:2},{name:"Shot-Glas",len:1}];
 
 const prevReady=A.listeners.onReady;
 A.listeners.onReady=()=>{
+  initRefs();
   if(prevReady) prevReady();
   onValue(ref(db,`rooms/${A.room}/tournamentSetup`),snap=>{
     A.state.tournamentSetup=snap.val();
@@ -57,6 +64,10 @@ function renderOfficialPanel(){
 async function startSetup(gameType){
   if(!A.isHost) return;
   await remove(ref(db,`rooms/${A.room}/official`));
+  await remove(ref(db,`rooms/${A.room}/tournament`));
+  await remove(ref(db,`rooms/${A.room}/quizMulti`));
+  await remove(ref(db,`rooms/${A.room}/duelSession`));
+  await remove(ref(db,`rooms/${A.room}/duelSetup`));
   await set(ref(db,`rooms/${A.room}/tournamentSetup`),{gameType,picks:{},startedAt:Date.now()});
   A.switchTab("Games");
 }
