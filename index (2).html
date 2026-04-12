@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mallorca 2026 V7</title>
+<style>
+:root{--gold:#ffcc00;--dark:#0f0f12;--bg:#14141a;--card:#1e1e26;--card2:#2a2a34;--muted:#8a8a95;--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--purple:#9b59b6;--orange:#e67e22;--border:#2e2e38}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:#fff;font-family:-apple-system,system-ui,sans-serif;min-height:100vh;overscroll-behavior:none}
+body{padding-bottom:80px}
+.wrap{max-width:480px;margin:auto;padding:10px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card);border-radius:12px;margin-bottom:10px;position:sticky;top:10px;z-index:50}
+.topbar h1{margin:0;font-size:1rem;color:var(--gold)}
+.badge{font-size:.7rem;opacity:.7}
+.badge.host{color:var(--gold);opacity:1;font-weight:bold}
+.card{background:var(--card);padding:16px;border-radius:14px;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+h2{margin:0 0 12px;font-size:1.1rem}
+h3{margin:14px 0 8px;font-size:.95rem}
+.sub{opacity:.55;font-size:.8rem;margin:4px 0}
+hr{border:none;border-top:1px dashed var(--border);margin:14px 0}
+input,select,textarea,button{width:100%;padding:13px;margin:5px 0;border-radius:10px;border:none;font-size:16px;font-family:inherit}
+select{background:#fff;color:#000;height:48px}
+input,textarea{background:var(--card2);color:#fff;border:1px solid var(--border)}
+button{background:var(--gold);color:#000;font-weight:bold;cursor:pointer;transition:transform .1s}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.4}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-gold{background:var(--gold);color:#000;border:2px solid #fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:#fff}
+.btn-sm{padding:8px 12px;font-size:.8rem;width:auto;margin:2px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hidden{display:none!important}
+
+/* === LANDINGPAGE === */
+#login{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at top,#2d1f0a,var(--bg) 60%);
+  padding:20px;text-align:center;position:relative;overflow:hidden;
+}
+#login::before{
+  content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:radial-gradient(circle,rgba(255,204,0,.05) 0%,transparent 40%);
+  animation:rotate 30s linear infinite;pointer-events:none;
+}
+@keyframes rotate{to{transform:rotate(360deg)}}
+.landing-logo{
+  font-size:2.6rem;font-weight:900;letter-spacing:2px;
+  background:linear-gradient(120deg,#ffcc00,#ffaa00,#ffcc00);
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shine 3s ease-in-out infinite;
+  cursor:pointer;user-select:none;margin-bottom:4px;
+  text-shadow:0 0 30px rgba(255,204,0,.2);
+}
+@keyframes shine{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.landing-sub{opacity:.7;font-size:.85rem;letter-spacing:3px;margin-bottom:40px;text-transform:uppercase}
+.landing-card{
+  background:rgba(30,30,38,.85);backdrop-filter:blur(10px);
+  padding:24px;border-radius:20px;border:1px solid rgba(255,204,0,.15);
+  max-width:360px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.5);
+  position:relative;z-index:1;
+}
+.landing-emoji{font-size:3rem;margin-bottom:10px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.landing-card h2{color:var(--gold);font-size:1.3rem;margin-bottom:4px}
+.landing-card .sub{margin-bottom:16px}
+.host-hint{position:absolute;bottom:20px;font-size:.65rem;opacity:.25}
+
+/* === TABBAR === */
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:6px 4px 10px;z-index:100}
+.tab{flex:1;background:none;border:none;color:var(--muted);padding:8px 2px;font-size:.62rem;text-align:center;cursor:pointer;border-radius:10px;margin:0;position:relative}
+.tab.active{color:var(--gold);background:rgba(255,204,0,.1)}
+.tab .ic{display:block;font-size:1.3rem;margin-bottom:2px}
+.tab .pulse{position:absolute;top:4px;right:8px;width:8px;height:8px;background:var(--red);border-radius:50%;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.6}}
+
+/* === SCORE === */
+.score-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:10px;margin:5px 0;background:var(--card2)}
+.score-row.me{background:rgba(255,204,0,.15);border:1px solid var(--gold)}
+.score-row.top{border-left:4px solid var(--gold)}
+.score-row .casual{opacity:.5;font-size:.75rem;margin-left:6px}
+
+/* === BINGO === */
+.bingo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:10px 0}
+.bingo-cell{aspect-ratio:1;background:var(--card2);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.6rem;padding:3px;cursor:pointer;position:relative;line-height:1.1;border:2px solid transparent;word-break:break-word}
+.bingo-cell.marked{background:rgba(255,204,0,.25);border-color:var(--gold)}
+.bingo-cell.confirmed{background:var(--green);color:#000;border-color:#fff;font-weight:bold}
+.bingo-cell.free{background:#444;font-weight:bold}
+.bingo-cell .conf{position:absolute;bottom:1px;right:3px;font-size:.55rem;opacity:.8}
+.bingo-cell.winrow{box-shadow:0 0 0 3px var(--gold) inset}
+
+/* === CITIES === */
+.city-row{display:flex;align-items:center;justify-content:space-between;padding:11px;background:var(--card2);border-radius:10px;margin:5px 0;transition:all .3s}
+.city-row.elim{opacity:.35;text-decoration:line-through}
+.city-row.flash-up{animation:flashUp .6s}
+@keyframes flashUp{0%{background:rgba(46,204,113,.4)}100%{background:var(--card2)}}
+.city-meta{font-size:.7rem;opacity:.6;margin-top:3px}
+.vote-pill{background:var(--green);color:#000;padding:3px 9px;border-radius:10px;font-size:.75rem;font-weight:bold}
+.vote-pill.neg{background:var(--red);color:#fff}
+
+/* === MISSIONS === */
+.mission{background:var(--card2);padding:12px;border-radius:10px;margin:6px 0;border-left:4px solid var(--purple)}
+.mission.done{border-left-color:var(--green);opacity:.7}
+.mission.group{border-left-color:var(--orange)}
+.mission .pts{float:right;background:var(--gold);color:#000;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:bold}
+.mission .desc{font-size:.8rem;opacity:.75;margin:4px 0}
+.mission .type-tag{display:inline-block;font-size:.65rem;padding:2px 6px;border-radius:8px;background:#444;margin-right:4px}
+.mission .type-tag.group{background:var(--orange);color:#fff}
+.mission .type-tag.solo{background:var(--purple);color:#fff}
+
+/* === MISC === */
+.flash{padding:10px;border-radius:8px;background:rgba(46,204,113,.15);border-left:3px solid var(--green);margin:8px 0;font-size:.85rem}
+.flash.warn{background:rgba(231,76,60,.15);border-left-color:var(--red)}
+.flash.info{background:rgba(52,152,219,.15);border-left-color:var(--blue)}
+.flash.gold{background:rgba(255,204,0,.15);border-left-color:var(--gold)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center}
+.overlay.show{display:flex}
+.spin{font-size:5rem;animation:spin 2s infinite linear}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:12px 20px;border-radius:25px;font-weight:bold;z-index:200;animation:toastIn .3s;max-width:90%;text-align:center}
+@keyframes toastIn{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.q-big{font-size:1.4rem;color:var(--gold);text-align:center;margin:15px 0;font-weight:bold;min-height:40px;line-height:1.3}
+.timer{font-size:1.8rem;color:var(--gold);text-align:center;font-weight:bold;margin:8px 0}
+.token{display:inline-block;background:var(--purple);color:#fff;padding:2px 8px;border-radius:10px;font-size:.7rem;margin:2px;font-weight:bold}
+.token.bonus{background:var(--gold);color:#000}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card2);border-radius:8px;margin:4px 0;font-size:.85rem}
+.result-row.winner{background:rgba(46,204,113,.2);border-left:3px solid var(--green)}
+.result-bar{flex:1;height:20px;background:#1a1a22;border-radius:4px;margin:0 8px;overflow:hidden;position:relative}
+.result-bar-fill{height:100%;background:var(--green);transition:width .5s}
+.bracket{padding:10px;background:var(--card2);border-radius:8px;margin:6px 0;font-size:.85rem}
+.bracket .match{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #444}
+.bracket .match:last-child{border:none}
+.bracket .winner{color:var(--green);font-weight:bold}
+.bs-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin:8px 0;max-width:300px}
+.bs-cell{aspect-ratio:1;background:var(--card2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.9rem;cursor:pointer;border:1px solid #444}
+.bs-cell.ship{background:#3e5060}
+.bs-cell.hit{background:var(--red);color:#fff}
+.bs-cell.miss{background:#1a3a4a;color:#88a}
+.bs-cell.sunk{background:#000;color:var(--gold)}
+.bs-cell.disabled{cursor:not-allowed;opacity:.7}
+.bs-label{font-size:.75rem;opacity:.7;margin-bottom:3px}
+.plus{color:var(--green);font-weight:bold}
+</style>
+</head>
+<body>
+
+<!-- ===== LANDINGPAGE ===== -->
+<div id="login">
+  <div class="landing-logo" id="landingLogo">BIERKULTUR</div>
+  <div class="landing-sub">Mallorca · 2026</div>
+  <div class="landing-card">
+    <div class="landing-emoji">🍻</div>
+    <h2>Willkommen</h2>
+    <div class="sub">Gib deinen Namen ein und tritt der Runde bei</div>
+    <input id="nameInp" placeholder="Dein Name" maxlength="20">
+    <input id="roomInp" placeholder="Code" value="MALLE26">
+    <button id="btnJoin">Beitreten</button>
+    <button id="btnHost" class="btn-blue hidden">Als Host starten</button>
+  </div>
+  <div class="host-hint">v7</div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app" class="wrap hidden">
+  <div class="topbar">
+    <h1>Mallorca 26</h1>
+    <div class="badge" id="userBadge"></div>
+  </div>
+
+  <div id="tabScore" class="tabPane">
+    <div class="card">
+      <h2>Wochenend-Stand</h2>
+      <div id="leaderboard"></div>
+      <div class="sub" style="margin-top:10px">Casual-Punkte (c) zaehlen 10% zum Gesamtscore</div>
+    </div>
+    <div class="card">
+      <h3>Tokens & Punkte verschenken</h3>
+      <div id="myTokens"></div>
+    </div>
+  </div>
+
+  <div id="tabBingo" class="tabPane hidden">
+    <div class="card">
+      <h2>Bier-Bingo</h2>
+      <div class="sub">Tippe ein Feld wenn du das Bier getrunken hast. 2 andere muessen bestaetigen. Bingo = 10 Pkt!</div>
+      <div id="bingoGrid" class="bingo-grid"></div>
+      <div id="bingoStatus"></div>
+      <button id="bingoGetCard" class="btn-orange">Neue Karte holen</button>
+    </div>
+    <div class="card">
+      <h3>Andere bestaetigen</h3>
+      <div id="bingoConfirmList"><div class="sub">Nichts zu bestaetigen</div></div>
+    </div>
+  </div>
+
+  <div id="tabGames" class="tabPane hidden">
+    <div id="officialPanel" class="card hidden">
+      <h2>Offizielle Runde laeuft</h2>
+      <div id="officialBody"></div>
+    </div>
+    <div class="card">
+      <h2>Solo-Spiele <span class="sub" style="font-weight:normal">(Casual)</span></h2>
+      <div class="sub">Zeitvertreib. Punkte zaehlen nur 10% fuer den Gesamtstand.</div>
+      <button class="btn-blue" data-solo="math">Kopfrechnen Sprint (30s)</button>
+      <button class="btn-purple" data-solo="estimate">Schaetz-Quiz (5 Fragen)</button>
+      <button class="btn-orange" data-solo="reaction">Reaktions-Test</button>
+    </div>
+    <div id="soloArea" class="card hidden"></div>
+  </div>
+
+  <div id="tabCities" class="tabPane hidden">
+    <div class="card">
+      <h2>Naechstes Reiseziel</h2>
+      <div id="citiesList"></div>
+      <div id="citiesAction"></div>
+    </div>
+    <div id="cityEditPanel" class="card hidden">
+      <h3>Stadt bearbeiten</h3>
+      <div id="cityEditBody"></div>
+    </div>
+  </div>
+
+  <div id="tabMissions" class="tabPane hidden">
+    <div class="card">
+      <h2>Missionen</h2>
+      <div class="sub">Einmalig = nur eine Person. Mehrmalig = jeder einmal. 2 Bestaetigungen noetig.</div>
+      <div id="missionsList"></div>
+    </div>
+    <div class="card">
+      <h3>Mission vorschlagen</h3>
+      <input id="newMissionTitle" placeholder="Titel z.B. Gruppenfoto am Strand">
+      <input id="newMissionDesc" placeholder="Beschreibung (optional)">
+      <div class="row">
+        <select id="newMissionType">
+          <option value="once">Einmalig (erste Person)</option>
+          <option value="multi">Mehrmalig (jeder einmal)</option>
+        </select>
+        <select id="newMissionPoints">
+          <option value="2">2 Pkt</option>
+          <option value="5" selected>5 Pkt</option>
+          <option value="10">10 Pkt</option>
+          <option value="20">20 Pkt</option>
+        </select>
+      </div>
+      <button id="addMission" class="btn-green">Hinzufuegen</button>
+    </div>
+  </div>
+
+  <div id="tabHost" class="tabPane hidden">
+    <div class="card">
+      <h2>Host-Panel</h2>
+      <div id="hostStatus"></div>
+      <button id="btnTakeHost" class="btn-blue">Host uebernehmen (mit Bestaetigung)</button>
+    </div>
+    <div id="hostControls" class="hidden">
+      <div class="card">
+        <h3>Offizielle Runde starten</h3>
+        <button class="btn-gold" data-start="quiz-multi-3">🎯 Quiz: 3 Fragen gemischt</button>
+        <button class="btn-gold" data-start="quiz-multi-5">🎯 Quiz: 5 Fragen gemischt</button>
+        <button class="btn-gold" data-start="quiz-multi-10">🎯 Quiz: 10 Fragen gemischt</button>
+        <button class="btn-blue" data-start="duel-math">Duell: Kopfrechnen</button>
+        <button class="btn-blue" data-start="duel-estimate">Duell: Schaetzen</button>
+        <button class="btn-orange" data-start="group-estimate">Gruppe vs Gruppe: Schaetzen</button>
+        <button class="btn-red" data-start="reaction-tournament">⚡ Reaktions-Turnier</button>
+        <button class="btn-red" data-start="battleship-tournament">⚓ Schiffeversenken-Turnier</button>
+        <button class="btn-red" data-start="tictactoe-tournament">⭕ TicTacToe-3 Turnier</button>
+      </div>
+      <div class="card">
+        <h3>Bingo</h3>
+        <button id="bingoDealAll" class="btn-orange">Allen neue Karten austeilen</button>
+      </div>
+      <div class="card">
+        <h3>Staedte-Voting starten</h3>
+        <button class="btn-green" data-cityvote="pos3">3 Punkte (verteilt)</button>
+        <button class="btn-green" data-cityvote="pos3stack">3 Punkte (mehrfach fuer gleiche Stadt)</button>
+        <button class="btn-red" data-cityvote="neg1">1 Negativ-Stimme</button>
+        <button class="btn-orange" data-cityvote="duel">Duell (waehle 2)</button>
+        <button class="btn-purple" data-cityvote="ko">K.O. (eine fliegt)</button>
+        <button class="btn-blue" data-cityvote="weighted">Gewichtet nach Rang (Top-Spieler zaehlen mehr)</button>
+        <button id="endCityVote" class="btn-purple">Voting beenden & auswerten</button>
+        <hr>
+        <input id="newCity" placeholder="Stadt hinzufuegen...">
+        <button id="addCity" class="btn-green">Stadt hinzufuegen</button>
+        <hr>
+        <button class="btn-orange" id="cityLowestOut">Schwaechste(n) rauswerfen</button>
+        <button class="btn-ghost" id="cityResetVotes">Alle Votes auf 0 (Liste behalten)</button>
+        <button class="btn-ghost" id="cityReactivateAll">Alle wieder aktivieren</button>
+      </div>
+      <div class="card">
+        <h3>Tokens & Punkte verteilen</h3>
+        <select id="tokenPlayer"></select>
+        <button class="btn-green" id="giveBonusVote">+1 Bonus-Stadt-Stimme</button>
+        <div class="row">
+          <input id="hostPointAmt" type="number" placeholder="Punkte" value="5">
+          <button class="btn-gold" id="giveHostPoints">+Pkt geben</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Sonstiges</h3>
+        <button class="btn-red" id="btnDrinkEvent">Trink-Event</button>
+        <button class="btn-ghost" id="btnResetScores">Scores zuruecksetzen</button>
+        <button class="btn-orange" id="btnReleaseDevice">🔓 Spieler-Name freigeben (fuer neues Geraet)</button>
+        <button class="btn-red" id="btnFullReset">KOMPLETT-RESET</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tabbar hidden" id="tabbar">
+  <button class="tab active" data-tab="Score"><span class="ic">🏆</span>Rang</button>
+  <button class="tab" data-tab="Bingo"><span class="ic">🎯</span>Bingo</button>
+  <button class="tab" data-tab="Games"><span class="ic">🎮</span>Spiele</button>
+  <button class="tab" data-tab="Cities"><span class="ic">🏙️</span>Staedte</button>
+  <button class="tab" data-tab="Missions"><span class="ic">📸</span>Mission</button>
+  <button class="tab" data-tab="Host"><span class="ic">👑</span>Host</button>
+</div>
+
+<div id="overlay" class="overlay">
+  <div class="spin">🍻</div>
+  <div id="overlayText" style="font-size:1.8rem;color:var(--gold);font-weight:bold;margin:20px"></div>
+  <button id="overlayClose" class="btn-ghost" style="max-width:200px">Weiter</button>
+</div>
+
+<div id="toastContainer"></div>
+
+<script type="module" src="./js/core.js"></script>
+<script type="module" src="./js/cities.js"></script>
+<script type="module" src="./js/missions.js"></script>
+<script type="module" src="./js/bingo.js"></script>
+<script type="module" src="./js/solo.js"></script>
+<script type="module" src="./js/official.js"></script>
+<script type="module" src="./js/tournament.js"></script>
+</body>
+</html>
