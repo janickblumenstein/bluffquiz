@@ -11,15 +11,15 @@ function initRefs(){
 const BS_SIZE=6, BS_SHIPS=[{name:"Estrella-Frachter",len:3},{name:"Mahou-Boot",len:2},{name:"Cana-Kahn",len:2},{name:"Shot-Glas",len:1}];
 
 // === BIER-DUELL Konstanten ===
-const BIERE=[
-  {id:"amsterdam", name:"Amsterdam", type:"IPA",    emoji:"🍻", beats:["Pils","Lager"]},
-  {id:"berlin",    name:"Berlin",    type:"Pils",   emoji:"🍺", beats:["Weizen","Sauer"]},
-  {id:"zofingen",  name:"Zofingen",  type:"Lager",  emoji:"🍺", beats:["Weizen","Stout"]},
-  {id:"edinburgh", name:"Edinburgh", type:"Stout",  emoji:"🍺", beats:["IPA","Vienna"]},
-  {id:"krakau",    name:"Krakau",    type:"Sauer",  emoji:"🍋", beats:["Stout","Vienna"]},
-  {id:"wien",      name:"Wien",      type:"Vienna", emoji:"🍺", beats:["Amber","Pils"]},
-  {id:"damaskus",  name:"Damaskus",  type:"Amber",  emoji:"🍺", beats:["IPA","Sauer"]},
-  {id:"palma",     name:"Palma",     type:"Weizen", emoji:"🌾", beats:["IPA","Stout"]}
+const BIERE = [
+  {id:"amsterdam", name:"Amsterdam", type:"IPA",    emoji:"🌿", beats:["Pils","Lager"]},     // hopfig / bitter
+  {id:"berlin",    name:"Berlin",    type:"Pils",   emoji:"🟠", beats:["Weizen","Sauer"]},   // klassisch
+  {id:"zofingen",  name:"Zofingen",  type:"Lager",  emoji:"🍺", beats:["Weizen","Stout"]},   // clean / gold
+  {id:"edinburgh", name:"Edinburgh", type:"Stout",  emoji:"🍫", beats:["IPA","Vienna"]},     // dunkel / schwer
+  {id:"krakau",    name:"Krakau",    type:"Sauer",  emoji:"🐷", beats:["Stout","Vienna"]},   // sauer
+  {id:"wien",      name:"Wien",      type:"Vienna", emoji:"🥨", beats:["Amber","Pils"]},     // malzig / bernstein
+  {id:"damaskus",  name:"Damaskus",  type:"Amber",  emoji:"💣", beats:["IPA","Sauer"]},      // tiefer / karamell
+  {id:"palma",     name:"Palma",     type:"Weizen", emoji:"🍌", beats:["IPA","Stout"]}       // weizig
 ];
 const BIER_MAP=Object.fromEntries(BIERE.map(b=>[b.id,b]));
 function bierWinner(idA,idB){
