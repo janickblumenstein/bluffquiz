@@ -16,14 +16,60 @@ const QUIZ_WHO=[
   "Wer schnarcht am lautesten?",
   "Wer verliert die Wette als Erster?",
   "Wer macht die meisten Selfies?",
-  "Wer wird von Kellnerinnen am meisten angeflirtet?"
+  "Wer wird von Kellnerinnen am meisten angeflirtet?",
+  "Wer verteidigt Donald J. Trump auch nach dem dritten Bier noch mit voller Ueberzeugung?",
+  "Wer hat die groesste Klappe – und liefert am wenigsten?",
+  "Wer wird als Erster sentimental nach 3 Bier?",
+  "Wer bestellt 'nur ein Bier' und endet komplett anders?",
+  "Wer ist am Abend noch fit – und morgens komplett zerstört?",
+  "Wer sucht am haeufigsten sein eigenes Zeug?",
+  "Wer wird ploetzlich zum DJ und nervt alle?",
+  "Wer kennt am Ende 'jeden' im Laden?",
+  "Wer redet am meisten Unsinn – mit voller Ueberzeugung?",
+  "Wer ueberschaetzt seine Trinkfestigkeit am haertesten?",
+  "Wer macht die unnoetig kompliziertesten Bestellungen?",
+  "Wer sagt am oeftesten: 'Ich zahle naechste Runde'?",
+  "Wer verliert komplett das Zeitgefuehl?",
+  "Wer wird am ehesten von der Gruppe vergessen?",
+  "Wer tanzt am schlechtesten – aber mit Abstand am meisten?",
+  "Wer fuehrt die sinnlosesten Diskussionen?",
+  "Wer wird am ehesten vom Sicherheitspersonal angesprochen?",
+  "Wer denkt, er ist lustig – ist es aber nur bedingt?",
+  "Wer gibt die besten Tipps – die keiner braucht?",
+  "Wer ist am Ende ueberraschend der Vernuenftigste?",
+  "Wer behauptet morgen: 'So schlimm war es gar nicht'?",
+  "Wer will als Erster wieder zurueck nach Mallorca?"
+  
 ];
 const QUIZ_TEXT=[
   "Was ist das Motto des Trips in 3 Woertern?",
   "Beschreibe Mallorca mit einem Emoji-Kombo",
   "Was ist der beste Drink auf der Insel?",
   "Welcher Song beschreibt diesen Trip?",
-  "Worueber wurde heute am meisten gelacht?"
+  "Worueber wurde heute am meisten gelacht?",
+  "Warum heisst es eigentlich Ballermann?",
+  "Woran erkennst du sofort einen Schweizer Touristen auf Mallorca?",
+  "Was ist die realistischste Ausrede am Morgen danach?",
+  "Erklaere dieses Wochenende deiner Familie moeglichst harmlos",
+  "Was ist der Moment, an dem der Abend definitiv kippt?",
+  "Welche Regel nimmt sich die Gruppe vor – und bricht sie garantiert?",
+  "Was ist das erste, das jemand im Pool macht?",
+  "Wer geht am ehesten verloren – und warum?",
+  "Was ist der klassische Satz kurz vor einer schlechten Entscheidung?",
+  "Wie klingt die perfekte Bestellung am Ballermann?",
+  "Welche neue Tradition entsteht an diesem Wochenende?",
+  "Wie sieht der perfekte Kater-Fruehstuecksteller aus?",
+  "Welche Challenge entsteht spontan nach dem dritten Bier?",
+  "Was ist die schlechteste Idee, die sich zuerst gut anfuehlt?",
+  "Wie wuerde ein Werbeslogan fuer euren Trip lauten?",
+  "Wer wird ploetzlich zum Philosophen – und ueber was?",
+  "Was ist die unnoetigste Ausgabe des Wochenendes?",
+  "Welche App wird am haeufigsten benutzt – und warum?",
+  "Was geht als Erstes verloren?",
+  "Was ist das unausgesprochene Gesetz des Wochenendes?",
+  "Wie endet der Abend im besten oder schlimmsten Fall?",
+  "Was ist die wichtigste Faehigkeit fuer dieses Wochenende?"
+  
 ];
 const NUM_QS_PER_DUEL=3; // Mehrere Fragen pro Duell/Gruppe
 
