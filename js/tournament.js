@@ -737,10 +737,13 @@ async function bdResolveRound(idx) {
   const pick1 = picks[p1], pick2 = picks[p2];
   if (!pick1 || !pick2) return;
   
-  const winner = bierWinner(pick1, pick2);
+  const winningBeer = bierWinner(pick1, pick2);
+  let roundWinner = null;
+  if (winningBeer === pick1) roundWinner = p1;
+  else if (winningBeer === pick2) roundWinner = p2;
   
   const newScores = { ...(d.scores || {}) };
-  if (winner) newScores[winner] = (newScores[winner] || 0) + 1;
+  if (roundWinner) newScores[roundWinner] = (newScores[roundWinner] || 0) + 1;
   
   const newUsed = { ...(d.used || {}) };
   newUsed[p1] = [...(newUsed[p1] || []), pick1];
@@ -749,22 +752,23 @@ async function bdResolveRound(idx) {
   const currentRound = d.round || 1;
   const newHistory = [...(d.history || []), {
       round: currentRound, 
-      p1, p2, pick1, pick2, winner
+      p1, p2, pick1, pick2, winner: roundWinner
   }];
   
   let matchWinner = null;
   let isDraw = false;
 
-  // --- REGELN: Zuerst 5 Pkt ODER Max 9 Runden ---
-  if (newScores[p1] >= 5) {
+  // --- REGEL: Zuerst 3 Punkte (Max 8 Runden, da 8 Biere) ---
+  if (newScores[p1] >= 3) {
       matchWinner = p1;
-  } else if (newScores[p2] >= 5) {
+  } else if (newScores[p2] >= 3) {
       matchWinner = p2;
-  } else if (currentRound >= 9) {
+  } else if (currentRound >= 8) {
+      // Nach 8 Runden sind alle Buttons aufgebraucht!
       if (newScores[p1] > newScores[p2]) matchWinner = p1;
       else if (newScores[p2] > newScores[p1]) matchWinner = p2;
       else {
-          // Gleichstand -> Losentscheid!
+          // Gleichstand nach 8 Runden -> Losentscheid
           matchWinner = Math.random() > 0.5 ? p1 : p2;
           isDraw = true; 
       }
@@ -786,11 +790,9 @@ async function bdResolveRound(idx) {
   
   await update(r, updates);
 
-  // Turnier automatisch weiterschalten
   if (matchWinner) {
-      // Wenn das Los entschieden hat, markieren wir das Match als "Punkte schon vergeben", 
-      // damit der Spieler zwar weiterkommt, aber keine 5 Punkte kassiert!
       if (isDraw) {
+          // Keine Punkte vergeben bei Losentscheid
           await update(ref(db, `rooms/${A.room}/tournament/matches/${idx}`), { pointsAwarded: true });
       }
       setTimeout(() => advanceTournament(idx, matchWinner), 3500);
@@ -815,62 +817,81 @@ function renderBierDuel(t, idx, m, bh) {
   const score1 = (md.scores || {})[m.p1] || 0;
   const score2 = (md.scores || {})[m.p2] || 0;
 
-  // HIER FEHLTE VORHIN DAS 'let':
   let html = `<div class="q-big">🍺 ${m.p1} vs ${m.p2}</div>`;
   
-  html += `<div class="flash gold" style="text-align:center;font-size:1.2rem">
-    <b>${m.p1}</b> ${score1} : ${score2} <b>${m.p2}</b>
-    <div class="sub">Wer zuerst 5 Pkt hat (Max. 9 Runden) · Runde ${md.round || 1}</div>
+  // Schöner Score-Header
+  html += `<div class="card" style="background:rgba(255,204,0,0.1); border:1px solid var(--gold); margin-bottom:15px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px;">
+      <div style="text-align:left; flex:1;">
+        <div style="font-size:0.7rem; opacity:0.6;">Spieler 1</div>
+        <b style="${A.user === m.p1 ? 'color:var(--gold)' : ''}">${m.p1}</b>
+      </div>
+      <div style="font-size:1.8rem; font-weight:900; padding:0 15px; letter-spacing:4px;">${score1}:${score2}</div>
+      <div style="text-align:right; flex:1;">
+        <div style="font-size:0.7rem; opacity:0.6;">Spieler 2</div>
+        <b style="${A.user === m.p2 ? 'color:var(--gold)' : ''}">${m.p2}</b>
+      </div>
+    </div>
+    <div style="text-align:center; font-size:0.7rem; opacity:0.7; padding-bottom:5px; border-top:1px solid rgba(255,204,0,0.2);">
+      Zuerst 3 Pkt (Max. 8 Runden) · <b>Runde ${Math.min(8, md.round || 1)}</b>
+    </div>
   </div>`;
 
   if (md.phase === "done") {
-    const drawText = md.isDraw ? " <br><small>(Durch Losentscheid nach 9 Runden)</small>" : "";
-    html += `<div class="flash">🏆 <b>${md.winner}</b> gewinnt das Match!${drawText}</div>`;
+    const drawText = md.isDraw ? "<br><small style='color:var(--orange)'>⚠️ Losentscheid nach 8 Runden</small>" : "";
+    html += `<div class="flash gold" style="text-align:center;">
+      <div style="font-size:1.2rem;">🏆 <b>${md.winner}</b> gewinnt das Match!</div>
+      ${drawText}
+    </div>`;
     
     if (md.history && md.history.length) {
-      html += '<h3>Verlauf:</h3>';
+      html += '<h3>Verlauf:</h3><div style="max-height:150px; overflow-y:auto; font-size:0.8rem;">';
       md.history.forEach(h => {
         const b1 = BIER_MAP[h.pick1], b2 = BIER_MAP[h.pick2];
-        const winStr = h.winner ? `→ 🏆 ${h.winner}` : `→ 🤝 Unentschieden`;
-        html += `<div class="result-row"><span>R${h.round}: ${h.p1} ${b1.emoji} ${b1.name}(${b1.type}) vs ${b2.emoji} ${b2.name}(${b2.type}) ${h.p2}</span><span>${winStr}</span></div>`;
+        const winStr = h.winner ? `<span style="color:var(--gold)">🏆 ${h.winner}</span>` : `🍻 Unentschieden`;
+        html += `<div class="result-row">
+          <span>R${h.round}: ${b1.emoji} vs ${b2.emoji}</span>
+          ${winStr}
+        </div>`;
       });
+      html += '</div>';
     }
-    if (A.isHost) html += `<button class="btn-green" id="bdNext">Naechstes Match</button>`;
+    if (A.isHost) html += `<button class="btn-green" id="bdNext" style="margin-top:10px;">Nächstes Match</button>`;
     
   } else if (isPlayer) {
     if (myPick) {
       const mb = BIER_MAP[myPick];
-      html += `<div class="flash">✅ Du hast gewaehlt: ${mb.emoji} <b>${mb.name}</b> (${mb.type})</div>`;
-      html += `<div class="sub">${oppPicked ? 'Auswertung laeuft...' : 'Warte auf ' + opp + '...'}</div>`;
+      html += `<div class="flash info">✅ Gesetzt: ${mb.emoji} <b>${mb.name}</b><br><small>Warte auf ${opp}...</small></div>`;
     } else {
-      html += `<h3>Waehle dein Bier:</h3><div class="grid2">`;
+      html += `<h3 style="margin-top:0;">Wähle dein Bier:</h3><div class="grid2">`;
       BIERE.forEach(b => {
         const isUsed = used.includes(b.id);
         const beatsStr = b.beats.join(", ");
-        html += `<button class="${isUsed ? 'btn-ghost' : 'btn-gold'}" ${isUsed ? 'disabled' : ''} data-bier="${b.id}" style="text-align:left;padding:10px;font-size:.75rem">
-          <div style="font-size:1.1rem">${b.emoji} ${b.name}</div>
-          <div style="opacity:.7;font-weight:normal">${b.type}</div>
-          <div style="opacity:.5;font-size:.7rem;font-weight:normal">schlaegt: ${beatsStr}</div>
+        html += `<button class="${isUsed ? 'btn-ghost' : 'btn-gold'}" ${isUsed ? 'disabled' : ''} data-bier="${b.id}" style="text-align:left; padding:8px; height:auto;">
+          <div style="font-size:1rem;">${b.emoji} ${b.name}</div>
+          <div style="font-size:0.6rem; opacity:0.6;">Schlägt: ${beatsStr}</div>
         </button>`;
       });
       html += `</div>`;
-      if (oppPicked) html += `<div class="sub" style="margin-top:8px">⏳ Gegner hat schon gewaehlt, du bist dran!</div>`;
     }
   } else {
-    const p1Picked = !!(md.picks || {})[m.p1];
-    const p2Picked = !!(md.picks || {})[m.p2];
-    html += `<div class="sub">Runde laeuft: ${m.p1}:${p1Picked ? '✓' : '⏳'} · ${m.p2}:${p2Picked ? '✓' : '⏳'}</div>`;
+    const p1P = !!(md.picks || {})[m.p1];
+    const p2P = !!(md.picks || {})[m.p2];
+    html += `<div class="flash">
+      <b>Status:</b><br>
+      ${m.p1}: ${p1P ? '✅ bereit' : '⏳ wählt...'}<br>
+      ${m.p2}: ${p2P ? '✅ bereit' : '⏳ wählt...'}
+    </div>`;
   }
 
   if (md.history && md.history.length && md.phase !== "done") {
     const last = md.history[md.history.length - 1];
     const b1 = BIER_MAP[last.pick1], b2 = BIER_MAP[last.pick2];
-    const winStr = last.winner ? ` → 🏆 <b>${last.winner}</b>` : ` → 🤝 Unentschieden`;
-    html += `<hr><div class="sub">Letzte Runde: ${last.p1} spielte ${b1.emoji} ${b1.name} vs ${b2.emoji} ${b2.name} ${last.p2}${winStr}</div>`;
+    const winStr = last.winner ? ` → Punkt für <b>${last.winner}</b>` : ` → 🍻 Unentschieden`;
+    html += `<hr><div class="sub">Letzte Runde: ${last.p1} (${b1.emoji}) vs (${b2.emoji}) ${last.p2}${winStr}</div>`;
   }
 
-  html += bh;
-  body.innerHTML = html;
+  body.innerHTML = html + bh;
   
   document.querySelectorAll("[data-bier]").forEach(b => b.onclick = () => bdPick(idx, b.dataset.bier));
   const bn = $("bdNext"); if (bn) bn.onclick = () => advanceTournament(idx, md.winner);
