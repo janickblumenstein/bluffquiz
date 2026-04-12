@@ -260,7 +260,7 @@ async function advanceTournament(idx,winner){
 }
 
 function bracketHtml(t){
-  let html='<h3>Bracket</h3><div class="bracket">';
+  let html='<hr><h3>🏆 Turnierbaum</h3><div class="bracket">';
   const byRound={};
   t.matches.forEach((m,i)=>{(byRound[m.round]=byRound[m.round]||[]).push({...m,idx:i})});
   Object.keys(byRound).sort().forEach(r=>{
