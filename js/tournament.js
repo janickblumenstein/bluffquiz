@@ -545,85 +545,123 @@ async function initTTT(idx,m){
   await update(ref(db,`rooms/${A.room}/tournament/tictactoe`),updates);
   toast(`${Object.keys(updates).length} Match(es) gestartet`);
 }
-async function tttMove(idx,cellIdx,m){
-  const r=ref(db,`rooms/${A.room}/tournament/tictactoe/${idx}`);
-  const d=(await get(r)).val(); if(!d||d.phase!=="play"||d.turn!==A.user) return;
-  if(d.board[cellIdx]) return;
-  const board=[...d.board];
-  const moveCounter=(d.moveCounter||0)+1;
-  // Regel: Spieler hat max. 3 Steine. Wenn ich bereits 3 Steine habe, verschwindet mein aeltester
-  const myCells=board.map((c,i)=>({c,i})).filter(x=>x.c&&x.c.p===A.user).sort((a,b)=>a.c.seq-b.c.seq);
-  if(myCells.length>=3){
-    board[myCells[0].i]=null; // aeltesten entfernen
-  }
-  board[cellIdx]={p:A.user,seq:moveCounter};
-  // Win-Check: Nur mit genau 3 eigenen Steinen
-  const myStones=board.map((c,i)=>c&&c.p===A.user?i:null).filter(x=>x!==null);
-  const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-  let winner=null;
-  if(myStones.length===3){
-    for(const ln of lines){ if(ln.every(ix=>myStones.includes(ix))){ winner=A.user; break; } }
-  }
-  const updates={board,moveCounter};
-  if(winner){ updates.phase="done"; updates.winner=winner; }
-  else updates.turn=A.user===m.p1?m.p2:m.p1;
-  await update(r,updates);
-  if(winner) setTimeout(()=>advanceTournament(idx,winner),2500);
-}
-function renderTicTacToe(t,idx,m,bh){
-  const body=$("officialBody");
-  const md=(t.tictactoe&&t.tictactoe[idx]);
-  if(!md|| !md.board) {
-    body.innerHTML=`<div class="q-big">⭕ ${m.p1} vs ${m.p2}</div>${A.isHost?'<button class="btn-orange" id="tttInit">Match starten</button>':'<div class="sub">Warte auf Host...</div>'}${bh}`;
-    const ti=$("tttInit"); if(ti) ti.onclick=()=>initTTT(idx,m);
-    return;
-  }
+async function tttMove(idx, cellIdx, m) {
+  const r = ref(db, `rooms/${A.room}/tournament/tictactoe/${idx}`);
+  const d = (await get(r)).val();
+  if (!d || d.phase !== "play" || d.turn !== A.user) return;
+  if (d.board[cellIdx] !== 0) return;
 
-  // FALL 2: Das Spiel wurde gestartet, aber das Board-Array ist noch nicht da
-  if (!md.board) {
-    body.innerHTML = `<div class="q-big">Spielfeld wird geladen...</div>${bh}`;
-    return;
-  }
-  
-  const isPlayer=A.user===m.p1||A.user===m.p2;
-  let html=`<div class="q-big">⭕ ${m.p1} vs ${m.p2}</div>`;
-  html+=`<div class="sub" style="text-align:center">Regel: Max. 3 Steine pro Spieler. Beim 4. Zug verschwindet dein aeltester Stein. Nur mit 3 in einer Reihe gewinnst du!</div>`;
-  if(md.phase==="done"){
-    html+=`<div class="flash">🏆 ${md.winner} gewinnt!</div>`;
-    if(A.isHost) html+=`<button class="btn-green" id="tttNext">Naechstes Match</button>`;
-  } else html+=`<div class="sub" style="text-align:center">Am Zug: <b>${md.turn}</b></div>`;
+  const board = [...d.board];
+  const moveCounter = (d.moveCounter || 0) + 1;
 
-  // Board 3x3
-  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:280px;margin:15px auto">';
-  md.board.forEach((cell,i)=>{
-    const isMyTurn=md.turn===A.user&&md.phase==="play"&&isPlayer&&!cell;
-    // Alter-Indikator: Zaehle wie alt der aelteste der betreffenden Spieler ist
-    let style="aspect-ratio:1;background:var(--card2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:bold;cursor:"+(isMyTurn?"pointer":"default")+";border:2px solid #444";
-    let content="";
-    if(cell){
-      // Zeichen: erster Spieler X, zweiter O
-      const cellValue = md.board[i];
-      const symbol = cellValue === 0 ? "" : (cellValue.p === m.p1 ? "✕" : "◯");
-      // Transparenz je nach Alter (aelteste wird blass, wenn Spieler 3 Steine hat)
-      const myOwner=cell.p;
-      const ownerStones=md.board.filter(x=>x&&x.p===myOwner).sort((a,b)=>a.seq-b.seq);
-      const isOldest=ownerStones.length>=3&&ownerStones[0].seq===cell.seq;
-      style+=isOldest?";opacity:.4":"";
-      style+=cell.p===m.p1?";color:var(--gold)":";color:var(--blue)";
-      content=symbol;
+  // Eigene Steine finden und nach Alter (seq) sortieren
+  const myStones = [];
+  board.forEach((cell, i) => {
+    if (cell && typeof cell === 'object' && cell.p === A.user) {
+      myStones.push({ i, seq: cell.seq });
     }
-    html+=`<div style="${style}" data-ttt="${i}">${content}</div>`;
   });
-  html+='</div>';
-  html+=bh;
-  body.innerHTML=html;
-  if(isPlayer&&md.phase==="play"){
-    document.querySelectorAll("[data-ttt]").forEach(c=>{
-      const i=parseInt(c.dataset.ttt);
-      if(!md.board[i]&&md.turn===A.user) c.onclick=()=>tttMove(idx,i,m);
-    });
+  myStones.sort((a, b) => a.seq - b.seq);
+
+  // Wenn man bereits 3 Steine hat, wird der älteste entfernt,
+  // bevor der neue (vierte) gesetzt wird.
+  if (myStones.length >= 3) {
+    board[myStones[0].i] = 0;
   }
-  const tn=$("tttNext"); if(tn) tn.onclick=()=>advanceTournament(idx,md.winner);
+
+  // Neuen Stein setzen
+  board[cellIdx] = { p: A.user, seq: moveCounter };
+
+  // Gewinnprüfung (3 in einer Reihe)
+  const checkWin = (b, p) => {
+    const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return lines.some(ln => ln.every(i => b[i] && b[i].p === p));
+  };
+
+  const isWin = checkWin(board, A.user);
+  const updates = { board, moveCounter };
+
+  if (isWin) {
+    updates.phase = "done";
+    updates.winner = A.user;
+    await update(r, updates);
+    setTimeout(() => advanceTournament(idx, A.user), 2000);
+  } else if (moveCounter >= 20) {
+    // Unentschieden-Logik
+    const winner = Math.random() > 0.5 ? m.p1 : m.p2;
+    updates.phase = "done";
+    updates.winner = winner;
+    updates.isDraw = true; // Flag für "keine Punkte"
+    await update(r, updates);
+    // Turnier weiterschalten ohne awardScore aufzurufen
+    setTimeout(async () => {
+        const tSnap = await get(ref(db, `rooms/${A.room}/tournament`));
+        const t = tSnap.val();
+        const updatedMatches = [...t.matches];
+        updatedMatches[idx].winner = winner;
+        await update(ref(db, `rooms/${A.room}/tournament`), { matches: updatedMatches });
+    }, 2000);
+  } else {
+    updates.turn = A.user === m.p1 ? m.p2 : m.p1;
+    await update(r, updates);
+  }
+}
+function renderTicTacToe(t, idx, m, bh) {
+  const body = $("officialBody");
+  const md = (t.tictactoe && t.tictactoe[idx]);
+
+  if (!md || !md.board) {
+    body.innerHTML = `<div class="q-big">⭕ ${m.p1} vs ${m.p2}</div>${A.isHost ? '<button class="btn-orange" id="tttInit">Match starten</button>' : '<div class="sub">Warte auf Host...</div>'}${bh}`;
+    const ti = $("tttInit"); if (ti) ti.onclick = () => initTTT(idx, m);
+    return;
+  }
+
+  const isPlayer = A.user === m.p1 || A.user === m.p2;
+  let html = `<div class="q-big">${m.p1} vs ${m.p2}</div>`;
+  html += `<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px auto; max-width:300px;">`;
+
+  md.board.forEach((cell, i) => {
+    const isEmpty = !cell || cell === 0;
+    const isMyTurn = md.turn === A.user && md.phase === "play" && isPlayer && isEmpty;
+    
+    // Optik der Zelle
+    let style = `aspect-ratio:1; background:var(--card2); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:bold; border:2px solid #444; transition: all 0.3s;`;
+    if (isMyTurn) style += `cursor:pointer; border-color:var(--gold);`;
+
+    let content = "";
+    if (!isEmpty) {
+        const isP1 = cell.p === m.p1;
+        content = isP1 ? "✕" : "◯";
+        
+        // Finde heraus, ob dieser Stein der älteste des jeweiligen Spielers ist
+        const playerStones = md.board
+            .map((c, index) => ({...c, index}))
+            .filter(c => c && c.p === cell.p)
+            .sort((a, b) => a.seq - b.seq);
+        
+        // Wenn der Spieler 3 Steine hat, markiere den ältesten (index 0) als blass
+        if (playerStones.length >= 3 && playerStones[0].seq === cell.seq) {
+            style += "opacity: 0.3; transform: scale(0.9);";
+        }
+        style += isP1 ? "color:var(--gold);" : "color:var(--blue);";
+    }
+
+    html += `<div style="${style}" onclick="window.tttClick(${i})">${content}</div>`;
+  });
+
+  html += `</div>`;
+  
+  if (md.phase === "play") {
+    html += `<div class="flash ${md.turn === A.user ? 'gold' : ''}">${md.turn === A.user ? 'DU BIST DRAN!' : 'Warten auf ' + md.turn}</div>`;
+    html += `<div class="sub">Zug: ${md.moveCounter} / 20</div>`;
+  } else {
+    html += `<div class="flash gold">SIEG: ${md.winner} ${md.isDraw ? '(AUSGELOST)' : ''}</div>`;
+  }
+
+  body.innerHTML = html + bh;
+  
+  // Klick-Handler global verfügbar machen für das onclick im String
+  window.tttClick = (i) => tttMove(idx, i, m);
 }
 
 // === BIER-DUELL ===
