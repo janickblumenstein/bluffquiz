@@ -866,7 +866,7 @@ function renderBierDuel(t, idx, m, bh) {
       html += `<h3 style="margin-top:0;">Wähle dein Bier:</h3><div class="grid2">`;
       BIERE.forEach(b => {
         const isUsed = used.includes(b.id);
-        const beatsStr = b.name.join(", ");
+        const beatsStr = b.beats.join(", ");
         html += `<button class="${isUsed ? 'btn-ghost' : 'btn-gold'}" ${isUsed ? 'disabled' : ''} data-bier="${b.id}" style="text-align:left; padding:8px; height:auto;">
           <div style="font-size:1rem;">${b.emoji} ${b.name} ${b.type}</div>
           <div style="font-size:0.6rem; opacity:0.6;">Schlägt: ${beatsStr}</div>
