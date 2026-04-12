@@ -551,7 +551,28 @@ async function tttMove(idx, cellIdx, m) {
   if (!d || d.phase !== "play" || d.turn !== A.user) return;
   if (d.board[cellIdx] !== 0) return;
 
-  const board = [...d.board];
+ // --- KUGELSICHERES ARRAY BAUEN ---
+  const board = [];
+  for (let i = 0; i < 9; i++) {
+    // Falls ein Feld undefined oder null ist, mach eine 0 daraus
+    const cell = (d.board && d.board[i]) !== undefined ? d.board[i] : 0;
+    board.push(cell === null ? 0 : cell); 
+  }
+  const moveCounter = (d.moveCounter || 0) + 1;
+
+  // Eigene Steine finden und nach Alter (seq) sortieren
+  const myStones = [];
+  board.forEach((cell, i) => {
+    if (cell && typeof cell === 'object' && cell.p === A.user) {
+      myStones.push({ i, seq: cell.seq });
+    }
+  });
+  myStones.sort((a, b) => a.seq - b.seq);
+
+  // Wenn man bereits 3 Steine hat, wird der älteste entfernt
+  if (myStones.length >= 3) {
+    board[myStones[0].i] = 0;
+  }
   const moveCounter = (d.moveCounter || 0) + 1;
 
   // Eigene Steine finden und nach Alter (seq) sortieren
@@ -620,7 +641,9 @@ function renderTicTacToe(t, idx, m, bh) {
   let html = `<div class="q-big">${m.p1} vs ${m.p2}</div>`;
   html += `<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px auto; max-width:300px;">`;
 
-  md.board.forEach((cell, i) => {
+  // --- IMMER EXAKT 9 BOXEN RENDERN ---
+  for (let i = 0; i < 9; i++) {
+    const cell = (md.board && md.board[i]) ? md.board[i] : 0;
     const isEmpty = !cell || cell === 0;
     const isMyTurn = md.turn === A.user && md.phase === "play" && isPlayer && isEmpty;
     
@@ -634,10 +657,12 @@ function renderTicTacToe(t, idx, m, bh) {
         content = isP1 ? "✕" : "◯";
         
         // Finde heraus, ob dieser Stein der älteste des jeweiligen Spielers ist
-        const playerStones = md.board
-            .map((c, index) => ({...c, index}))
-            .filter(c => c && c.p === cell.p)
-            .sort((a, b) => a.seq - b.seq);
+        const playerStones = [];
+        for (let j=0; j<9; j++) {
+            const c = md.board && md.board[j];
+            if (c && c.p === cell.p) playerStones.push({...c, index: j});
+        }
+        playerStones.sort((a, b) => a.seq - b.seq);
         
         // Wenn der Spieler 3 Steine hat, markiere den ältesten (index 0) als blass
         if (playerStones.length >= 3 && playerStones[0].seq === cell.seq) {
@@ -647,7 +672,7 @@ function renderTicTacToe(t, idx, m, bh) {
     }
 
     html += `<div style="${style}" onclick="window.tttClick(${i})">${content}</div>`;
-  });
+  }
 
   html += `</div>`;
   
