@@ -122,6 +122,18 @@ function renderVoteAction(aa,round,list,entries){
       return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
     }).join("");
   }
+
+  else if(round.type==="revive"){
+    const elimOnly=entries.filter(e=>e[1].status==="eliminated");
+    if(!elimOnly.length){
+      aa.innerHTML=`<hr><h3>🔄 Comeback-Modus:</h3><div class="sub">Es gibt keine eliminierten Städte zum Zurückholen.</div>`;
+    } else {
+      aa.innerHTML=`<hr><h3>Welche Stadt soll ZURÜCK ins Rennen?</h3>`+elimOnly.map(([k,city])=>{
+        const sel=myV===k;
+        return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
+      }).join("");
+    }
+  }
   else if(round.type==="weighted"){
     // Zeige dem User sein Stimmengewicht
     const sortedP=Object.entries(A.players).sort((a,b)=>{
@@ -283,6 +295,26 @@ async function endCityVote(){
     active.forEach(([k])=>{const t=tally[k]||0; if(t<minV){minV=t;lowest=k;}});
     if(lowest){ await update(ref(db,`rooms/${A.room}/cities/list/${lowest}`),{status:"eliminated"}); toast(`${list[lowest].name} fliegt raus`); }
   }
+
+  else if(r.type==="revive"){
+    Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
+    const elim=Object.entries(list).filter(e=>e[1].status==="eliminated");
+    let highest=null,maxV=0; // maxV=0 stellt sicher, dass mind. 1 Stimme nötig ist
+    
+    // Finde die eliminierte Stadt mit den meisten Stimmen
+    elim.forEach(([k])=>{
+      const t=tally[k]||0; 
+      if(t>maxV){maxV=t; highest=k;}
+    });
+    
+    if(highest){ 
+      await update(ref(db,`rooms/${A.room}/cities/list/${highest}`),{status:"active"}); 
+      toast(`🔄 ${list[highest].name} ist wieder im Rennen!`); 
+    } else {
+      toast("Keine Stadt zurückgeholt (Niemand hat abgestimmt).");
+    }
+  }
+    
   else if(r.type==="weighted"){
     // Stimmen gewichtet nach Rang: 1. Platz = 3x, 2.-3. Platz = 2x, Rest = 1x
     const sortedP=Object.entries(A.players).sort((a,b)=>{
