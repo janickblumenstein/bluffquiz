@@ -569,7 +569,7 @@ async function tttMove(idx,cellIdx,m){
 function renderTicTacToe(t,idx,m,bh){
   const body=$("officialBody");
   const md=(t.tictactoe&&t.tictactoe[idx]);
-  if(!md){
+  if(!md|| !md.board) {
     body.innerHTML=`<div class="q-big">⭕ ${m.p1} vs ${m.p2}</div>${A.isHost?'<button class="btn-orange" id="tttInit">Match starten</button>':'<div class="sub">Warte auf Host...</div>'}${bh}`;
     const ti=$("tttInit"); if(ti) ti.onclick=()=>initTTT(idx,m);
     return;
