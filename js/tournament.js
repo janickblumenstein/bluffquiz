@@ -11,7 +11,7 @@ function initRefs(){
 const BS_SIZE=6, BS_SHIPS=[{name:"Estrella-Frachter",len:3},{name:"Mahou-Boot",len:2},{name:"Cana-Kahn",len:2},{name:"Shot-Glas",len:1}];
 
 // === BIER-DUELL Konstanten ===
-onst BIERE = [
+const BIERE = [
   // Favorit (Stark: schlägt 3 Biere + Wasser)
   {id:"amsterdam", name:"Amsterdam", type:"IPA",    emoji:"🌿", beats:["berlin","zofingen","edinburgh","wasser"]},
   
