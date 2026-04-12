@@ -1,17 +1,41 @@
 // === solo.js - Solo-Spiele (Casual-Punkte) ===
 const A=window.App, {$,toast,awardScore,shuffle}=A;
 
-const SCHAETZ=[
-  {q:"Einwohner Palma de Mallorca?",a:416065},
-  {q:"Hoehe Kathedrale La Seu in Metern?",a:44},
-  {q:"Laenge Mallorcas Kueste in km?",a:550},
+const SCHAETZ_FAKTEN = [
+  {q:"Einwohner Mallorca gesamt?",a:920000},
+  {q:"Anzahl Strände auf Mallorca?",a:262},
+  {q:"Hoechster Berg (Puig Major) in Metern?",a:1445},
+  {q:"Laenge der Insel (Nord-Sued) in km?",a:100},
+  {q:"Breite der Insel (Ost-West) in km?",a:75},
+  {q:"Kueste Mallorcas in km?",a:550},
   {q:"Anzahl Inseln der Balearen?",a:151},
-  {q:"Durchschnittstemperatur Palma April Celsius?",a:18},
-  {q:"Km Palma-Barcelona Luftlinie?",a:230},
-  {q:"Sonnenstunden Mallorca pro Jahr?",a:2800},
-  {q:"Hoechster Berg Mallorcas in Metern?",a:1445},
-  {q:"Touristen pro Jahr in Millionen?",a:14},
-  {q:"Preis eines Estrella am Ballermann (Euro)?",a:5}
+  {q:"Durchschnittliche Wassertemperatur Mai (C)?",a:19},
+  {q:"Durchschnittliche Tagestemperatur Mai (C)?",a:24},
+  {q:"Sonnenstunden pro Jahr Mallorca?",a:2800},
+
+  {q:"Flughafen Palma Passagiere pro Jahr (Mio)?",a:31},
+  {q:"Anzahl Fluege pro Tag Hochsaison?",a:1000},
+  {q:"Einwohner Palma?",a:416000},
+  {q:"Hoehe Kathedrale La Seu (m)?",a:44},
+  {q:"Baujahr Beginn Kathedrale?",a:1229},
+
+  {q:"Laenge Playa de Palma in km?",a:6},
+  {q:"Anzahl Balnearios (Strandabschnitte)?",a:15},
+  {q:"Liter in einem Sangria-Eimer?",a:3},
+  {q:"Kalorien in 1 Liter Bier?",a:430},
+  {q:"Durchschnittspreis Bier am Ballermann (Euro)?",a:5},
+
+  {q:"Wie viele Deutsche leben auf Mallorca (ca.)?",a:20000},
+  {q:"Touristen pro Jahr Mallorca (Mio)?",a:14},
+  {q:"Groesse Mallorca in km²?",a:3640},
+  {q:"Hoechste Klippe Mallorcas (m)?",a:384},
+  {q:"Durchschnittliche Niederschlagstage pro Jahr?",a:60},
+
+  {q:"Distanz Palma–Barcelona (km Luftlinie)?",a:230},
+  {q:"Anzahl Yachthae fen auf Mallorca?",a:46},
+  {q:"Anzahl Golfplaetze auf Mallorca?",a:24},
+  {q:"Durchschnittliche Hotelauslastung Sommer (%)?",a:85},
+  {q:"Durchschnittliche Biermenge pro Tourist/Woche (Liter, geschätzt)?",a:15}
 ];
 // Exportiere fuer andere Module
 A.SCHAETZ=SCHAETZ;
