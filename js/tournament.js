@@ -305,7 +305,7 @@ function renderTournament(t){
   if(t.gameType==="bierduel") return renderBierDuel(t,idx,m,bh+picker);
   if(t.gameType==="memory") return renderMemory(t,idx,m,bh+picker);
   if(t.gameType==="roulette") return renderRoulette(t,idx,m,bh+picker);
-  if(t.gameType==="stopwatch") return renderRoulette(t,idx,m,bh+picker);
+  if(t.gameType==="stopwatch") return renderStopwatch(t,idx,m,bh+picker);
 }
 
 // === REACTION (First-Click-Wins via Transaction) ===
