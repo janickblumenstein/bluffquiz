@@ -981,7 +981,7 @@ function renderBattleship(t,idx,m,bh){
   if(md.phase==="done"){
     html+=`<div class="flash">🏆 ${md.winner} gewinnt!</div>`;
     if(A.isHost) html+=`<button class="btn-green" id="bsNext">Naechstes Match</button>`;
-  } else html+=`<div class="sub" style="text-align:center">Am Zug: <b>${md.turn}</b></div>`;
+  } //else html+=`<div class="sub" style="text-align:center">Am Zug: <b>${md.turn}</b></div>`;
 
   if(isPlayer){
     html+='<div class="bs-label">Deine Schiffe:</div><div class="bs-grid">';
@@ -997,6 +997,9 @@ function renderBattleship(t,idx,m,bh){
         cls+=sh.cells.every(c=>(sh.hits||[]).includes(c))?" sunk":" hit";
       } else if(wasShot) cls+=" miss";
       html+=`<div class="${cls}"></div>`;
+    } html+='</div>';
+    if (md.phase === "play") {
+        html += `<div class="flash ${md.turn === A.user ? 'gold' : ''}" style="text-align:center; margin:15px 0 5px 0; padding:8px;">Am Zug: <b>${md.turn}</b></div>`;
     }
     html+='</div><div class="bs-label">Gegner-Feld:</div><div class="bs-grid" id="bsOpp">';
     const oppB=md.boards[opp];
@@ -1100,7 +1103,7 @@ async function tttMove(idx, cellIdx, m) {
   myStones.sort((a, b) => a.seq - b.seq);
 
   // Wenn man bereits 3 Steine hat, wird der älteste entfernt
-  if (myStones.length >= 3) {
+  if (myStones.length >= 4) {
     board[myStones[0].i] = 0;
   }
 
@@ -1180,8 +1183,9 @@ function renderTicTacToe(t, idx, m, bh) {
         }
         playerStones.sort((a, b) => a.seq - b.seq);
         
-        // Wenn der Spieler 3 Steine hat, markiere den ältesten (index 0) als blass
-        if (playerStones.length >= 3 && playerStones[0].seq === cell.seq) {
+        // NEU: Wenn der Spieler 4 Steine hat, markiere den ältesten (index 0) als blass...
+        // ABER NUR, wenn es der Stein des GEGNERS ist!
+        if (playerStones.length >= 4 && playerStones[0].seq === cell.seq && cell.p !== A.user) {
             style += "opacity: 0.3; transform: scale(0.9);";
         }
         style += isP1 ? "color:var(--gold);" : "color:var(--blue);";
