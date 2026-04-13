@@ -1,24 +1,59 @@
-// === cities.js - Staedte-Voting mit Karte, Tabelle und 50 Metropolen ===
+// === cities.js - Staedte-Voting mit Karte, Sticky-Tabelle und Metropolen-Daten ===
 const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore}=A;
 
+// Erweiterte Datenbank: Koordinaten, Ø Bierpreis (CHF), Ø Temp Mai (°C), Flugzeit ab Basel (ca.)
 const EUROPE_CITIES = {
-  "Amsterdam": [52.3676, 4.9041], "Athen": [37.9838, 23.7275], "Barcelona": [41.3851, 2.1734],
-  "Belgrad": [44.7866, 20.4489], "Berlin": [52.5200, 13.4050], "Bratislava": [48.1486, 17.1077],
-  "Budapest": [47.4979, 19.0402], "Bukarest": [44.4268, 26.1025], "Dublin": [53.3498, -6.2603],
-  "Dubrovnik": [42.6507, 18.0944], "Edinburgh": [55.9533, -3.1883], "Florenz": [43.7696, 11.2558],
-  "Hamburg": [53.5511, 9.9937], "Helsinki": [60.1695, 24.9354], "Ibiza-Stadt": [38.9067, 1.4206],
-  "Istanbul": [41.0082, 28.9784], "Kopenhagen": [55.6761, 12.5683], "Krakau": [50.0647, 19.9450],
-  "Lissabon": [38.7223, -9.1393], "London": [51.5074, -0.1278], "Madrid": [40.4168, -3.7038],
-  "Mailand": [45.4642, 9.1900], "Málaga": [36.7213, -4.4213], "München": [48.1351, 11.5820],
-  "Neapel": [40.8518, 14.2681], "Oslo": [59.9139, 10.7522], "Palma de Mallorca": [39.5696, 2.6502],
-  "Paris": [48.8566, 2.3522], "Porto": [41.1579, -8.6291], "Prag": [50.0755, 14.4378],
-  "Reykjavik": [64.1466, -21.9426], "Riga": [56.9496, 24.1052], "Rom": [41.9028, 12.4964],
-  "Sevilla": [37.3891, -5.9845], "Sofia": [42.6977, 23.3219], "Split": [43.5081, 16.4402],
-  "Stockholm": [59.3293, 18.0686], "Tallinn": [59.4370, 24.7536], "Valletta": [35.8989, 14.5146],
-  "Valencia": [39.4699, -0.3763], "Venedig": [45.4408, 12.3155], "Warschau": [52.2297, 21.0122],
-  "Wien": [48.2082, 16.3738], "Zagreb": [45.8150, 15.9819], "Zürich": [47.3769, 8.5417],
-  "Kiew": [50.4501, 30.5234], "Lyon": [45.7640, 4.8357], "Marseille": [43.2965, 5.3698],
-  "Turin": [45.0703, 7.6869], "Bordeaux": [44.8378, -0.5792], "Las Vegas" [36.1691, -115.1499]
+  "Amsterdam": { coords: [52.3676, 4.9041], beer: 6.5, temp: 13, flight: "1h 25m" },
+  "Athen": { coords: [37.9838, 23.7275], beer: 4.5, temp: 21, flight: "2h 40m" },
+  "Barcelona": { coords: [41.3851, 2.1734], beer: 3.5, temp: 18, flight: "1h 50m" },
+  "Belgrad": { coords: [44.7866, 20.4489], beer: 2.5, temp: 18, flight: "1h 45m" },
+  "Berlin": { coords: [52.5200, 13.4050], beer: 4.5, temp: 14, flight: "1h 20m" },
+  "Bratislava": { coords: [48.1486, 17.1077], beer: 2.5, temp: 16, flight: "1h 25m" },
+  "Budapest": { coords: [47.4979, 19.0402], beer: 2.5, temp: 17, flight: "1h 35m" },
+  "Bukarest": { coords: [44.4268, 26.1025], beer: 2.5, temp: 18, flight: "2h 20m" },
+  "Dublin": { coords: [53.3498, -6.2603], beer: 6.5, temp: 11, flight: "2h 05m" },
+  "Dubrovnik": { coords: [42.6507, 18.0944], beer: 4.0, temp: 18, flight: "1h 45m" },
+  "Edinburgh": { coords: [55.9533, -3.1883], beer: 6.0, temp: 11, flight: "2h 00m" },
+  "Florenz": { coords: [43.7696, 11.2558], beer: 5.5, temp: 19, flight: "1h 15m" },
+  "Hamburg": { coords: [53.5511, 9.9937], beer: 4.5, temp: 13, flight: "1h 15m" },
+  "Helsinki": { coords: [60.1695, 24.9354], beer: 7.5, temp: 10, flight: "2h 45m" },
+  "Ibiza-Stadt": { coords: [38.9067, 1.4206], beer: 6.0, temp: 19, flight: "1h 55m" },
+  "Istanbul": { coords: [41.0082, 28.9784], beer: 3.5, temp: 18, flight: "2h 55m" },
+  "Kopenhagen": { coords: [55.6761, 12.5683], beer: 7.0, temp: 12, flight: "1h 40m" },
+  "Krakau": { coords: [50.0647, 19.9450], beer: 3.0, temp: 15, flight: "1h 35m" },
+  "Lissabon": { coords: [38.7223, -9.1393], beer: 3.0, temp: 18, flight: "2h 40m" },
+  "London": { coords: [51.5074, -0.1278], beer: 7.0, temp: 14, flight: "1h 35m" },
+  "Madrid": { coords: [40.4168, -3.7038], beer: 3.5, temp: 18, flight: "2h 10m" },
+  "Mailand": { coords: [45.4642, 9.1900], beer: 5.5, temp: 18, flight: "0h 55m" },
+  "Málaga": { coords: [36.7213, -4.4213], beer: 3.0, temp: 20, flight: "2h 35m" },
+  "München": { coords: [48.1351, 11.5820], beer: 5.0, temp: 14, flight: "0h 55m" },
+  "Neapel": { coords: [40.8518, 14.2681], beer: 3.5, temp: 20, flight: "1h 45m" },
+  "Oslo": { coords: [59.9139, 10.7522], beer: 9.0, temp: 12, flight: "2h 20m" },
+  "Palma de Mallorca": { coords: [39.5696, 2.6502], beer: 4.0, temp: 19, flight: "1h 50m" },
+  "Paris": { coords: [48.8566, 2.3522], beer: 7.5, temp: 15, flight: "1h 15m" },
+  "Porto": { coords: [41.1579, -8.6291], beer: 2.5, temp: 17, flight: "2h 30m" },
+  "Prag": { coords: [50.0755, 14.4378], beer: 2.5, temp: 15, flight: "1h 20m" },
+  "Reykjavik": { coords: [64.1466, -21.9426], beer: 10.0, temp: 7, flight: "3h 50m" },
+  "Riga": { coords: [56.9496, 24.1052], beer: 4.0, temp: 12, flight: "2h 25m" },
+  "Rom": { coords: [41.9028, 12.4964], beer: 5.0, temp: 21, flight: "1h 35m" },
+  "Sevilla": { coords: [37.3891, -5.9845], beer: 3.0, temp: 22, flight: "2h 35m" },
+  "Sofia": { coords: [42.6977, 23.3219], beer: 2.0, temp: 16, flight: "2h 15m" },
+  "Split": { coords: [43.5081, 16.4402], beer: 3.5, temp: 20, flight: "1h 35m" },
+  "Stockholm": { coords: [59.3293, 18.0686], beer: 7.5, temp: 12, flight: "2h 25m" },
+  "Tallinn": { coords: [59.4370, 24.7536], beer: 4.5, temp: 11, flight: "2h 40m" },
+  "Valletta": { coords: [35.8989, 14.5146], beer: 4.0, temp: 20, flight: "2h 15m" },
+  "Valencia": { coords: [39.4699, -0.3763], beer: 3.0, temp: 19, flight: "2h 05m" },
+  "Venedig": { coords: [45.4408, 12.3155], beer: 6.0, temp: 18, flight: "1h 10m" },
+  "Warschau": { coords: [52.2297, 21.0122], beer: 3.5, temp: 15, flight: "1h 55m" },
+  "Wien": { coords: [48.2082, 16.3738], beer: 4.5, temp: 16, flight: "1h 20m" },
+  "Zagreb": { coords: [45.8150, 15.9819], beer: 3.0, temp: 17, flight: "1h 25m" },
+  "Zürich": { coords: [47.3769, 8.5417], beer: 8.0, temp: 14, flight: "0h 0m" },
+  "Kiew": { coords: [50.4501, 30.5234], beer: 2.0, temp: 16, flight: "2h 40m" },
+  "Lyon": { coords: [45.7640, 4.8357], beer: 6.0, temp: 16, flight: "1h 00m" },
+  "Marseille": { coords: [43.2965, 5.3698], beer: 5.5, temp: 18, flight: "1h 25m" },
+  "Turin": { coords: [45.0703, 7.6869], beer: 5.0, temp: 17, flight: "1h 00m" },
+  "Bordeaux": { coords: [44.8378, -0.5792], beer: 6.0, temp: 17, flight: "1h 35m" },
+  "Las Vegas": { coords: [36.1691, -115.1499], beer: 8.5, temp: 28, flight: "14h 00m" }
 };
 
 let map = null;
@@ -48,7 +83,8 @@ function updateMap(entries) {
   markers = {};
   
   entries.forEach(([id, city]) => {
-    const coords = EUROPE_CITIES[city.name] || [47.3769, 8.5417]; 
+    const defaultData = EUROPE_CITIES[city.name] || { coords: [47.3769, 8.5417] }; 
+    const coords = defaultData.coords;
     const isElim = city.status === 'eliminated';
     
     const marker = L.circleMarker(coords, {
@@ -62,23 +98,35 @@ function updateMap(entries) {
     let popupHtml = `<div style="color:#000; text-align:center;">
       <b style="font-size:1.1rem">${city.name}</b><br>
       <span style="font-weight:bold; color:${city.votes < 0 ? 'red' : 'green'}">Stimmen: ${city.votes || 0}</span>
+      <div style="font-size:0.75rem; margin-top:5px; opacity:0.8;">
+         ${city.beerPrice ? `🍻 CHF ${city.beerPrice}` : ''} 
+         ${city.tempMay ? ` · ☀️ ${city.tempMay}°C` : ''}
+      </div>
     </div>`;
     marker.bindPopup(popupHtml);
     markers[id] = marker;
   });
 }
 
-// Global verfügbar machen für HTML Event-Handler
 window.openCityEditor = openCityEditor;
-
 
 // === SEED ===
 const prevSeed=A.listeners.seedDefaults;
 A.listeners.seedDefaults=async()=>{
   if(prevSeed) await prevSeed();
   const cityObj={};
-  const startCities = ["Lissabon", "Prag", "Las Vega", "Budapest", "Valencia"];
-  startCities.forEach((n,i)=>{cityObj["c_"+i]={name:n,status:"active",votes:0,price:"",depCh:"",depBack:""}});
+  const startCities = ["Lissabon", "Prag", "Las Vegas", "Budapest", "Valencia"];
+  
+  startCities.forEach((n,i)=>{
+    const data = EUROPE_CITIES[n] || {};
+    cityObj["c_"+i]={
+      name: n, status: "active", votes: 0, 
+      price: "", depCh: "", depBack: "",
+      beerPrice: data.beer || "", 
+      tempMay: data.temp || "", 
+      flightTime: data.flight || ""
+    };
+  });
   await set(ref(db,`rooms/${A.room}/cities/list`),cityObj);
 };
 
@@ -121,35 +169,33 @@ function renderCities(){
 
 // Hilfsfunktionen fürs Sortieren
 function parsePrice(str) {
-    if(!str) return Infinity; // Leere ans Ende
-    const m = str.match(/\d+/);
-    return m ? parseInt(m[0]) : Infinity;
+    if(!str && str !== 0) return Infinity; 
+    const num = parseFloat(String(str).replace(/[^\d.-]/g, ''));
+    return isNaN(num) ? Infinity : num;
+}
+function parseDuration(str) {
+    if (!str) return Infinity;
+    let mins = 0;
+    const hMatch = str.match(/(\d+)\s*h/i);
+    const mMatch = str.match(/(\d+)\s*m/i);
+    if (hMatch) mins += parseInt(hMatch[1]) * 60;
+    if (mMatch) mins += parseInt(mMatch[1]);
+    if (!hMatch && !mMatch) {
+        const num = parseFloat(str);
+        if (!isNaN(num)) return num; 
+    }
+    return mins || Infinity;
 }
 function parseDateForSort(str) {
-    if(!str || str.trim() === "") return Infinity; // Leere Felder ans Ende
-
-    // Standardwerte: Wir gehen von Mai (Monat 5) aus, falls nichts angegeben ist
+    if(!str || str.trim() === "") return Infinity; 
     let day = 0, month = 5, hour = 0, minute = 0; 
-
-    // 1. Uhrzeit suchen (sucht nach HH:MM oder HH.MM)
     const timeMatch = str.match(/(\d{1,2})[:.](\d{2})/);
-    if (timeMatch) {
-        hour = parseInt(timeMatch[1], 10);
-        minute = parseInt(timeMatch[2], 10);
-    }
-
-    // 2. Datum suchen (sucht nach DD.MM. oder nur DD.)
-    // Akzeptiert: "12.05.", "12.5.", "12.05", "12."
+    if (timeMatch) { hour = parseInt(timeMatch[1], 10); minute = parseInt(timeMatch[2], 10); }
     const dateMatch = str.match(/(\d{1,2})\.(\d{1,2})?/) || str.match(/(\d{1,2})/);
-    
     if (dateMatch) {
         day = parseInt(dateMatch[1], 10);
-        if (dateMatch[2]) {
-            month = parseInt(dateMatch[2], 10); // Falls ein Monat da ist, überschreibe den Mai
-        }
+        if (dateMatch[2]) month = parseInt(dateMatch[2], 10); 
     }
-
-    // Wir berechnen eine sortierbare Zahl (z.B. Monat 5, Tag 12, 14:30 Uhr -> 5121430)
     return (month * 1000000) + (day * 10000) + (hour * 100) + minute;
 }
 
@@ -157,7 +203,6 @@ function renderCitiesTable(entries) {
     const listDiv = $("citiesList");
     if(!listDiv) return;
 
-    // Globale Sortier-Richtung merken
     window._citySort = window._citySort || { col: 'votes', asc: false };
     const sort = window._citySort;
 
@@ -166,15 +211,15 @@ function renderCitiesTable(entries) {
         const cA = a[1];
         const cB = b[1];
 
-        // Eliminierte immer nach unten
-        if (cA.status !== cB.status) {
-            return cA.status === 'active' ? -1 : 1;
-        }
+        if (cA.status !== cB.status) return cA.status === 'active' ? -1 : 1;
 
         let valA, valB;
         if(sort.col === 'name') { valA = cA.name.toLowerCase(); valB = cB.name.toLowerCase(); }
         else if(sort.col === 'votes') { valA = cA.votes || 0; valB = cB.votes || 0; }
         else if(sort.col === 'price') { valA = parsePrice(cA.price); valB = parsePrice(cB.price); }
+        else if(sort.col === 'beerPrice') { valA = parsePrice(cA.beerPrice); valB = parsePrice(cB.beerPrice); }
+        else if(sort.col === 'tempMay') { valA = parsePrice(cA.tempMay); valB = parsePrice(cB.tempMay); }
+        else if(sort.col === 'flightTime') { valA = parseDuration(cA.flightTime); valB = parseDuration(cB.flightTime); }
         else if(sort.col === 'depCh') { valA = parseDateForSort(cA.depCh); valB = parseDateForSort(cB.depCh); }
         else if(sort.col === 'depBack') { valA = parseDateForSort(cA.depBack); valB = parseDateForSort(cB.depBack); }
 
@@ -187,19 +232,22 @@ function renderCitiesTable(entries) {
 
     let html = `<div style="overflow-x:auto; margin-top:15px; border-radius:8px; border:1px solid var(--border);">
         <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.8rem; white-space:nowrap;">
-        <thead style="background:var(--card2); cursor:pointer; user-select:none;">
+        <thead style="cursor:pointer; user-select:none;">
             <tr>
-                <th style="padding:10px;" onclick="window.setCitySort('name')">Stadt${indicator('name')}</th>
-                <th style="padding:10px;" onclick="window.setCitySort('votes')">Pkt${indicator('votes')}</th>
-                <th style="padding:10px;" onclick="window.setCitySort('price')">Preis${indicator('price')}</th>
-                <th style="padding:10px;" onclick="window.setCitySort('depCh')">Hinflug${indicator('depCh')}</th>
-                <th style="padding:10px;" onclick="window.setCitySort('depBack')">Rückflug${indicator('depBack')}</th>
+                <th style="padding:10px; position:sticky; left:0; background:var(--card2); z-index:2; border-right:1px solid var(--border);" onclick="window.setCitySort('name')">Stadt${indicator('name')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('votes')">Pkt${indicator('votes')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('price')">Budget${indicator('price')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('beerPrice')">0.5l Bier${indicator('beerPrice')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('tempMay')">Temp Mai${indicator('tempMay')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('flightTime')">Flugzeit${indicator('flightTime')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('depCh')">Hinflug${indicator('depCh')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('depBack')">Rückflug${indicator('depBack')}</th>
             </tr>
         </thead>
         <tbody>`;
 
     if(sorted.length === 0) {
-        html += `<tr><td colspan="5" style="padding:10px; text-align:center; opacity:0.5;">Keine Städte vorhanden</td></tr>`;
+        html += `<tr><td colspan="8" style="padding:10px; text-align:center; opacity:0.5;">Keine Städte vorhanden</td></tr>`;
     }
 
     sorted.forEach(([id, city]) => {
@@ -207,14 +255,17 @@ function renderCitiesTable(entries) {
         const rowStyle = isElim ? 'opacity:0.4; text-decoration:line-through;' : '';
         const clickAction = A.isHost ? `onclick="window.openCityEditor('${id}')" style="cursor:pointer;"` : '';
 
-        html += `<tr style="border-top:1px solid var(--border); background:var(--card); transition:background 0.2s;" ${clickAction}>
-            <td style="padding:10px; font-weight:bold; ${rowStyle}">${city.name}</td>
-            <td style="padding:10px; ${rowStyle}">
+        html += `<tr style="border-top:1px solid var(--border); transition:background 0.2s;" ${clickAction}>
+            <td style="padding:10px; font-weight:bold; ${rowStyle} position:sticky; left:0; background:var(--card); z-index:1; border-right:1px solid var(--border);">${city.name}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">
                 <span class="vote-pill ${city.votes < 0 ? 'neg' : ''}" style="display:inline-block; padding:2px 6px;">${city.votes>0?'+':''}${city.votes||0}</span>
             </td>
-            <td style="padding:10px; ${rowStyle}">${city.price || '-'}</td>
-            <td style="padding:10px; font-size:0.7rem; ${rowStyle}">${city.depCh || '-'}</td>
-            <td style="padding:10px; font-size:0.7rem; ${rowStyle}">${city.depBack || '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.price || '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.beerPrice ? 'CHF ' + city.beerPrice : '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.tempMay ? city.tempMay + ' °C' : '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.flightTime || '-'}</td>
+            <td style="padding:10px; background:var(--card); font-size:0.7rem; ${rowStyle}">${city.depCh || '-'}</td>
+            <td style="padding:10px; background:var(--card); font-size:0.7rem; ${rowStyle}">${city.depBack || '-'}</td>
         </tr>`;
     });
 
@@ -230,8 +281,9 @@ window.setCitySort = (col) => {
         window._citySort.asc = !window._citySort.asc;
     } else {
         window._citySort.col = col;
-        // Preis/Flüge standardmäßig aufsteigend sortieren (günstigste/früheste zuerst)
-        window._citySort.asc = (col === 'price' || col === 'depCh' || col === 'depBack') ? true : false;
+        // Preis/Zeiten standardmäßig aufsteigend (günstigste/schnellste/früheste zuerst). Temperatur standardmäßig absteigend (wärmste zuerst).
+        if (col === 'tempMay' || col === 'votes') window._citySort.asc = false;
+        else window._citySort.asc = true;
     }
     renderCitiesTable(Object.entries((A.state.cities||{}).list||{}));
 };
@@ -239,7 +291,6 @@ window.setCitySort = (col) => {
 function renderVoteAction(aa,round,list,entries){
   const myV=(round.votes||{})[A.user];
   const me=A.players[A.user]||{};
-  // Sortiere für die Voting-Buttons rein alphabetisch (ist übersichtlicher)
   const activeOnly=entries.filter(e=>e[1].status==="active").sort((a,b) => a[1].name.localeCompare(b[1].name));
 
   if(round.type==="pos3"){
@@ -368,14 +419,24 @@ function openCityEditor(cid){
   panel.classList.remove("hidden");
   $("cityEditBody").innerHTML=`
     <div class="q-big" style="font-size:1.1rem">${city.name}</div>
-    <label class="sub">Name (Muss in Liste existieren fuer Koordinaten):</label>
-    <input id="edName" value="${city.name||''}">
-    <label class="sub">Preis (z.B. CHF 250):</label>
+    <label class="sub">Reisebudget (z.B. CHF 250):</label>
     <input id="edPrice" value="${city.price||''}" placeholder="z.B. CHF 250">
-    <label class="sub">Abflug von CH:</label>
-    <input id="edDepCh" value="${city.depCh||''}" placeholder="z.B. 12. 14:30 (Tag. Zeit)">
-    <label class="sub">Abflug zurueck:</label>
-    <input id="edDepBack" value="${city.depBack||''}" placeholder="z.B. 14. 18:00 (Tag. Zeit)">
+    <div class="grid2">
+       <div>
+           <label class="sub">Bierpreis (CHF):</label>
+           <input id="edBeer" type="number" step="0.5" value="${city.beerPrice||''}" placeholder="z.B. 4.5">
+       </div>
+       <div>
+           <label class="sub">Temp Mai (°C):</label>
+           <input id="edTemp" type="number" value="${city.tempMay||''}" placeholder="z.B. 21">
+       </div>
+    </div>
+    <label class="sub">Flugzeit (z.B. 1h 30m):</label>
+    <input id="edFlight" value="${city.flightTime||''}" placeholder="z.B. 1h 30m">
+    <label class="sub">Hinflug:</label>
+    <input id="edDepCh" value="${city.depCh||''}" placeholder="z.B. 12. 14:30">
+    <label class="sub">Rückflug:</label>
+    <input id="edDepBack" value="${city.depBack||''}" placeholder="z.B. 14. 18:00">
     <div class="row">
       <button class="btn-green" id="edSave">💾 Speichern</button>
       <button class="btn-red" id="edDelete">🗑️ Loeschen</button>
@@ -384,8 +445,10 @@ function openCityEditor(cid){
   `;
   $("edSave").onclick=async()=>{
     await update(ref(db,`rooms/${A.room}/cities/list/${cid}`),{
-      name:$("edName").value.trim(),
       price:$("edPrice").value.trim(),
+      beerPrice:$("edBeer").value.trim(),
+      tempMay:$("edTemp").value.trim(),
+      flightTime:$("edFlight").value.trim(),
       depCh:$("edDepCh").value.trim(),
       depBack:$("edDepBack").value.trim()
     });
@@ -409,8 +472,19 @@ async function addCity(){
   const exists = Object.values(list).some(c => c.name === v);
   if(exists) return toast("Stadt existiert bereits!");
 
-  await set(ref(db,`rooms/${A.room}/cities/list/c_${Date.now()}`),{name:v,status:"active",votes:0,price:"",depCh:"",depBack:""});
-  $("newCity").value=""; // Reset dropdown
+  const data = EUROPE_CITIES[v] || {};
+  await set(ref(db,`rooms/${A.room}/cities/list/c_${Date.now()}`),{
+      name: v, 
+      status: "active", 
+      votes: 0, 
+      price: "", 
+      depCh: "", 
+      depBack: "",
+      beerPrice: data.beer || "",
+      tempMay: data.temp || "",
+      flightTime: data.flight || ""
+  });
+  $("newCity").value=""; 
   toast("Stadt hinzugefuegt");
 }
 
