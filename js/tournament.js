@@ -63,6 +63,7 @@ A.listeners.onReady=()=>{
     else if(t==="battleship-tournament") b.onclick=()=>startSetup("battleship");
     else if(t==="tictactoe-tournament") b.onclick=()=>startSetup("tictactoe");
     else if(t==="bierduel-tournament") b.onclick=()=>startSetup("bierduel");
+    else if(t==="memory-tournament") b.onclick=()=>startSetup("memory");
   });
 };
 
@@ -300,6 +301,7 @@ function renderTournament(t){
   if(t.gameType==="battleship") return renderBattleship(t,idx,m,bh+picker);
   if(t.gameType==="tictactoe") return renderTicTacToe(t,idx,m,bh+picker);
   if(t.gameType==="bierduel") return renderBierDuel(t,idx,m,bh+picker);
+  if(t.gameType==="memory") return renderMemory(t,idx,m,bh+picker);
 }
 
 // === REACTION (First-Click-Wins via Transaction) ===
@@ -411,6 +413,188 @@ function placeShipsRandom(){
     while(!placed&&tries<700){ tries++; placed=tryPlace(false); }
   }
   return {ships,shotsAt:[]};
+}
+
+// === BIER-MEMORY ===
+async function initMemory(idx, m) {
+  if (!A.isHost) return;
+  const t = (await get(ref(db, `rooms/${A.room}/tournament`))).val();
+  if (!t) return;
+  const myRound = t.matches[idx].round;
+  const updates = {};
+
+  // Wir nehmen die 8 Biere + 1 Schnaps = 9 Items -> 18 Karten (Immer ein Sieger!)
+  const pool = BIERE.filter(b => b.id !== "wasser"); 
+  let deck = [];
+  pool.forEach(b => { deck.push(b.id); deck.push(b.id); }); // Jedes Item 2x
+
+  t.matches.forEach((mt, i) => {
+    if (mt.round === myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2) {
+      if (!(t.memory && t.memory[i])) {
+        // Deck für jedes Match individuell mischen
+        const shuffledDeck = shuffle([...deck]);
+        // State: hidden, flipped, matched
+        const board = shuffledDeck.map(id => ({ id, state: "hidden" }));
+        
+        updates[i] = {
+          board: board,
+          turn: mt.p1,
+          phase: "play",
+          scores: { [mt.p1]: 0, [mt.p2]: 0 },
+          startedAt: Date.now()
+        };
+      }
+    }
+  });
+  await update(ref(db, `rooms/${A.room}/tournament/memory`), updates);
+  toast(`${Object.keys(updates).length} Match(es) gestartet`);
+}
+
+async function memFlip(idx, cardIdx, m) {
+  const r = ref(db, `rooms/${A.room}/tournament/memory/${idx}`);
+  const d = (await get(r)).val();
+  if (!d || d.phase !== "play" || d.turn !== A.user) return;
+
+  const board = [...d.board];
+  if (board[cardIdx].state !== "hidden") return; // Bereits aufgedeckt oder gematcht
+
+  // Zähle, wie viele Karten gerade "flipped" (aber noch kein Paar) sind
+  const currentlyFlipped = board.map((c, i) => ({...c, i})).filter(c => c.state === "flipped");
+  let updates = {};
+
+  // FALL 1: Es liegen noch 2 falsche Karten vom vorherigen Zug offen.
+  // Klick versteckt diese beiden und deckt die neue auf.
+  if (currentlyFlipped.length === 2) {
+      board[currentlyFlipped[0].i].state = "hidden";
+      board[currentlyFlipped[1].i].state = "hidden";
+      board[cardIdx].state = "flipped";
+      updates.board = board;
+      await update(r, updates);
+      return;
+  }
+
+  // FALL 2: Es ist die erste Karte in diesem Zug
+  if (currentlyFlipped.length === 0) {
+      board[cardIdx].state = "flipped";
+      updates.board = board;
+      await update(r, updates);
+      return;
+  }
+
+  // FALL 3: Es ist die zweite Karte in diesem Zug -> MATCH-CHECK!
+  if (currentlyFlipped.length === 1) {
+      board[cardIdx].state = "flipped";
+      const firstCard = currentlyFlipped[0];
+
+      if (firstCard.id === board[cardIdx].id) {
+          // 🎉 PAAR GEFUNDEN!
+          board[firstCard.i].state = "matched";
+          board[cardIdx].state = "matched";
+          
+          const newScores = { ...d.scores };
+          newScores[A.user] = (newScores[A.user] || 0) + 1;
+          
+          updates.board = board;
+          updates.scores = newScores;
+
+          // Win Condition: Wer zuerst 5 Paare hat, gewinnt (von 9 möglichen)
+          if (newScores[A.user] >= 5) {
+              updates.phase = "done";
+              updates.winner = A.user;
+          } else {
+              // Fair-Play Regel im Turnier: Auch bei einem Treffer wechselt der Zug!
+              updates.turn = A.user === m.p1 ? m.p2 : m.p1;
+          }
+          
+          await update(r, updates);
+          if (updates.phase === "done") {
+              setTimeout(() => advanceTournament(idx, A.user), 2500);
+          }
+      } else {
+          // ❌ KEIN PAAR
+          updates.board = board;
+          updates.turn = A.user === m.p1 ? m.p2 : m.p1;
+          await update(r, updates);
+      }
+  }
+}
+
+function renderMemory(t, idx, m, bh) {
+  const body = $("officialBody");
+  const md = (t.memory && t.memory[idx]);
+  
+  if (!md) {
+    body.innerHTML = `<div class="q-big">🧠 ${m.p1} vs ${m.p2}</div>${A.isHost ? '<button class="btn-orange" id="memInit">Match starten</button>' : '<div class="sub">Warte auf Host...</div>'}${bh}`;
+    const btn = $("memInit"); if (btn) btn.onclick = () => initMemory(idx, m);
+    return;
+  }
+  
+  const isPlayer = A.user === m.p1 || A.user === m.p2;
+  const score1 = (md.scores || {})[m.p1] || 0;
+  const score2 = (md.scores || {})[m.p2] || 0;
+
+  let html = `<div class="q-big">🧠 ${m.p1} vs ${m.p2}</div>`;
+  
+  // Scoreboard
+  html += `<div class="card" style="background:rgba(155,89,182,0.1); border:1px solid var(--purple); margin-bottom:15px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px;">
+      <div style="text-align:left; flex:1;">
+        <div style="font-size:0.7rem; opacity:0.6;">Spieler 1</div>
+        <b style="${A.user === m.p1 ? 'color:var(--gold)' : ''}">${m.p1}</b>
+      </div>
+      <div style="font-size:1.8rem; font-weight:900; padding:0 15px; letter-spacing:4px; color:var(--purple);">${score1}:${score2}</div>
+      <div style="text-align:right; flex:1;">
+        <div style="font-size:0.7rem; opacity:0.6;">Spieler 2</div>
+        <b style="${A.user === m.p2 ? 'color:var(--gold)' : ''}">${m.p2}</b>
+      </div>
+    </div>
+    <div style="text-align:center; font-size:0.7rem; opacity:0.7; padding-bottom:5px; border-top:1px solid rgba(155,89,182,0.2);">
+      Finde 5 Paare zum Sieg!
+    </div>
+  </div>`;
+
+  if (md.phase === "done") {
+    html += `<div class="flash" style="background:rgba(46,204,113,0.2); border-left:4px solid var(--green);">
+      <div style="font-size:1.2rem; text-align:center;">🏆 <b>${md.winner}</b> gewinnt!</div>
+    </div>`;
+    if (A.isHost) html += `<button class="btn-green" id="memNext" style="margin-top:10px;">Nächstes Match</button>`;
+  } else {
+    // Turn Indicator
+    html += `<div class="flash ${md.turn === A.user ? 'gold' : ''}" style="text-align:center;">
+      ${md.turn === A.user ? '<b>DU BIST DRAN!</b> Karte wählen...' : 'Warten auf ' + md.turn + '...'}
+    </div>`;
+  }
+
+  // Memory Grid (3 Spalten, 6 Reihen - Perfekt fürs Handy)
+  html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:20px 0;">`;
+  
+  (md.board || []).forEach((card, i) => {
+    let bg = "var(--card2)";
+    let border = "2px solid #444";
+    let content = `<span style="font-size:1.5rem; opacity:0.3;">🍻</span>`;
+    let cursor = (md.turn === A.user && md.phase === "play" && isPlayer && card.state === "hidden") ? "pointer" : "default";
+
+    if (card.state !== "hidden") {
+        const bierInfo = BIER_MAP[card.id];
+        content = `<div style="font-size:1.8rem;">${bierInfo.emoji}</div><div style="font-size:0.55rem; line-height:1; margin-top:4px;">${bierInfo.name}</div>`;
+        bg = "var(--card)";
+    }
+    
+    if (card.state === "flipped") {
+        border = "2px solid var(--gold)";
+    } else if (card.state === "matched") {
+        border = "2px solid var(--green)";
+        bg = "rgba(46,204,113,0.15)";
+    }
+
+    html += `<div style="aspect-ratio:1; background:${bg}; border:${border}; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:${cursor}; text-align:center; padding:2px; transition:all 0.3s;" onclick="window.memClick(${i})">${content}</div>`;
+  });
+
+  html += `</div>`;
+  body.innerHTML = html + bh;
+
+  window.memClick = (i) => memFlip(idx, i, m);
+  const mn = $("memNext"); if (mn) mn.onclick = () => advanceTournament(idx, md.winner);
 }
 
 async function initBattleship(idx,m){
