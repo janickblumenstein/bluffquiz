@@ -73,25 +73,13 @@ function renderOfficialPanel(){
   const setup=A.state.tournamentSetup;
   const t=A.state.tournament;
   const panel=$("officialPanel");
-  // Official und quizMulti/duelSession werden von official.js gerendert
-  // Hier nur wenn Turnier aktiv
+  
   if(setup){ panel.classList.remove("hidden"); renderSetup(); return; }
   if(t&&t.active){
     panel.classList.remove("hidden");
     renderTournament(t);
-    setTimeout(()=>{
-      document.querySelectorAll("[data-spect]").forEach(b=>b.onclick=()=>{
-        A._spectIdx=parseInt(b.dataset.spect);
-        renderTournament(A.state.tournament);
-      });
-      document.querySelectorAll("[data-spect-clear]").forEach(b=>b.onclick=()=>{
-        A._spectIdx=null;
-        renderTournament(A.state.tournament);
-      });
-    },0);
     return;
   }
-  // else lassen wir official.js uebernehmen
 }
 
 async function startSetup(gameType){
@@ -277,7 +265,6 @@ function bracketHtml(t){
 
 function renderTournament(t){
   const body=$("officialBody");
-  // Reaktion bleibt seriell. Schiffe + TicTacToe + BierDuel parallel.
   const parallelMode=(t.gameType==="battleship"||t.gameType==="tictactoe"||t.gameType==="bierduel"||t.gameType==="roulette"||t.gameType==="stopwatch"||t.gameType==="memory");
   const idx=parallelMode?findMatchForUser(t):t.currentMatchIdx;
   const bh=bracketHtml(t);
@@ -292,6 +279,35 @@ function renderTournament(t){
     const cl=$("closeTour"); if(cl) cl.onclick=()=>remove(ref(db,`rooms/${A.room}/tournament`));
     return;
   }
+
+  const m=t.matches[idx];
+  if(m.bye){
+    setTimeout(()=>advanceTournament(idx,m.p1),800);
+    body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bh}`;
+    return;
+  }
+
+  // Spielfeld aufbauen (ohne 'return', damit der Code unten noch ausgefuehrt wird!)
+  if(t.gameType==="reaction") renderReaction(t,idx,m,bh);
+  else if(t.gameType==="battleship") renderBattleship(t,idx,m,bh+picker);
+  else if(t.gameType==="tictactoe") renderTicTacToe(t,idx,m,bh+picker);
+  else if(t.gameType==="bierduel") renderBierDuel(t,idx,m,bh+picker);
+  else if(t.gameType==="memory") renderMemory(t,idx,m,bh+picker);
+  else if(t.gameType==="roulette") renderRoulette(t,idx,m,bh+picker);
+  else if(t.gameType==="stopwatch") renderStopwatch(t,idx,m,bh+picker);
+
+  // FIX: Zuschauer-Buttons IMMER neu verknuepfen, nachdem das HTML aktualisiert wurde
+  setTimeout(()=>{
+    document.querySelectorAll("[data-spect]").forEach(b=>b.onclick=()=>{
+      A._spectIdx=parseInt(b.dataset.spect);
+      renderTournament(A.state.tournament);
+    });
+    document.querySelectorAll("[data-spect-clear]").forEach(b=>b.onclick=()=>{
+      A._spectIdx=null;
+      renderTournament(A.state.tournament);
+    });
+  },0);
+}
 
   const m=t.matches[idx];
   if(m.bye){
