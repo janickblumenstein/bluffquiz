@@ -64,6 +64,8 @@ A.listeners.onReady=()=>{
     else if(t==="tictactoe-tournament") b.onclick=()=>startSetup("tictactoe");
     else if(t==="bierduel-tournament") b.onclick=()=>startSetup("bierduel");
     else if(t==="memory-tournament") b.onclick=()=>startSetup("memory");
+    else if(t==="roulette-tournament") b.onclick=()=>startSetup("roulette");
+    else if(t==="stopwatch-tournament") b.onclick=()=>startSetup("stopwatch");
   });
 };
 
@@ -276,7 +278,7 @@ function bracketHtml(t){
 function renderTournament(t){
   const body=$("officialBody");
   // Reaktion bleibt seriell. Schiffe + TicTacToe + BierDuel parallel.
-  const parallelMode=(t.gameType==="battleship"||t.gameType==="tictactoe"||t.gameType==="bierduel");
+  const parallelMode=(t.gameType==="battleship"||t.gameType==="tictactoe"||t.gameType==="bierduel"||t.gameType==="roulette"||t.gameType==="stopwatch");
   const idx=parallelMode?findMatchForUser(t):t.currentMatchIdx;
   const bh=bracketHtml(t);
   const picker=parallelMode?renderMatchPicker(t,bh):"";
@@ -302,6 +304,8 @@ function renderTournament(t){
   if(t.gameType==="tictactoe") return renderTicTacToe(t,idx,m,bh+picker);
   if(t.gameType==="bierduel") return renderBierDuel(t,idx,m,bh+picker);
   if(t.gameType==="memory") return renderMemory(t,idx,m,bh+picker);
+  if(t.gameType==="roulette") return renderRoulette(t,idx,m,bh+picker);
+  if(t.gameType==="stopwatch") return renderRoulette(t,idx,m,bh+picker);
 }
 
 // === REACTION (First-Click-Wins via Transaction) ===
@@ -413,6 +417,204 @@ function placeShipsRandom(){
     while(!placed&&tries<700){ tries++; placed=tryPlace(false); }
   }
   return {ships,shotsAt:[]};
+}
+
+// === BIERDECKEL-ROULETTE ===
+function generateRouletteBoard() {
+    const board = new Array(9).fill(0); // 0 = Safe
+    const bombIndex = Math.floor(Math.random() * 9);
+    board[bombIndex] = 1; // 1 = Kater/Bombe
+    return board;
+}
+
+async function initRoulette(idx, m) {
+  if (!A.isHost) return;
+  const t = (await get(ref(db, `rooms/${A.room}/tournament`))).val();
+  if (!t) return;
+  const myRound = t.matches[idx].round;
+  const updates = {};
+
+  t.matches.forEach((mt, i) => {
+    if (mt.round === myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2) {
+      if (!(t.roulette && t.roulette[i])) {
+        updates[i] = {
+          board: generateRouletteBoard(),
+          revealed: [], // Welche Indices wurden schon geklickt?
+          turn: mt.p1,
+          phase: "play",
+          round: 1,
+          scores: { [mt.p1]: 0, [mt.p2]: 0 },
+          startedAt: Date.now()
+        };
+      }
+    }
+  });
+  await update(ref(db, `rooms/${A.room}/tournament/roulette`), updates);
+  toast(`${Object.keys(updates).length} Match(es) gestartet`);
+}
+
+async function rlFlip(idx, cellIdx, m) {
+  const r = ref(db, `rooms/${A.room}/tournament/roulette/${idx}`);
+  const d = (await get(r)).val();
+  if (!d || d.phase !== "play" || d.turn !== A.user) return;
+
+  const revealed = d.revealed || [];
+  if (revealed.includes(cellIdx)) return; // Schon aufgedeckt
+
+  const isBomb = d.board[cellIdx] === 1;
+  const updates = {};
+  
+  if (isBomb) {
+      // BUMM! Der Gegner kriegt den Punkt
+      const roundWinner = A.user === m.p1 ? m.p2 : m.p1;
+      const newScores = { ...d.scores };
+      newScores[roundWinner] = (newScores[roundWinner] || 0) + 1;
+      
+      updates.scores = newScores;
+      updates.revealed = [...revealed, cellIdx]; // Bombe zeigen
+      
+      if (newScores[roundWinner] >= 2) {
+          // Match vorbei! (Zuerst 2 Siege)
+          updates.phase = "done";
+          updates.winner = roundWinner;
+          await update(r, updates);
+          setTimeout(() => advanceTournament(idx, roundWinner), 3000);
+      } else {
+          // Runde vorbei, kurze Pause, dann neues Board
+          updates.phase = "show_bomb";
+          await update(r, updates);
+          
+          setTimeout(async () => {
+              const freshBoardUpdates = {
+                  phase: "play",
+                  board: generateRouletteBoard(),
+                  revealed: [],
+                  turn: roundWinner, // Gewinner der Runde darf als Zweites ziehen (Vorteil) -> Verlierer fängt an!
+                  round: (d.round || 1) + 1
+              };
+              await update(r, freshBoardUpdates);
+          }, 2000); // 2 Sekunden die Bombe zeigen
+      }
+  } else {
+      // Puh, Glück gehabt! Nächster ist dran.
+      updates.revealed = [...revealed, cellIdx];
+      updates.turn = A.user === m.p1 ? m.p2 : m.p1;
+      await update(r, updates);
+  }
+}
+
+function renderRoulette(t, idx, m, bh) {
+  const body = $("officialBody");
+  const md = (t.roulette && t.roulette[idx]);
+  
+  if (!md) {
+    body.innerHTML = `<div class="q-big">💥 ${m.p1} vs ${m.p2}</div>${A.isHost ? '<button class="btn-orange" id="rlInit">Match starten</button>' : '<div class="sub">Warte auf Host...</div>'}${bh}`;
+    const btn = $("rlInit"); if (btn) btn.onclick = () => initRoulette(idx, m);
+    return;
+  }
+  
+  const isPlayer = A.user === m.p1 || A.user === m.p2;
+  const score1 = (md.scores || {})[m.p1] || 0;
+  const score2 = (md.scores || {})[m.p2] || 0;
+
+  let html = `<div class="q-big">💥 ${m.p1} vs ${m.p2}</div>`;
+  
+  // Scoreboard
+  html += `<div class="card" style="background:rgba(230,126,34,0.1); border:1px solid var(--orange); margin-bottom:15px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px;">
+      <div style="text-align:left; flex:1;">
+        <div style="font-size:0.7rem; opacity:0.6;">Spieler 1</div>
+        <b style="${A.user === m.p1 ? 'color:var(--gold)' : ''}">${m.p1}</b>
+      </div>
+      <div style="font-size:1.8rem; font-weight:900; padding:0 15px; letter-spacing:4px; color:var(--orange);">${score1}:${score2}</div>
+      <div style="text-align:right; flex:1;">
+        <div style="font-size:0.7rem; opacity:0.6;">Spieler 2</div>
+        <b style="${A.user === m.p2 ? 'color:var(--gold)' : ''}">${m.p2}</b>
+      </div>
+    </div>
+    <div style="text-align:center; font-size:0.7rem; opacity:0.7; padding-bottom:5px; border-top:1px solid rgba(230,126,34,0.2);">
+      Finde NICHT den Kater! (Zuerst 2 Pkt)
+    </div>
+  </div>`;
+
+  if (md.phase === "done") {
+    html += `<div class="flash" style="background:rgba(46,204,113,0.2); border-left:4px solid var(--green); text-align:center;">
+      <div style="font-size:1.2rem;">🏆 <b>${md.winner}</b> gewinnt!</div>
+    </div>`;
+    if (A.isHost) html += `<button class="btn-green" id="rlNext" style="margin-top:10px;">Nächstes Match</button>`;
+  } else if (md.phase === "show_bomb") {
+     html += `<div class="flash" style="background:rgba(231,76,60,0.2); border-left:4px solid var(--red); text-align:center;">
+      <div style="font-size:1.5rem;">💥 BUMM! 💥</div>
+      <div class="sub">Punkt für den Gegner. Nächste Runde startet...</div>
+    </div>`;
+  } else {
+    html += `<div class="flash ${md.turn === A.user ? 'gold' : ''}" style="text-align:center;">
+      ${md.turn === A.user ? '<b>DEIN ZUG!</b> Deckel antippen...' : 'Warten auf ' + md.turn + '...'}
+    </div>`;
+  }
+
+  // 3x3 Grid
+  html += `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin:20px auto; max-width:300px;">`;
+  
+  const revealed = md.revealed || [];
+  for (let i = 0; i < 9; i++) {
+    const isRevealed = revealed.includes(i);
+    const isBomb = md.board && md.board[i] === 1;
+    
+    let bg = "var(--card2)";
+    let border = "2px solid #444";
+    let content = "";
+    let cursor = (md.turn === A.user && md.phase === "play" && isPlayer && !isRevealed) ? "pointer" : "default";
+
+    if (isRevealed) {
+        if (isBomb) {
+            bg = "rgba(231,76,60,0.2)";
+            border = "2px solid var(--red)";
+            content = "💥";
+        } else {
+            bg = "rgba(46,204,113,0.1)";
+            border = "2px solid var(--green)";
+            content = "🍺";
+        }
+    }
+
+    html += `<div style="aspect-ratio:1; background:${bg}; border:${border}; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:${cursor}; font-size:2.5rem; transition:all 0.2s;" onclick="window.rlClick(${i})">${content}</div>`;
+  }
+
+  html += `</div>`;
+  body.innerHTML = html + bh;
+
+  window.rlClick = (i) => rlFlip(idx, i, m);
+  const rn = $("rlNext"); if (rn) rn.onclick = () => advanceTournament(idx, md.winner);
+}
+
+// === BIER-STOPPUHR (5-Sekunden-Stopp) ===
+async function initStopwatch(idx, m) {
+  if (!A.isHost) return;
+  await update(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`), {
+    phase: "ready",
+    times: {},
+    startedAt: Date.now()
+  });
+}
+
+async function stopTimer(idx) {
+  const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
+  const d = (await get(r)).val();
+  if (!d || d.phase !== "running" || d.times[A.user]) return;
+
+  const elapsed = (Date.now() - d.startTime) / 1000;
+  await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/times/${A.user}`), elapsed);
+
+  // Check if both stopped
+  const fresh = (await get(r)).val();
+  if (fresh.times[d.p1] && fresh.times[d.p2]) {
+    const diff1 = Math.abs(5 - fresh.times[d.p1]);
+    const diff2 = Math.abs(5 - fresh.times[d.p2]);
+    const winner = diff1 < diff2 ? d.p1 : d.p2;
+    await update(r, { phase: "done", winner: winner });
+    setTimeout(() => advanceTournament(idx, winner), 3000);
+  }
 }
 
 // === BIER-MEMORY ===
