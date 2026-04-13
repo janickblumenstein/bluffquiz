@@ -3,6 +3,48 @@ const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore}=A;
 
 const DEFAULT_CITIES=["Lissabon","Prag","Krakau","Budapest","Valencia","Porto","Sevilla","Neapel","Belgrad"];
 
+const DEFAULT_CITIES = {
+  "Lissabon": [38.7223, -9.1393],
+  "Prag": [50.0755, 14.4378],
+  "Krakau": [50.0647, 19.9450],
+  "Budapest": [47.4979, 19.0402],
+  "Valencia": [39.4699, -0.3763],
+  "Porto": [41.1579, -8.6291],
+  "Sevilla": [37.3891, -5.9845],
+  "Neapel": [40.8518, 14.2681],
+  "Belgrad": [44.7866, 20.4489]
+};
+
+let map = null;
+let markers = {};
+
+// In die renderCities() Funktion einbauen:
+function updateMap(list) {
+  if (!map) {
+    map = L.map('cityMap').setView([47.3769, 8.5417], 4); // Startpunkt Europa
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+  }
+
+  // Marker löschen oder aktualisieren
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  
+  Object.entries(list).forEach(([id, city]) => {
+    const coords = DEFAULT_CITIES[city.name] || [47, 8]; // Fallback
+    const isElim = city.status === 'eliminated';
+    
+    const marker = L.circleMarker(coords, {
+      radius: isElim ? 5 : 8,
+      fillColor: isElim ? "#e74c3c" : "#ffcc00",
+      color: "#fff",
+      weight: 1,
+      fillOpacity: isElim ? 0.3 : 1
+    }).addTo(map);
+
+    marker.bindPopup(`<b>${city.name}</b><br>Stimmen: ${city.votes || 0}`);
+    markers[id] = marker;
+  });
+}
+
 // === SEED ===
 const prevSeed=A.listeners.seedDefaults;
 A.listeners.seedDefaults=async()=>{
