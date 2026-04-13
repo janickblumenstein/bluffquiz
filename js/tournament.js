@@ -278,7 +278,7 @@ function bracketHtml(t){
 function renderTournament(t){
   const body=$("officialBody");
   // Reaktion bleibt seriell. Schiffe + TicTacToe + BierDuel parallel.
-  const parallelMode=(t.gameType==="battleship"||t.gameType==="tictactoe"||t.gameType==="bierduel"||t.gameType==="roulette"||t.gameType==="stopwatch");
+  const parallelMode=(t.gameType==="battleship"||t.gameType==="tictactoe"||t.gameType==="bierduel"||t.gameType==="roulette"||t.gameType==="stopwatch"||t.gameType==="memory");
   const idx=parallelMode?findMatchForUser(t):t.currentMatchIdx;
   const bh=bracketHtml(t);
   const picker=parallelMode?renderMatchPicker(t,bh):"";
@@ -589,31 +589,161 @@ function renderRoulette(t, idx, m, bh) {
 }
 
 // === BIER-STOPPUHR (5-Sekunden-Stopp) ===
+// === BIER-STOPPUHR (5-Sekunden-Stopp) ===
 async function initStopwatch(idx, m) {
   if (!A.isHost) return;
-  await update(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`), {
-    phase: "ready",
-    times: {},
-    startedAt: Date.now()
+  const t = (await get(ref(db, `rooms/${A.room}/tournament`))).val();
+  if (!t) return;
+  const myRound = t.matches[idx].round;
+  const updates = {};
+
+  t.matches.forEach((mt, i) => {
+    if (mt.round === myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2) {
+      if (!(t.stopwatch && t.stopwatch[i])) {
+        updates[i] = {
+          phase: "waiting", // "waiting" -> "running" -> "done"
+          times: {},
+          ready: {},
+          startedAt: Date.now()
+        };
+      }
+    }
   });
+  await update(ref(db, `rooms/${A.room}/tournament/stopwatch`), updates);
+  toast(`${Object.keys(updates).length} Match(es) gestartet`);
 }
 
-async function stopTimer(idx) {
+async function swReady(idx, m) {
+  const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
+  await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/ready/${A.user}`), true);
+  
+  const d = (await get(r)).val();
+  if (d && d.ready && d.ready[m.p1] && d.ready[m.p2] && d.phase === "waiting") {
+      // Beide sind bereit -> Timer startet in exakt 2 Sekunden
+      await update(r, { phase: "running", startTime: Date.now() + 2000 });
+  }
+}
+
+async function stopTimer(idx, m) {
   const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
   const d = (await get(r)).val();
-  if (!d || d.phase !== "running" || d.times[A.user]) return;
+  if (!d || d.phase !== "running" || (d.times && d.times[A.user])) return;
+  
+  // Anti-Cheat: Wer klickt, bevor es losgeht, bekommt einen Hinweis
+  if (Date.now() < d.startTime) {
+      toast("Zu früh gedrückt!");
+      return;
+  }
 
+  // Zeit erfassen
   const elapsed = (Date.now() - d.startTime) / 1000;
   await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/times/${A.user}`), elapsed);
 
-  // Check if both stopped
+  // Check, ob beide gestoppt haben
   const fresh = (await get(r)).val();
-  if (fresh.times[d.p1] && fresh.times[d.p2]) {
-    const diff1 = Math.abs(5 - fresh.times[d.p1]);
-    const diff2 = Math.abs(5 - fresh.times[d.p2]);
-    const winner = diff1 < diff2 ? d.p1 : d.p2;
+  if (fresh.times && fresh.times[m.p1] && fresh.times[m.p2]) {
+    const diff1 = Math.abs(5 - fresh.times[m.p1]);
+    const diff2 = Math.abs(5 - fresh.times[m.p2]);
+    
+    // Wer näher an 5,00s ist, gewinnt
+    let winner = diff1 < diff2 ? m.p1 : (diff2 < diff1 ? m.p2 : (Math.random() > 0.5 ? m.p1 : m.p2));
+    
     await update(r, { phase: "done", winner: winner });
-    setTimeout(() => advanceTournament(idx, winner), 3000);
+    setTimeout(() => advanceTournament(idx, winner), 3500);
+  }
+}
+
+function renderStopwatch(t, idx, m, bh) {
+  const body = $("officialBody");
+  const md = (t.stopwatch && t.stopwatch[idx]);
+  
+  if (!md) {
+    body.innerHTML = `<div class="q-big">⏱️ ${m.p1} vs ${m.p2}</div>${A.isHost ? '<button class="btn-orange" id="swInit">Match starten</button>' : '<div class="sub">Warte auf Host...</div>'}${bh}`;
+    const btn = $("swInit"); if (btn) btn.onclick = () => initStopwatch(idx, m);
+    return;
+  }
+  
+  const isPlayer = A.user === m.p1 || A.user === m.p2;
+  const t1 = (md.times || {})[m.p1];
+  const t2 = (md.times || {})[m.p2];
+
+  let html = `<div class="q-big">⏱️ ${m.p1} vs ${m.p2}</div>`;
+  html += `<div class="sub" style="text-align:center;">Stoppe die Zeit so nah wie möglich bei exakt <b>5.000 Sekunden!</b><br><span style="color:var(--orange)">Tipp: Nach 2 Sekunden wird die Uhr unsichtbar! 🙈</span></div>`;
+
+  if (md.phase === "waiting") {
+      html += `<div class="flash" style="text-align:center; margin-top:15px;">`;
+      if (isPlayer) {
+          const rdy = md.ready && md.ready[A.user];
+          html += `<button class="${rdy ? 'btn-ghost' : 'btn-blue'}" id="swRdy" ${rdy ? 'disabled' : ''}>${rdy ? '✅ Du bist bereit' : 'Start drücken!'}</button>`;
+          if (!rdy) html += `<div class="sub" style="margin-top:5px;">Sobald beide bereit sind, startet der Countdown.</div>`;
+      } else {
+          const rdy1 = md.ready && md.ready[m.p1];
+          const rdy2 = md.ready && md.ready[m.p2];
+          html += `Warte auf Spieler...<br>${m.p1}: ${rdy1 ? '✅' : '⏳'} | ${m.p2}: ${rdy2 ? '✅' : '⏳'}`;
+      }
+      html += `</div>`;
+  } else if (md.phase === "running") {
+      const myTime = md.times && md.times[A.user];
+      html += `<div id="swBox" style="background:var(--card2); height:150px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:3.5rem; font-weight:bold; cursor:${isPlayer && !myTime ? 'pointer' : 'default'}; margin:15px 0; border:2px solid var(--blue);">`;
+      
+      if (myTime) {
+         html += `<span style="color:var(--green)">✅ Gestoppt!</span>`;
+      } else {
+         html += `<span id="swDisplay">Bereit machen...</span>`;
+      }
+      html += `</div>`;
+      
+      if (isPlayer && !myTime) {
+          html += `<button class="btn-red" style="padding:15px; font-size:1.5rem;" id="swStop">🛑 STOPP!</button>`;
+      } else if (isPlayer && myTime) {
+          html += `<div class="sub" style="text-align:center;">Warte auf Gegner...</div>`;
+      }
+  } else if (md.phase === "done") {
+      const diff1 = Math.abs(5 - t1);
+      const diff2 = Math.abs(5 - t2);
+      html += `<div class="flash gold" style="text-align:center; margin-top:15px;">
+         <div style="font-size:1.2rem;">🏆 <b>${md.winner}</b> gewinnt!</div>
+         <hr style="border-color:rgba(0,0,0,0.1);">
+         <div style="display:flex; justify-content:space-between; font-size:1.1rem; margin-top:10px;">
+             <div style="${md.winner === m.p1 ? 'font-weight:bold; color:var(--gold);' : 'opacity:0.6;'}">
+                 <div>${m.p1}</div>
+                 <div>${t1 ? t1.toFixed(3) : '---'}s <br><small style="font-size:0.7rem">(Δ ${diff1.toFixed(3)})</small></div>
+             </div>
+             <div style="${md.winner === m.p2 ? 'font-weight:bold; color:var(--gold);' : 'opacity:0.6;'}">
+                 <div>${m.p2}</div>
+                 <div>${t2 ? t2.toFixed(3) : '---'}s <br><small style="font-size:0.7rem">(Δ ${diff2.toFixed(3)})</small></div>
+             </div>
+         </div>
+      </div>`;
+      if (A.isHost) html += `<button class="btn-green" id="swNext" style="margin-top:10px;">Nächstes Match</button>`;
+  }
+
+  body.innerHTML = html + bh;
+
+  // Event Bindings
+  const rBtn = $("swRdy"); if (rBtn) rBtn.onclick = () => swReady(idx, m);
+  const sBtn = $("swStop"); if (sBtn) sBtn.onclick = () => stopTimer(idx, m);
+  const bBtn = $("swBox"); if (bBtn && isPlayer && md.phase==="running" && (!md.times || !md.times[A.user])) bBtn.onclick = () => stopTimer(idx, m);
+  const nBtn = $("swNext"); if (nBtn) nBtn.onclick = () => advanceTournament(idx, md.winner);
+
+  // Visueller Live-Timer
+  if (md.phase === "running") {
+      const display = $("swDisplay");
+      if (display) {
+         const updateTimer = () => {
+             const now = Date.now();
+             const diff = now - md.startTime;
+             if (diff < 0) {
+                 display.innerText = "⏳ " + Math.ceil(Math.abs(diff)/1000) + "s";
+             } else if (diff < 2000) {
+                 display.innerText = (diff / 1000).toFixed(2) + "s";
+             } else {
+                 display.innerText = "🙈 ???";
+             }
+         };
+         // Wir fügen das Intervall der App hinzu, damit es sauber aufgeräumt wird
+         A.timers.push(setInterval(updateTimer, 50));
+      }
   }
 }
 
