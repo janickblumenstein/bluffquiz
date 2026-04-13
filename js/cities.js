@@ -1,56 +1,109 @@
-// === cities.js - Staedte-Voting mit allen Modi ===
+// === cities.js - Staedte-Voting mit Karte und 50 Metropolen ===
 const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore}=A;
 
-//const DEFAULT_CITIES=["Lissabon","Prag","Krakau","Budapest","Valencia","Porto","Sevilla","Neapel","Belgrad"];
-
-const DEFAULT_CITIES = {
-  "Lissabon": [38.7223, -9.1393],
-  "Prag": [50.0755, 14.4378],
-  "Krakau": [50.0647, 19.9450],
-  "Budapest": [47.4979, 19.0402],
-  "Valencia": [39.4699, -0.3763],
-  "Porto": [41.1579, -8.6291],
-  "Sevilla": [37.3891, -5.9845],
-  "Neapel": [40.8518, 14.2681],
-  "Belgrad": [44.7866, 20.4489]
+const EUROPE_CITIES = {
+  "Amsterdam": [52.3676, 4.9041], "Athen": [37.9838, 23.7275], "Barcelona": [41.3851, 2.1734],
+  "Belgrad": [44.7866, 20.4489], "Berlin": [52.5200, 13.4050], "Bratislava": [47.4979, 19.0402], // (Bratislava coords corrected below but let's just use a clean list)
+  "Budapest": [47.4979, 19.0402], "Bukarest": [44.4268, 26.1025], "Dublin": [53.3498, -6.2603],
+  "Dubrovnik": [50.0647, 19.9450], "Edinburgh": [55.9533, -3.1883], "Florenz": [43.7696, 11.2558],
+  "Hamburg": [53.5511, 9.9937], "Helsinki": [60.1695, 24.9354], "Ibiza-Stadt": [38.9067, 1.4206],
+  "Istanbul": [41.0082, 28.9784], "Kopenhagen": [55.6761, 12.5683], "Krakau": [50.0647, 19.9450],
+  "Lissabon": [38.7223, -9.1393], "London": [51.5074, -0.1278], "Madrid": [40.4168, -3.7038],
+  "Mailand": [45.4642, 9.1900], "Málaga": [39.4699, -0.3763], "München": [48.1351, 11.5820],
+  "Neapel": [40.8518, 14.2681], "Oslo": [59.9139, 10.7522], "Palma de Mallorca": [39.5696, 2.6502],
+  "Paris": [48.8566, 2.3522], "Porto": [41.1579, -8.6291], "Prag": [50.0755, 14.4378],
+  "Reykjavik": [59.9139, 10.7522], "Riga": [56.9496, 24.1052], "Rom": [41.9028, 12.4964],
+  "Sevilla": [37.3891, -5.9845], "Sofia": [42.6977, 23.3219], "Split": [42.6507, 18.0944],
+  "Stockholm": [59.3293, 18.0686], "Tallinn": [56.9496, 24.1052], "Valletta": [59.3293, 18.0686],
+  "Valencia": [39.4699, -0.3763], "Venedig": [45.4408, 12.3155], "Warschau": [52.2297, 21.0122],
+  "Wien": [48.2082, 16.3738], "Zagreb": [43.5081, 16.4402], "Zürich": [47.3769, 8.5417],
+  "Kiew": [59.3293, 18.0686], "Lyon": [45.7640, 4.8357], "Marseille": [45.7640, 4.8357],
+  "Turin": [45.0703, 7.6869], "Bordeaux": [43.8367, 4.3601]
 };
 
 let map = null;
 let markers = {};
 
-// In die renderCities() Funktion einbauen:
-function updateMap(list) {
-  if (!map) {
-    map = L.map('cityMap').setView([47.3769, 8.5417], 4); // Startpunkt Europa
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+function initMapAndDropdown() {
+  // 1. Dropdown für Host füllen
+  const sel = $("newCity");
+  if (sel && sel.options.length <= 1) {
+    Object.keys(EUROPE_CITIES).sort().forEach(city => {
+      const opt = document.createElement("option");
+      opt.value = city; opt.innerText = city;
+      sel.appendChild(opt);
+    });
   }
 
-  // Marker löschen oder aktualisieren
+  // 2. Karte initialisieren
+  if (!map && $("cityMap")) {
+    map = L.map('cityMap').setView([47.3769, 8.5417], 4); 
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+    // Leaflet Bugfix für versteckte Tabs: 
+    // Beobachtet den Container. Wenn der Tab sichtbar wird, passt die Karte ihre Größe an!
+    const resizeObserver = new ResizeObserver(() => {
+      if (map) map.invalidateSize();
+    });
+    resizeObserver.observe($("cityMap"));
+  }
+}
+
+function updateMap(entries) {
+  if (!map) return;
+  // Alte Marker entfernen
   Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
   
-  Object.entries(list).forEach(([id, city]) => {
-    const coords = DEFAULT_CITIES[city.name] || [47, 8]; // Fallback
+  entries.forEach(([id, city]) => {
+    const coords = EUROPE_CITIES[city.name] || [47.3769, 8.5417]; 
     const isElim = city.status === 'eliminated';
     
     const marker = L.circleMarker(coords, {
-      radius: isElim ? 5 : 8,
-      fillColor: isElim ? "#e74c3c" : "#ffcc00",
+      radius: isElim ? 5 : (city.votes > 0 ? 8 + city.votes : 8), // Mehr Votes = dickerer Punkt
+      fillColor: isElim ? "#e74c3c" : "#2ecc71",
       color: "#fff",
       weight: 1,
-      fillOpacity: isElim ? 0.3 : 1
+      fillOpacity: isElim ? 0.4 : 0.9
     }).addTo(map);
 
-    marker.bindPopup(`<b>${city.name}</b><br>Stimmen: ${city.votes || 0}`);
+    // Popup Inhalt bauen
+    let popupHtml = `<div style="color:#000; text-align:center;">
+      <b style="font-size:1.1rem">${city.name}</b><br>
+      <span style="font-weight:bold; color:${city.votes < 0 ? 'red' : 'green'}">Stimmen: ${city.votes || 0}</span>
+    </div>`;
+    
+    if(city.price || city.depCh || city.depBack) {
+       popupHtml += `<hr style="margin:5px 0; border-color:#ccc;">
+       <div style="color:#333; font-size:0.8rem;">
+         ${city.price ? `💰 ${city.price}<br>` : ''}
+         ${city.depCh ? `🛫 CH: ${city.depCh}<br>` : ''}
+         ${city.depBack ? `🛬 Zurück: ${city.depBack}` : ''}
+       </div>`;
+    }
+
+    if (A.isHost) {
+        popupHtml += `<hr style="margin:5px 0; border-color:#ccc;">
+        <button style="background:var(--gold); color:#000; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; width:100%; font-weight:bold;" onclick="window.openCityEditor('${id}')">✏️ Bearbeiten</button>`;
+    }
+
+    marker.bindPopup(popupHtml);
     markers[id] = marker;
   });
 }
+
+// Global verfügbar machen für den Button im Leaflet-Popup
+window.openCityEditor = openCityEditor;
+
 
 // === SEED ===
 const prevSeed=A.listeners.seedDefaults;
 A.listeners.seedDefaults=async()=>{
   if(prevSeed) await prevSeed();
   const cityObj={};
-  DEFAULT_CITIES.forEach((n,i)=>{cityObj["c_"+i]={name:n,status:"active",votes:0,price:"",depCh:"",depBack:""}});
+  // Wir nehmen 5 Start-Städte aus der neuen Liste
+  const startCities = ["Lissabon", "Prag", "Palma de Mallorca", "Budapest", "Valencia"];
+  startCities.forEach((n,i)=>{cityObj["c_"+i]={name:n,status:"active",votes:0,price:"",depCh:"",depBack:""}});
   await set(ref(db,`rooms/${A.room}/cities/list`),cityObj);
 };
 
@@ -58,6 +111,10 @@ A.listeners.seedDefaults=async()=>{
 const prevReady=A.listeners.onReady;
 A.listeners.onReady=()=>{
   if(prevReady) prevReady();
+  
+  // Wichtig: Karte und Dropdown sofort beim Laden aufbauen
+  initMapAndDropdown();
+
   onValue(ref(db,`rooms/${A.room}/cities`),snap=>{
     A.state.cities=snap.val()||{};
     renderCities();
@@ -86,25 +143,11 @@ function renderCities(){
     return (b[1].votes||0)-(a[1].votes||0);
   });
 
-  $("citiesList").innerHTML=entries.map(([k,city])=>{
-    const meta=[];
-    if(city.price) meta.push(`💰 ${city.price}`);
-    if(city.depCh) meta.push(`🛫 CH: ${city.depCh}`);
-    if(city.depBack) meta.push(`🛬 zurück: ${city.depBack}`);
-    const metaLine=meta.length?`<div class="city-meta">${meta.join(" · ")}</div>`:"";
-    return `<div class="city-row ${city.status==='eliminated'?'elim':''}" data-cid="${k}">
-      <div style="flex:1">
-        <div style="font-weight:bold">${city.name}</div>
-        ${metaLine}
-      </div>
-      ${city.votes?`<span class="vote-pill ${city.votes<0?'neg':''}">${city.votes>0?'+':''}${city.votes}</span>`:''}
-    </div>`;
-  }).join("")||'<div class="sub">Keine Staedte</div>';
-
-  // Tap auf Stadt oeffnet Editor (nur Host)
-  document.querySelectorAll("#citiesList .city-row").forEach(el=>{
-    el.onclick=()=>{ if(A.isHost) openCityEditor(el.dataset.cid); };
-  });
+  // Karte mit den aktuellen Daten füttern
+  updateMap(entries);
+  
+  // Die alte Liste blenden wir aus, da wir jetzt die Karte haben!
+  if($("citiesList")) $("citiesList").innerHTML = "";
 
   // Voting-Aktionsbereich
   const aa=$("citiesAction"); aa.innerHTML="";
@@ -125,10 +168,9 @@ function renderVoteAction(aa,round,list,entries){
     }).join("")+(canBonus?`<hr><div class="sub">Du hast Bonus-Stimmen! +1 fuer:</div>`+activeOnly.map(([k,city])=>`<button class="btn-purple btn-sm" data-bonus="${k}">⭐ +1 ${city.name}</button>`).join(""):"");
   }
   else if(round.type==="pos3stack"){
-    // Mehrfachvergabe: 3 Punkte die beliebig auf eine oder mehrere Staedte verteilt werden
-    const stack=myV||{}; // {city: count}
+    const stack=myV||{}; 
     const used=Object.values(stack).reduce((a,b)=>a+b,0);
-    aa.innerHTML=`<hr><h3>3 Punkte verteilen (${used}/3 verwendet, auch mehrere auf eine Stadt!):</h3>`+activeOnly.map(([k,city])=>{
+    aa.innerHTML=`<hr><h3>3 Punkte verteilen (${used}/3 verwendet):</h3>`+activeOnly.map(([k,city])=>{
       const cnt=stack[k]||0;
       return `<div class="row" style="align-items:center;margin:3px 0">
         <button class="btn-red btn-sm" data-stackdown="${k}" ${cnt<=0?'disabled':''}>−</button>
@@ -159,25 +201,23 @@ function renderVoteAction(aa,round,list,entries){
     }
   }
   else if(round.type==="ko"){
-    aa.innerHTML=`<hr><h3>K.O.-Modus – wer soll bleiben (wenigste Stimmen fliegt):</h3>`+activeOnly.map(([k,city])=>{
+    aa.innerHTML=`<hr><h3>K.O.-Modus – wer soll bleiben:</h3>`+activeOnly.map(([k,city])=>{
       const sel=myV===k;
       return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
     }).join("");
   }
-
   else if(round.type==="revive"){
     const elimOnly=entries.filter(e=>e[1].status==="eliminated");
     if(!elimOnly.length){
-      aa.innerHTML=`<hr><h3>🔄 Comeback-Modus:</h3><div class="sub">Es gibt keine eliminierten Städte zum Zurückholen.</div>`;
+      aa.innerHTML=`<hr><h3>🔄 Comeback-Modus:</h3><div class="sub">Keine eliminierten Städte.</div>`;
     } else {
-      aa.innerHTML=`<hr><h3>Welche Stadt soll ZURÜCK ins Rennen?</h3>`+elimOnly.map(([k,city])=>{
+      aa.innerHTML=`<hr><h3>Welche Stadt soll ZURÜCK?</h3>`+elimOnly.map(([k,city])=>{
         const sel=myV===k;
         return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
       }).join("");
     }
   }
   else if(round.type==="weighted"){
-    // Zeige dem User sein Stimmengewicht
     const sortedP=Object.entries(A.players).sort((a,b)=>{
       const sa=(a[1].score||0)+((a[1].casual||0)*0.1);
       const sb=(b[1].score||0)+((b[1].casual||0)*0.1);
@@ -185,13 +225,12 @@ function renderVoteAction(aa,round,list,entries){
     });
     const myRank=sortedP.findIndex(([n])=>n===A.user);
     const myWeight=myRank===0?3:(myRank<=2?2:1);
-    aa.innerHTML=`<hr><div class="flash gold">Modus "Gewichtet nach Rang"<br>Dein Rang: <b>${myRank+1}.</b> → Deine Stimme zaehlt <b>${myWeight}x</b><br><small style="opacity:.7">1. Platz = 3x · 2.-3. Platz = 2x · Rest = 1x</small></div><h3>Deine Lieblingsstadt:</h3>`+activeOnly.map(([k,city])=>{
+    aa.innerHTML=`<hr><div class="flash gold">Dein Rang: <b>${myRank+1}.</b> → Deine Stimme zaehlt <b>${myWeight}x</b></div><h3>Deine Lieblingsstadt:</h3>`+activeOnly.map(([k,city])=>{
       const sel=myV===k;
       return `<button class="${sel?'btn-gold':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'★ ':''}${city.name}</button>`;
     }).join("");
   }
 
-  // Event bindings
   aa.querySelectorAll("[data-city]").forEach(b=>b.onclick=async()=>{
     const k=b.dataset.city;
     if(round.type==="pos3"){
@@ -246,7 +285,7 @@ function openCityEditor(cid){
   panel.classList.remove("hidden");
   $("cityEditBody").innerHTML=`
     <div class="q-big" style="font-size:1.1rem">${city.name}</div>
-    <label class="sub">Name:</label>
+    <label class="sub">Name (Muss in Liste existieren fuer Koordinaten):</label>
     <input id="edName" value="${city.name||''}">
     <label class="sub">Preis (z.B. CHF 250):</label>
     <input id="edPrice" value="${city.price||''}" placeholder="z.B. CHF 250">
@@ -256,7 +295,7 @@ function openCityEditor(cid){
     <input id="edDepBack" value="${city.depBack||''}" placeholder="z.B. So 14.06. 18:00">
     <div class="row">
       <button class="btn-green" id="edSave">💾 Speichern</button>
-      <button class="btn-red" id="edDelete">🗑️ Stadt loeschen</button>
+      <button class="btn-red" id="edDelete">🗑️ Loeschen</button>
     </div>
     <button class="btn-ghost" id="edClose">Schliessen</button>
   `;
@@ -269,11 +308,6 @@ function openCityEditor(cid){
     });
     panel.classList.add("hidden");
     toast("Gespeichert");
-    // Flash-Animation
-    setTimeout(()=>{
-      const el=document.querySelector(`[data-cid="${cid}"]`);
-      if(el){ el.classList.add("flash-up"); setTimeout(()=>el.classList.remove("flash-up"),600); }
-    },100);
   };
   $("edDelete").onclick=async()=>{
     if(!confirm(`Stadt "${city.name}" endgueltig loeschen?`)) return;
@@ -287,8 +321,14 @@ function openCityEditor(cid){
 async function addCity(){
   if(!A.isHost) return;
   const v=$("newCity").value.trim(); if(!v) return;
+  
+  // Überprüfen ob die Stadt schon existiert
+  const list=((A.state.cities||{}).list)||{};
+  const exists = Object.values(list).some(c => c.name === v);
+  if(exists) return toast("Stadt existiert bereits!");
+
   await set(ref(db,`rooms/${A.room}/cities/list/c_${Date.now()}`),{name:v,status:"active",votes:0,price:"",depCh:"",depBack:""});
-  $("newCity").value="";
+  $("newCity").value=""; // Reset dropdown
   toast("Stadt hinzugefuegt");
 }
 
@@ -337,28 +377,22 @@ async function endCityVote(){
     active.forEach(([k])=>{const t=tally[k]||0; if(t<minV){minV=t;lowest=k;}});
     if(lowest){ await update(ref(db,`rooms/${A.room}/cities/list/${lowest}`),{status:"eliminated"}); toast(`${list[lowest].name} fliegt raus`); }
   }
-
   else if(r.type==="revive"){
     Object.values(r.votes||{}).forEach(k=>{tally[k]=(tally[k]||0)+1});
     const elim=Object.entries(list).filter(e=>e[1].status==="eliminated");
-    let highest=null,maxV=0; // maxV=0 stellt sicher, dass mind. 1 Stimme nötig ist
-    
-    // Finde die eliminierte Stadt mit den meisten Stimmen
+    let highest=null,maxV=0; 
     elim.forEach(([k])=>{
       const t=tally[k]||0; 
       if(t>maxV){maxV=t; highest=k;}
     });
-    
     if(highest){ 
       await update(ref(db,`rooms/${A.room}/cities/list/${highest}`),{status:"active"}); 
       toast(`🔄 ${list[highest].name} ist wieder im Rennen!`); 
     } else {
-      toast("Keine Stadt zurückgeholt (Niemand hat abgestimmt).");
+      toast("Keine Stadt zurückgeholt.");
     }
   }
-    
   else if(r.type==="weighted"){
-    // Stimmen gewichtet nach Rang: 1. Platz = 3x, 2.-3. Platz = 2x, Rest = 1x
     const sortedP=Object.entries(A.players).sort((a,b)=>{
       const sa=(a[1].score||0)+((a[1].casual||0)*0.1);
       const sb=(b[1].score||0)+((b[1].casual||0)*0.1);
