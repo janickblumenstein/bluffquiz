@@ -261,7 +261,7 @@ function renderCitiesTable(entries) {
                 <span class="vote-pill ${city.votes < 0 ? 'neg' : ''}" style="display:inline-block; padding:2px 6px;">${city.votes>0?'+':''}${city.votes||0}</span>
             </td>
             <td style="padding:10px; background:var(--card); ${rowStyle}">${city.price || '-'}</td>
-            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.beerPrice ? 'CHF ' + city.beerPrice : '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.beerPrice ?  city.beerPrice : '-'}</td>
             <td style="padding:10px; background:var(--card); ${rowStyle}">${city.tempMay ? city.tempMay + ' °C' : '-'}</td>
             <td style="padding:10px; background:var(--card); ${rowStyle}">${city.flightTime || '-'}</td>
             <td style="padding:10px; background:var(--card); font-size:0.7rem; ${rowStyle}">${city.depCh || '-'}</td>
