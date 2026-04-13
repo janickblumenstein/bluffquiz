@@ -96,7 +96,7 @@ function soloMath(area){
 }
 
 function soloEstimate(area){
-  const qs=shuffle(SCHAETZ).slice(0,5);
+  const qs=shuffle(SCHAETZ_FAKTEN).slice(0,5);
   let i=0,totalDiff=0;
   const next=()=>{
     if(i>=qs.length){
