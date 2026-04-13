@@ -309,20 +309,7 @@ function renderTournament(t){
   },0);
 }
 
-  const m=t.matches[idx];
-  if(m.bye){
-    setTimeout(()=>advanceTournament(idx,m.p1),800);
-    body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bh}`;
-    return;
-  }
-  if(t.gameType==="reaction") return renderReaction(t,idx,m,bh);
-  if(t.gameType==="battleship") return renderBattleship(t,idx,m,bh+picker);
-  if(t.gameType==="tictactoe") return renderTicTacToe(t,idx,m,bh+picker);
-  if(t.gameType==="bierduel") return renderBierDuel(t,idx,m,bh+picker);
-  if(t.gameType==="memory") return renderMemory(t,idx,m,bh+picker);
-  if(t.gameType==="roulette") return renderRoulette(t,idx,m,bh+picker);
-  if(t.gameType==="stopwatch") return renderStopwatch(t,idx,m,bh+picker);
-}
+// === REACTION (First-Click-Wins via Transaction) ===
 
 // === REACTION (First-Click-Wins via Transaction) ===
 function renderReaction(t,idx,m,bh){
