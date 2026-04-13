@@ -1,7 +1,7 @@
 // === cities.js - Staedte-Voting mit allen Modi ===
 const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore}=A;
 
-const DEFAULT_CITIES=["Lissabon","Prag","Krakau","Budapest","Valencia","Porto","Sevilla","Neapel","Belgrad"];
+//const DEFAULT_CITIES=["Lissabon","Prag","Krakau","Budapest","Valencia","Porto","Sevilla","Neapel","Belgrad"];
 
 const DEFAULT_CITIES = {
   "Lissabon": [38.7223, -9.1393],
