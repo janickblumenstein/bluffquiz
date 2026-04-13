@@ -1,31 +1,30 @@
-// === cities.js - Staedte-Voting mit Karte und 50 Metropolen ===
+// === cities.js - Staedte-Voting mit Karte, Tabelle und 50 Metropolen ===
 const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore}=A;
 
 const EUROPE_CITIES = {
   "Amsterdam": [52.3676, 4.9041], "Athen": [37.9838, 23.7275], "Barcelona": [41.3851, 2.1734],
-  "Belgrad": [44.7866, 20.4489], "Berlin": [52.5200, 13.4050], "Bratislava": [47.4979, 19.0402], // (Bratislava coords corrected below but let's just use a clean list)
+  "Belgrad": [44.7866, 20.4489], "Berlin": [52.5200, 13.4050], "Bratislava": [48.1486, 17.1077],
   "Budapest": [47.4979, 19.0402], "Bukarest": [44.4268, 26.1025], "Dublin": [53.3498, -6.2603],
-  "Dubrovnik": [50.0647, 19.9450], "Edinburgh": [55.9533, -3.1883], "Florenz": [43.7696, 11.2558],
+  "Dubrovnik": [42.6507, 18.0944], "Edinburgh": [55.9533, -3.1883], "Florenz": [43.7696, 11.2558],
   "Hamburg": [53.5511, 9.9937], "Helsinki": [60.1695, 24.9354], "Ibiza-Stadt": [38.9067, 1.4206],
   "Istanbul": [41.0082, 28.9784], "Kopenhagen": [55.6761, 12.5683], "Krakau": [50.0647, 19.9450],
   "Lissabon": [38.7223, -9.1393], "London": [51.5074, -0.1278], "Madrid": [40.4168, -3.7038],
-  "Mailand": [45.4642, 9.1900], "Málaga": [39.4699, -0.3763], "München": [48.1351, 11.5820],
+  "Mailand": [45.4642, 9.1900], "Málaga": [36.7213, -4.4213], "München": [48.1351, 11.5820],
   "Neapel": [40.8518, 14.2681], "Oslo": [59.9139, 10.7522], "Palma de Mallorca": [39.5696, 2.6502],
   "Paris": [48.8566, 2.3522], "Porto": [41.1579, -8.6291], "Prag": [50.0755, 14.4378],
-  "Reykjavik": [59.9139, 10.7522], "Riga": [56.9496, 24.1052], "Rom": [41.9028, 12.4964],
-  "Sevilla": [37.3891, -5.9845], "Sofia": [42.6977, 23.3219], "Split": [42.6507, 18.0944],
-  "Stockholm": [59.3293, 18.0686], "Tallinn": [56.9496, 24.1052], "Valletta": [59.3293, 18.0686],
+  "Reykjavik": [64.1466, -21.9426], "Riga": [56.9496, 24.1052], "Rom": [41.9028, 12.4964],
+  "Sevilla": [37.3891, -5.9845], "Sofia": [42.6977, 23.3219], "Split": [43.5081, 16.4402],
+  "Stockholm": [59.3293, 18.0686], "Tallinn": [59.4370, 24.7536], "Valletta": [35.8989, 14.5146],
   "Valencia": [39.4699, -0.3763], "Venedig": [45.4408, 12.3155], "Warschau": [52.2297, 21.0122],
-  "Wien": [48.2082, 16.3738], "Zagreb": [43.5081, 16.4402], "Zürich": [47.3769, 8.5417],
-  "Kiew": [59.3293, 18.0686], "Lyon": [45.7640, 4.8357], "Marseille": [45.7640, 4.8357],
-  "Turin": [45.0703, 7.6869], "Bordeaux": [43.8367, 4.3601]
+  "Wien": [48.2082, 16.3738], "Zagreb": [45.8150, 15.9819], "Zürich": [47.3769, 8.5417],
+  "Kiew": [50.4501, 30.5234], "Lyon": [45.7640, 4.8357], "Marseille": [43.2965, 5.3698],
+  "Turin": [45.0703, 7.6869], "Bordeaux": [44.8378, -0.5792]
 };
 
 let map = null;
 let markers = {};
 
 function initMapAndDropdown() {
-  // 1. Dropdown für Host füllen
   const sel = $("newCity");
   if (sel && sel.options.length <= 1) {
     Object.keys(EUROPE_CITIES).sort().forEach(city => {
@@ -35,23 +34,16 @@ function initMapAndDropdown() {
     });
   }
 
-  // 2. Karte initialisieren
   if (!map && $("cityMap")) {
     map = L.map('cityMap').setView([47.3769, 8.5417], 4); 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-    // Leaflet Bugfix für versteckte Tabs: 
-    // Beobachtet den Container. Wenn der Tab sichtbar wird, passt die Karte ihre Größe an!
-    const resizeObserver = new ResizeObserver(() => {
-      if (map) map.invalidateSize();
-    });
+    const resizeObserver = new ResizeObserver(() => { if (map) map.invalidateSize(); });
     resizeObserver.observe($("cityMap"));
   }
 }
 
 function updateMap(entries) {
   if (!map) return;
-  // Alte Marker entfernen
   Object.values(markers).forEach(m => map.removeLayer(m));
   markers = {};
   
@@ -60,39 +52,23 @@ function updateMap(entries) {
     const isElim = city.status === 'eliminated';
     
     const marker = L.circleMarker(coords, {
-      radius: isElim ? 5 : (city.votes > 0 ? 8 + city.votes : 8), // Mehr Votes = dickerer Punkt
+      radius: isElim ? 5 : (city.votes > 0 ? 8 + city.votes : 8),
       fillColor: isElim ? "#e74c3c" : "#2ecc71",
       color: "#fff",
       weight: 1,
       fillOpacity: isElim ? 0.4 : 0.9
     }).addTo(map);
 
-    // Popup Inhalt bauen
     let popupHtml = `<div style="color:#000; text-align:center;">
       <b style="font-size:1.1rem">${city.name}</b><br>
       <span style="font-weight:bold; color:${city.votes < 0 ? 'red' : 'green'}">Stimmen: ${city.votes || 0}</span>
     </div>`;
-    
-    if(city.price || city.depCh || city.depBack) {
-       popupHtml += `<hr style="margin:5px 0; border-color:#ccc;">
-       <div style="color:#333; font-size:0.8rem;">
-         ${city.price ? `💰 ${city.price}<br>` : ''}
-         ${city.depCh ? `🛫 CH: ${city.depCh}<br>` : ''}
-         ${city.depBack ? `🛬 Zurück: ${city.depBack}` : ''}
-       </div>`;
-    }
-
-    if (A.isHost) {
-        popupHtml += `<hr style="margin:5px 0; border-color:#ccc;">
-        <button style="background:var(--gold); color:#000; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; width:100%; font-weight:bold;" onclick="window.openCityEditor('${id}')">✏️ Bearbeiten</button>`;
-    }
-
     marker.bindPopup(popupHtml);
     markers[id] = marker;
   });
 }
 
-// Global verfügbar machen für den Button im Leaflet-Popup
+// Global verfügbar machen für HTML Event-Handler
 window.openCityEditor = openCityEditor;
 
 
@@ -101,7 +77,6 @@ const prevSeed=A.listeners.seedDefaults;
 A.listeners.seedDefaults=async()=>{
   if(prevSeed) await prevSeed();
   const cityObj={};
-  // Wir nehmen 5 Start-Städte aus der neuen Liste
   const startCities = ["Lissabon", "Prag", "Palma de Mallorca", "Budapest", "Valencia"];
   startCities.forEach((n,i)=>{cityObj["c_"+i]={name:n,status:"active",votes:0,price:"",depCh:"",depBack:""}});
   await set(ref(db,`rooms/${A.room}/cities/list`),cityObj);
@@ -111,10 +86,7 @@ A.listeners.seedDefaults=async()=>{
 const prevReady=A.listeners.onReady;
 A.listeners.onReady=()=>{
   if(prevReady) prevReady();
-  
-  // Wichtig: Karte und Dropdown sofort beim Laden aufbauen
   initMapAndDropdown();
-
   onValue(ref(db,`rooms/${A.room}/cities`),snap=>{
     A.state.cities=snap.val()||{};
     renderCities();
@@ -133,31 +105,126 @@ function bindCityUI(){
   $("cityReactivateAll").onclick=reactivateAll;
 }
 
-// === RENDER ===
+// === RENDER & TABELLE ===
 function renderCities(){
   const c=A.state.cities||{};
   const list=c.list||{};
   const round=c.round;
-  const entries=Object.entries(list).sort((a,b)=>{
-    if(a[1].status!==b[1].status) return a[1].status==="active"?-1:1;
-    return (b[1].votes||0)-(a[1].votes||0);
-  });
+  const entries=Object.entries(list);
 
-  // Karte mit den aktuellen Daten füttern
   updateMap(entries);
-  
-  // Die alte Liste blenden wir aus, da wir jetzt die Karte haben!
-  if($("citiesList")) $("citiesList").innerHTML = "";
+  renderCitiesTable(entries);
 
-  // Voting-Aktionsbereich
   const aa=$("citiesAction"); aa.innerHTML="";
   if(round&&round.type){ renderVoteAction(aa,round,list,entries); }
 }
 
+// Hilfsfunktionen fürs Sortieren
+function parsePrice(str) {
+    if(!str) return Infinity; // Leere ans Ende
+    const m = str.match(/\d+/);
+    return m ? parseInt(m[0]) : Infinity;
+}
+function parseDateForSort(str) {
+    if(!str) return Infinity; // Leere ans Ende
+    // Sucht z.B. nach "12.06. 14:30"
+    const m = str.match(/(\d{1,2})\.(\d{1,2})\.?\s+(\d{1,2}):(\d{2})/);
+    if(m) {
+        const [_, d, mo, h, mi] = m;
+        // Format MM-DD-HH-MM als Zahl (z.B. 06121430)
+        return parseInt(mo)*1000000 + parseInt(d)*10000 + parseInt(h)*100 + parseInt(mi);
+    }
+    return Infinity; 
+}
+
+function renderCitiesTable(entries) {
+    const listDiv = $("citiesList");
+    if(!listDiv) return;
+
+    // Globale Sortier-Richtung merken
+    window._citySort = window._citySort || { col: 'votes', asc: false };
+    const sort = window._citySort;
+
+    let sorted = [...entries];
+    sorted.sort((a,b) => {
+        const cA = a[1];
+        const cB = b[1];
+
+        // Eliminierte immer nach unten
+        if (cA.status !== cB.status) {
+            return cA.status === 'active' ? -1 : 1;
+        }
+
+        let valA, valB;
+        if(sort.col === 'name') { valA = cA.name.toLowerCase(); valB = cB.name.toLowerCase(); }
+        else if(sort.col === 'votes') { valA = cA.votes || 0; valB = cB.votes || 0; }
+        else if(sort.col === 'price') { valA = parsePrice(cA.price); valB = parsePrice(cB.price); }
+        else if(sort.col === 'depCh') { valA = parseDateForSort(cA.depCh); valB = parseDateForSort(cB.depCh); }
+        else if(sort.col === 'depBack') { valA = parseDateForSort(cA.depBack); valB = parseDateForSort(cB.depBack); }
+
+        if (valA < valB) return sort.asc ? -1 : 1;
+        if (valA > valB) return sort.asc ? 1 : -1;
+        return 0;
+    });
+
+    const indicator = (col) => sort.col === col ? (sort.asc ? ' ▲' : ' ▼') : '';
+
+    let html = `<div style="overflow-x:auto; margin-top:15px; border-radius:8px; border:1px solid var(--border);">
+        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.8rem; white-space:nowrap;">
+        <thead style="background:var(--card2); cursor:pointer; user-select:none;">
+            <tr>
+                <th style="padding:10px;" onclick="window.setCitySort('name')">Stadt${indicator('name')}</th>
+                <th style="padding:10px;" onclick="window.setCitySort('votes')">Pkt${indicator('votes')}</th>
+                <th style="padding:10px;" onclick="window.setCitySort('price')">Preis${indicator('price')}</th>
+                <th style="padding:10px;" onclick="window.setCitySort('depCh')">Hinflug${indicator('depCh')}</th>
+                <th style="padding:10px;" onclick="window.setCitySort('depBack')">Rückflug${indicator('depBack')}</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    if(sorted.length === 0) {
+        html += `<tr><td colspan="5" style="padding:10px; text-align:center; opacity:0.5;">Keine Städte vorhanden</td></tr>`;
+    }
+
+    sorted.forEach(([id, city]) => {
+        const isElim = city.status === 'eliminated';
+        const rowStyle = isElim ? 'opacity:0.4; text-decoration:line-through;' : '';
+        const clickAction = A.isHost ? `onclick="window.openCityEditor('${id}')" style="cursor:pointer;"` : '';
+
+        html += `<tr style="border-top:1px solid var(--border); background:var(--card); transition:background 0.2s;" ${clickAction}>
+            <td style="padding:10px; font-weight:bold; ${rowStyle}">${city.name}</td>
+            <td style="padding:10px; ${rowStyle}">
+                <span class="vote-pill ${city.votes < 0 ? 'neg' : ''}" style="display:inline-block; padding:2px 6px;">${city.votes>0?'+':''}${city.votes||0}</span>
+            </td>
+            <td style="padding:10px; ${rowStyle}">${city.price || '-'}</td>
+            <td style="padding:10px; font-size:0.7rem; ${rowStyle}">${city.depCh || '-'}</td>
+            <td style="padding:10px; font-size:0.7rem; ${rowStyle}">${city.depBack || '-'}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    if(A.isHost) {
+        html += `<div class="sub" style="text-align:right; margin-top:5px;">💡 Tippe als Host auf eine Zeile zum Bearbeiten</div>`;
+    }
+    listDiv.innerHTML = html;
+}
+
+window.setCitySort = (col) => {
+    if (window._citySort.col === col) {
+        window._citySort.asc = !window._citySort.asc;
+    } else {
+        window._citySort.col = col;
+        // Preis/Flüge standardmäßig aufsteigend sortieren (günstigste/früheste zuerst)
+        window._citySort.asc = (col === 'price' || col === 'depCh' || col === 'depBack') ? true : false;
+    }
+    renderCitiesTable(Object.entries((A.state.cities||{}).list||{}));
+};
+
 function renderVoteAction(aa,round,list,entries){
   const myV=(round.votes||{})[A.user];
   const me=A.players[A.user]||{};
-  const activeOnly=entries.filter(e=>e[1].status==="active");
+  // Sortiere für die Voting-Buttons rein alphabetisch (ist übersichtlicher)
+  const activeOnly=entries.filter(e=>e[1].status==="active").sort((a,b) => a[1].name.localeCompare(b[1].name));
 
   if(round.type==="pos3"){
     const bonusUsed=(round.bonusUsed||{})[A.user]||0;
@@ -174,7 +241,7 @@ function renderVoteAction(aa,round,list,entries){
       const cnt=stack[k]||0;
       return `<div class="row" style="align-items:center;margin:3px 0">
         <button class="btn-red btn-sm" data-stackdown="${k}" ${cnt<=0?'disabled':''}>−</button>
-        <div style="text-align:center;font-weight:bold">${city.name} <span class="vote-pill">${cnt}</span></div>
+        <div style="text-align:center;font-weight:bold;flex:2;">${city.name} <span class="vote-pill">${cnt}</span></div>
         <button class="btn-green btn-sm" data-stackup="${k}" ${used>=3?'disabled':''}>+</button>
       </div>`;
     }).join("");
@@ -207,7 +274,7 @@ function renderVoteAction(aa,round,list,entries){
     }).join("");
   }
   else if(round.type==="revive"){
-    const elimOnly=entries.filter(e=>e[1].status==="eliminated");
+    const elimOnly=entries.filter(e=>e[1].status==="eliminated").sort((a,b) => a[1].name.localeCompare(b[1].name));
     if(!elimOnly.length){
       aa.innerHTML=`<hr><h3>🔄 Comeback-Modus:</h3><div class="sub">Keine eliminierten Städte.</div>`;
     } else {
@@ -290,7 +357,7 @@ function openCityEditor(cid){
     <label class="sub">Preis (z.B. CHF 250):</label>
     <input id="edPrice" value="${city.price||''}" placeholder="z.B. CHF 250">
     <label class="sub">Abflug von CH:</label>
-    <input id="edDepCh" value="${city.depCh||''}" placeholder="z.B. Fr 12.06. 14:30 ZRH">
+    <input id="edDepCh" value="${city.depCh||''}" placeholder="z.B. Fr 12.06. 14:30">
     <label class="sub">Abflug zurueck:</label>
     <input id="edDepBack" value="${city.depBack||''}" placeholder="z.B. So 14.06. 18:00">
     <div class="row">
@@ -322,7 +389,6 @@ async function addCity(){
   if(!A.isHost) return;
   const v=$("newCity").value.trim(); if(!v) return;
   
-  // Überprüfen ob die Stadt schon existiert
   const list=((A.state.cities||{}).list)||{};
   const exists = Object.values(list).some(c => c.name === v);
   if(exists) return toast("Stadt existiert bereits!");
