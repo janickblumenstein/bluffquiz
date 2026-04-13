@@ -18,7 +18,7 @@ const EUROPE_CITIES = {
   "Valencia": [39.4699, -0.3763], "Venedig": [45.4408, 12.3155], "Warschau": [52.2297, 21.0122],
   "Wien": [48.2082, 16.3738], "Zagreb": [45.8150, 15.9819], "Zürich": [47.3769, 8.5417],
   "Kiew": [50.4501, 30.5234], "Lyon": [45.7640, 4.8357], "Marseille": [43.2965, 5.3698],
-  "Turin": [45.0703, 7.6869], "Bordeaux": [44.8378, -0.5792]
+  "Turin": [45.0703, 7.6869], "Bordeaux": [44.8378, -0.5792], "Las Vegas" [36.1691, -115.1499]
 };
 
 let map = null;
@@ -77,7 +77,7 @@ const prevSeed=A.listeners.seedDefaults;
 A.listeners.seedDefaults=async()=>{
   if(prevSeed) await prevSeed();
   const cityObj={};
-  const startCities = ["Lissabon", "Prag", "Palma de Mallorca", "Budapest", "Valencia"];
+  const startCities = ["Lissabon", "Prag", "Las Vega", "Budapest", "Valencia"];
   startCities.forEach((n,i)=>{cityObj["c_"+i]={name:n,status:"active",votes:0,price:"",depCh:"",depBack:""}});
   await set(ref(db,`rooms/${A.room}/cities/list`),cityObj);
 };
