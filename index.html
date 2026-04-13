@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Mallorca 2026 V7</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{--gold:#ffcc00;--dark:#0f0f12;--bg:#14141a;--card:#1e1e26;--card2:#2a2a34;--muted:#8a8a95;--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--purple:#9b59b6;--orange:#e67e22;--border:#2e2e38}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -217,6 +219,7 @@ button:disabled{opacity:.4}
   <div id="tabCities" class="tabPane hidden">
     <div class="card">
       <h2>Naechstes Reiseziel</h2>
+      <div id="cityMap" style="height: 250px; border-radius: 12px; margin-bottom: 15px; border: 2px solid var(--border);"></div>
       <div id="citiesList"></div>
       <div id="citiesAction"></div>
     </div>
