@@ -126,15 +126,31 @@ function parsePrice(str) {
     return m ? parseInt(m[0]) : Infinity;
 }
 function parseDateForSort(str) {
-    if(!str) return Infinity; // Leere ans Ende
-    // Sucht z.B. nach "12.06. 14:30"
-    const m = str.match(/(\d{1,2})\.(\d{1,2})\.?\s+(\d{1,2}):(\d{2})/);
-    if(m) {
-        const [_, d, mo, h, mi] = m;
-        // Format MM-DD-HH-MM als Zahl (z.B. 06121430)
-        return parseInt(mo)*1000000 + parseInt(d)*10000 + parseInt(h)*100 + parseInt(mi);
+    if(!str || str.trim() === "") return Infinity; // Leere Felder ans Ende
+
+    // Standardwerte: Wir gehen von Mai (Monat 5) aus, falls nichts angegeben ist
+    let day = 0, month = 5, hour = 0, minute = 0; 
+
+    // 1. Uhrzeit suchen (sucht nach HH:MM oder HH.MM)
+    const timeMatch = str.match(/(\d{1,2})[:.](\d{2})/);
+    if (timeMatch) {
+        hour = parseInt(timeMatch[1], 10);
+        minute = parseInt(timeMatch[2], 10);
     }
-    return Infinity; 
+
+    // 2. Datum suchen (sucht nach DD.MM. oder nur DD.)
+    // Akzeptiert: "12.05.", "12.5.", "12.05", "12."
+    const dateMatch = str.match(/(\d{1,2})\.(\d{1,2})?/) || str.match(/(\d{1,2})/);
+    
+    if (dateMatch) {
+        day = parseInt(dateMatch[1], 10);
+        if (dateMatch[2]) {
+            month = parseInt(dateMatch[2], 10); // Falls ein Monat da ist, überschreibe den Mai
+        }
+    }
+
+    // Wir berechnen eine sortierbare Zahl (z.B. Monat 5, Tag 12, 14:30 Uhr -> 5121430)
+    return (month * 1000000) + (day * 10000) + (hour * 100) + minute;
 }
 
 function renderCitiesTable(entries) {
@@ -357,9 +373,9 @@ function openCityEditor(cid){
     <label class="sub">Preis (z.B. CHF 250):</label>
     <input id="edPrice" value="${city.price||''}" placeholder="z.B. CHF 250">
     <label class="sub">Abflug von CH:</label>
-    <input id="edDepCh" value="${city.depCh||''}" placeholder="z.B. Fr 12.06. 14:30">
+    <input id="edDepCh" value="${city.depCh||''}" placeholder="z.B. 12. 14:30 (Tag. Zeit)">
     <label class="sub">Abflug zurueck:</label>
-    <input id="edDepBack" value="${city.depBack||''}" placeholder="z.B. So 14.06. 18:00">
+    <input id="edDepBack" value="${city.depBack||''}" placeholder="z.B. 14. 18:00 (Tag. Zeit)">
     <div class="row">
       <button class="btn-green" id="edSave">💾 Speichern</button>
       <button class="btn-red" id="edDelete">🗑️ Loeschen</button>
