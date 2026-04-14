@@ -95,7 +95,18 @@ async function startSetup(gameType){
 
 function renderSetup(){
   const setup=A.state.tournamentSetup; if(!setup) return;
-  const labels={reaction:"⚡ Reaktions-Test",battleship:"⚓ Schiffeversenken",tictactoe:"⭕ TicTacToe-3",bierduel:"🍺 Bier-Duell"};
+  
+  // HIER FEHLTEN DIE NEUEN SPIELE!
+  const labels={
+    reaction: "⚡ Reaktions-Test",
+    battleship: "⚓ Schiffeversenken",
+    tictactoe: "⭕ TicTacToe-3",
+    bierduel: "🍺 Bier-Duell",
+    memory: "🧠 Bier-Memory",           // NEU
+    roulette: "💥 Bier-Roulette",      // NEU
+    stopwatch: "⏱️ 5-Sekunden-Stoppuhr" // NEU
+  };
+  
   const body=$("officialBody");
   const picks=setup.picks||{};
   let html=`<div class="q-big">${labels[setup.gameType]} Turnier</div>`;
@@ -292,22 +303,6 @@ function renderTournament(t){
     return;
   }
 
-  const m=t.matches[idx];
-  if(m.bye){
-    setTimeout(()=>advanceTournament(idx,m.p1),800);
-    body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bh}`;
-    return;
-  }
-
-  // Spielfeld aufbauen (ohne 'return', damit der Code unten noch ausgefuehrt wird!)
-  if(t.gameType==="reaction") renderReaction(t,idx,m,bh);
-  else if(t.gameType==="battleship") renderBattleship(t,idx,m,bh+picker);
-  else if(t.gameType==="tictactoe") renderTicTacToe(t,idx,m,bh+picker);
-  else if(t.gameType==="bierduel") renderBierDuel(t,idx,m,bh+picker);
-  else if(t.gameType==="memory") renderMemory(t,idx,m,bh+picker);
-  else if(t.gameType==="roulette") renderRoulette(t,idx,m,bh+picker);
-  else if(t.gameType==="stopwatch") renderStopwatch(t,idx,m,bh+picker);
-
   // FIX: Zuschauer-Buttons IMMER neu verknuepfen, nachdem das HTML aktualisiert wurde
   setTimeout(()=>{
     document.querySelectorAll("[data-spect]").forEach(b=>b.onclick=()=>{
@@ -323,81 +318,105 @@ function renderTournament(t){
 
 // === REACTION (First-Click-Wins via Transaction) ===
 
-// === REACTION (First-Click-Wins via Transaction) ===
 function renderReaction(t,idx,m,bh){
   const body=$("officialBody");
-  const md=Object.assign({phase:"waiting",ready:{}},(t.reaction&&t.reaction[idx])||{});
+  const rd = (t.reaction && t.reaction[idx]) || { phase: "waiting", ready: {}, scores: { [m.p1]: 0, [m.p2]: 0 }, round: 1, history: [] };
   const isPlayer=A.user===m.p1||A.user===m.p2;
+  const opp = A.user === m.p1 ? m.p2 : m.p1;
+  
   let html=`<div class="q-big">⚡ ${m.p1} vs ${m.p2}</div>`;
 
-  if(md.phase==="waiting"){
-    if(isPlayer){
-      const rdy=md.ready&&md.ready[A.user];
-      html+=`<div class="sub" style="text-align:center">Beide Spieler: Bereit druecken</div>`;
-      html+=`<button class="${rdy?'btn-green':'btn-blue'}" id="reactReady">${rdy?'✓ Bereit':'Bereit'}</button>`;
-    } else html+=`<div class="sub" style="text-align:center">Warte auf Spieler...</div>`;
-    html+=`<div class="sub">Bereit: ${Object.keys(md.ready||{}).join(", ")||'-'}</div>`;
-  } else if(md.phase==="countdown"){
-    html+=`<div id="reactBox" style="background:var(--red);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;cursor:pointer;margin:10px 0">WARTEN...</div>`;
-  } else if(md.phase==="go"){
-    html+=`<div id="reactBox" style="background:var(--green);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;cursor:pointer;color:#000;margin:10px 0">JETZT!</div>`;
-  } else if(md.phase==="done"){
-    html+=`<div class="flash">🏆 ${md.winner} gewinnt!</div>`;
-    if(A.isHost) html+=`<button class="btn-green" id="nextMatch">Naechstes Match</button>`;
-  }
-  html+=bh;
-  if(A.isHost&&md.phase==="waiting") html+=`<hr><button class="btn-orange" id="forceStart">Jetzt starten (bypass Bereit)</button>`;
-  body.innerHTML=html;
+  // Scoreboard
+  html += `<div class="card" style="background:rgba(52,152,219,0.1); border:1px solid var(--blue); margin-bottom:15px; padding:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="text-align:left; flex:1;"><b>${m.p1}</b></div>
+      <div style="font-size:1.5rem; font-weight:900; color:var(--blue);">${rd.scores[m.p1]}:${rd.scores[m.p2]}</div>
+      <div style="text-align:right; flex:1;"><b>${m.p2}</b></div>
+    </div>
+    <div class="sub" style="text-align:center;">Best of 3 · Runde ${rd.round}</div>
+  </div>`;
 
-  const rd=$("reactReady"); if(rd) rd.onclick=async()=>{
+  if(rd.phase==="waiting"){
+    if(isPlayer){
+      const rdy=rd.ready && rd.ready[A.user];
+      html+=`<button class="${rdy?'btn-green':'btn-blue'}" id="reactReady">${rdy?'✓ Bereit':'BEREIT DRÜCKEN'}</button>`;
+    } else html+=`<div class="sub" style="text-align:center">Warte auf Spieler...</div>`;
+  } else if(rd.phase==="countdown"){
+    html+=`<div id="reactBox" style="background:var(--red);height:180px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;margin:10px 0">WARTEN...</div>`;
+  } else if(rd.phase==="go"){
+    html+=`<div id="reactBox" style="background:var(--green);height:180px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:bold;color:#000;margin:10px 0;cursor:pointer;">JETZT!</div>`;
+  } else if(rd.phase==="round_done" || rd.phase==="done"){
+    const last = rd.history ? rd.history[rd.history.length-1] : null;
+    if(last){
+      const early = last.winTime === "FRUEH";
+      html += `<div class="flash ${early?'warn':''}" style="text-align:center;">
+        <div style="font-size:1.2rem;">${early ? '🚫 Zu früh gedrückt!' : '⏱️ Zeit-Check'}</div>
+        <div style="margin-top:5px;"><b>${last.winner}</b> war schneller!</div>
+        ${!early ? `<div class="sub">Reaktionszeit: ${(last.winTime/1000).toFixed(3)}s</div>` : ''}
+      </div>`;
+    }
+
+    if(rd.phase==="done"){
+      html += `<div class="flash gold" style="text-align:center; font-weight:bold;">🏆 MATCH-SIEG: ${rd.winner}</div>`;
+      if(A.isHost) html+=`<button class="btn-green" id="nextMatch">Turnier fortsetzen</button>`;
+    } else if(A.isHost) {
+      html += `<button class="btn-orange" id="nextReactRound">Nächste Runde starten</button>`;
+    }
+  }
+
+  body.innerHTML=html+bh;
+
+  // Event Bindings
+  const rdBtn = $("reactReady"); if(rdBtn) rdBtn.onclick = async () => {
     await set(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/ready/${A.user}`),true);
-    const r=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/ready`))).val()||{};
-    if(r[m.p1]&&r[m.p2]){
-      const wait=1500+Math.random()*3000;
-      await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
+    const snap = await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/ready`));
+    const r = snap.val() || {};
+    if(r[m.p1] && r[m.p2]) {
+      const wait = 2000 + Math.random() * 4000;
+      await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "countdown", goAt: Date.now() + wait });
     }
   };
-  const fs=$("forceStart"); if(fs) fs.onclick=async()=>{
-    const wait=1500+Math.random()*3000;
-    await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
+
+  const nrBtn = $("nextReactRound"); if(nrBtn) nrBtn.onclick = async () => {
+    await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "waiting", ready: {}, goAt: null });
   };
-  // Client-side countdown->go transition
-  if(md.phase==="countdown"&&md.goAt){
-    const remaining=md.goAt-Date.now();
-    const flip=()=>update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
-    if(remaining<=0) flip();
-    else A.timers.push(setTimeout(flip,remaining));
+
+  const nmBtn = $("nextMatch"); if(nmBtn) nmBtn.onclick = () => advanceTournament(idx, rd.winner);
+
+  // Countdown Logic
+  if(rd.phase==="countdown" && rd.goAt){
+    const diff = rd.goAt - Date.now();
+    if(diff <= 0) update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "go", goAt: Date.now() });
+    else A.timers.push(setTimeout(() => update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "go", goAt: Date.now() }), diff));
   }
-  // Box click (FIRST-CLICK-WINS via transaction)
-  const rb=$("reactBox"); if(rb&&isPlayer){
-    rb.onclick=async()=>{
-      if(A._reactClicking) return; // Doppelklick-Guard
-      A._reactClicking=true;
-      const tap=Date.now();
-      // INSTANT UI FEEDBACK
-      rb.style.background="#555";
-      rb.innerText="✓ Erfasst...";
-      try {
-        const fresh=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val()||{};
-        if(fresh.phase==="countdown"){
-          const opp=A.user===m.p1?m.p2:m.p1;
-          await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/winner`),c=>c||opp);
-          await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"done",winTime:"FRUEH"});
-          setTimeout(()=>advanceTournament(idx,opp),2000);
-          return;
-        }
-        if(fresh.phase==="go"){
-          const res=await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/winner`),c=>c||A.user);
-          const winner=res.snapshot.val();
-          await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"done",winTime:tap-(fresh.goAt||tap)});
-          setTimeout(()=>advanceTournament(idx,winner),2000);
-        }
-      } finally {
-        setTimeout(()=>{A._reactClicking=false;},500);
-      }
+
+  // Click Logic
+  const rb = $("reactBox"); if(rb && isPlayer){
+    rb.onclick = async () => {
+      if(A._reactClicking) return;
+      A._reactClicking = true;
+      const tap = Date.now();
+      const current = (await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val();
+      if(!current || (current.phase !== "countdown" && current.phase !== "go")) { A._reactClicking=false; return; }
+
+      const winTime = current.phase === "countdown" ? "FRUEH" : tap - current.goAt;
+      const roundWinner = (winTime === "FRUEH") ? opp : A.user;
+      
+      const newScores = { ...rd.scores };
+      newScores[roundWinner]++;
+      const newHistory = [...(rd.history || []), { winner: roundWinner, winTime }];
+      const matchWinner = newScores[roundWinner] >= 2 ? roundWinner : null;
+
+      await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), {
+        phase: matchWinner ? "done" : "round_done",
+        scores: newScores,
+        history: newHistory,
+        winner: matchWinner,
+        round: rd.round + 1
+      });
+      A._reactClicking = false;
     };
   }
-  const nm=$("nextMatch"); if(nm) nm.onclick=()=>advanceTournament(idx,md.winner);
 }
 
 // === BATTLESHIP ===
@@ -605,27 +624,50 @@ function renderRoulette(t, idx, m, bh) {
 
 // === BIER-STOPPUHR (5-Sekunden-Stopp) ===
 // === BIER-STOPPUHR (5-Sekunden-Stopp) ===
+// === BIER-STOPPUHR (Initialisierung) ===
 async function initStopwatch(idx, m) {
   if (!A.isHost) return;
-  const t = (await get(ref(db, `rooms/${A.room}/tournament`))).val();
-  if (!t) return;
-  const myRound = t.matches[idx].round;
   const updates = {};
-
-  t.matches.forEach((mt, i) => {
-    if (mt.round === myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2) {
-      if (!(t.stopwatch && t.stopwatch[i])) {
-        updates[i] = {
-          phase: "waiting", // "waiting" -> "running" -> "done"
-          times: {},
-          ready: {},
-          startedAt: Date.now()
-        };
-      }
-    }
-  });
+  updates[idx] = {
+    phase: "waiting",
+    times: {},
+    ready: {},
+    scores: { [m.p1]: 0, [m.p2]: 0 },
+    round: 1,
+    startedAt: Date.now()
+  };
   await update(ref(db, `rooms/${A.room}/tournament/stopwatch`), updates);
-  toast(`${Object.keys(updates).length} Match(es) gestartet`);
+}
+
+// === BIER-STOPPUHR (Timer-Stopp Logik) ===
+async function stopTimer(idx, m) {
+  const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
+  const d = (await get(r)).val();
+  if (!d || d.phase !== "running" || (d.times && d.times[A.user])) return;
+  
+  if (Date.now() < d.startTime) { toast("Zu früh!"); return; }
+
+  const elapsed = (Date.now() - d.startTime) / 1000;
+  await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/times/${A.user}`), elapsed);
+
+  const fresh = (await get(r)).val();
+  if (fresh.times && fresh.times[m.p1] && fresh.times[m.p2]) {
+    const diff1 = Math.abs(5 - fresh.times[m.p1]);
+    const diff2 = Math.abs(5 - fresh.times[m.p2]);
+    const roundWinner = diff1 < diff2 ? m.p1 : m.p2;
+    
+    const newScores = { ...d.scores };
+    newScores[roundWinner]++;
+    const matchWinner = newScores[roundWinner] >= 2 ? roundWinner : null;
+
+    if (matchWinner) {
+      await update(r, { phase: "done", winner: matchWinner, scores: newScores });
+      setTimeout(() => advanceTournament(idx, matchWinner), 3500);
+    } else {
+      // Nächste Runde vorbereiten
+      setTimeout(() => update(r, { phase: "waiting", ready: {}, times: {}, scores: newScores, round: d.round + 1 }), 3000);
+    }
+  }
 }
 
 async function swReady(idx, m) {
@@ -639,34 +681,6 @@ async function swReady(idx, m) {
   }
 }
 
-async function stopTimer(idx, m) {
-  const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
-  const d = (await get(r)).val();
-  if (!d || d.phase !== "running" || (d.times && d.times[A.user])) return;
-  
-  // Anti-Cheat: Wer klickt, bevor es losgeht, bekommt einen Hinweis
-  if (Date.now() < d.startTime) {
-      toast("Zu früh gedrückt!");
-      return;
-  }
-
-  // Zeit erfassen
-  const elapsed = (Date.now() - d.startTime) / 1000;
-  await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/times/${A.user}`), elapsed);
-
-  // Check, ob beide gestoppt haben
-  const fresh = (await get(r)).val();
-  if (fresh.times && fresh.times[m.p1] && fresh.times[m.p2]) {
-    const diff1 = Math.abs(5 - fresh.times[m.p1]);
-    const diff2 = Math.abs(5 - fresh.times[m.p2]);
-    
-    // Wer näher an 5,00s ist, gewinnt
-    let winner = diff1 < diff2 ? m.p1 : (diff2 < diff1 ? m.p2 : (Math.random() > 0.5 ? m.p1 : m.p2));
-    
-    await update(r, { phase: "done", winner: winner });
-    setTimeout(() => advanceTournament(idx, winner), 3500);
-  }
-}
 
 function renderStopwatch(t, idx, m, bh) {
   const body = $("officialBody");
