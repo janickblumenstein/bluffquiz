@@ -169,7 +169,7 @@ async function actuallyStart(){
   const bracket=buildBracket(participants);
   const safeGameType = String(setup.gameType);
 
-  // ATOMARES UPDATE: Löscht das Setup und erstellt das Turnier gleichzeitig
+  // ATOMARES UPDATE: Verhindert Ladefehler beim Turnierstart
   const updates = {};
   updates[`rooms/${A.room}/tournamentSetup`] = null;
   updates[`rooms/${A.room}/tournament`] = {
@@ -305,7 +305,23 @@ function renderTournament(t){
     return;
   }
 
-  // FIX: Zuschauer-Buttons IMMER neu verknuepfen, nachdem das HTML aktualisiert wurde
+  const m=t.matches[idx];
+  if(m.bye){
+    setTimeout(()=>advanceTournament(idx,m.p1),800);
+    body.innerHTML=`<div class="q-big">${m.p1} hat Freilos!</div>${bh}`;
+    return;
+  }
+
+  // === HIER WAR DER FEHLER: Dieser Block fehlte! ===
+  if(t.gameType==="reaction") renderReaction(t,idx,m,bh);
+  else if(t.gameType==="battleship") renderBattleship(t,idx,m,bh+picker);
+  else if(t.gameType==="tictactoe") renderTicTacToe(t,idx,m,bh+picker);
+  else if(t.gameType==="bierduel") renderBierDuel(t,idx,m,bh+picker);
+  else if(t.gameType==="memory") renderMemory(t,idx,m,bh+picker);
+  else if(t.gameType==="roulette") renderRoulette(t,idx,m,bh+picker);
+  else if(t.gameType==="stopwatch") renderStopwatch(t,idx,m,bh+picker);
+
+  // FIX: Zuschauer-Buttons IMMER neu verknüpfen, nachdem das HTML aktualisiert wurde
   setTimeout(()=>{
     document.querySelectorAll("[data-spect]").forEach(b=>b.onclick=()=>{
       A._spectIdx=parseInt(b.dataset.spect);
@@ -624,20 +640,28 @@ function renderRoulette(t, idx, m, bh) {
   const rn = $("rlNext"); if (rn) rn.onclick = () => advanceTournament(idx, md.winner);
 }
 
-// === BIER-STOPPUHR (5-Sekunden-Stopp) ===
-// === BIER-STOPPUHR (5-Sekunden-Stopp) ===
 // === BIER-STOPPUHR (Initialisierung) ===
 async function initStopwatch(idx, m) {
   if (!A.isHost) return;
+  const t = (await get(ref(db, `rooms/${A.room}/tournament`))).val();
+  if (!t) return;
+  const myRound = t.matches[idx].round;
   const updates = {};
-  updates[idx] = {
-    phase: "waiting",
-    times: {},
-    ready: {},
-    scores: { [m.p1]: 0, [m.p2]: 0 },
-    round: 1,
-    startedAt: Date.now()
-  };
+
+  t.matches.forEach((mt, i) => {
+    if (mt.round === myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2) {
+      if (!(t.stopwatch && t.stopwatch[i])) {
+        updates[i] = {
+          phase: "waiting",
+          times: {},
+          ready: {},
+          scores: { [mt.p1]: 0, [mt.p2]: 0 },
+          round: 1,
+          startedAt: Date.now()
+        };
+      }
+    }
+  });
   await update(ref(db, `rooms/${A.room}/tournament/stopwatch`), updates);
 }
 
