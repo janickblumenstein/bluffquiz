@@ -897,7 +897,6 @@ function renderMemory(t, idx, m, bh) {
     // Turn Indicator
     html += `<div class="flash ${md.turn === A.user ? 'gold' : ''}" style="text-align:center;">
       ${md.turn === A.user ? '<b>DU BIST DRAN!</b> Karte wählen...' : 'Warten auf ' + md.turn + '...'}
-      html += `<div class="sub" style="text-align:center;">Max. 3 Steine gleichzeitig! Merke dir deine Reihenfolge.</div>`;
     </div>`;
   }
 
