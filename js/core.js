@@ -61,6 +61,7 @@ App.$("overlayClose").onclick=()=>App.$("overlay").classList.remove("show");
 
 async function start(takeHost){
   App.user=App.$("nameInp").value.trim();
+  localStorage.setItem("malle26_username", App.user);
   App.room=(App.$("roomInp").value.trim()||"MALLE26").toUpperCase();
   if(!App.user) return alert("Name eingeben!");
 
@@ -267,5 +268,41 @@ function renderTokenSelect(){
   sel.innerHTML=Object.keys(App.players).map(p=>`<option value="${p}">${p}</option>`).join("");
   if(cur) sel.value=cur;
 }
+
+// === AUTO-LOGIN ===
+async function attemptAutoLogin() {
+  const savedName = localStorage.getItem("malle26_username");
+  const savedDevice = localStorage.getItem("malle26_deviceId");
+  if (!savedName || !savedDevice) return;
+
+  // Namen schon mal ins Feld schreiben
+  if (App.$("nameInp")) App.$("nameInp").value = savedName;
+
+  try {
+    App.room = (App.$("roomInp").value.trim() || "MALLE26").toUpperCase();
+    const regSnap = await get(ref(db, `rooms/${App.room}/deviceReg/${savedName}`));
+    
+    // Wenn Gerät und Name zusammenpassen -> Direkt rein!
+    if (regSnap.exists() && regSnap.val().deviceId === savedDevice) {
+      App.user = savedName;
+      App.deviceId = savedDevice;
+      
+      App.$("login").classList.add("hidden");
+      App.$("app").classList.remove("hidden");
+      App.$("tabbar").classList.remove("hidden");
+      
+      attachListeners();
+      bindCoreUI();
+      if (App.listeners.onReady) App.listeners.onReady();
+      switchTab("Score"); // Start-Tab nach Auto-Login
+      toast(`Willkommen zurück, ${savedName}!`);
+    }
+  } catch (error) {
+    console.error("Auto-login error:", error);
+  }
+}
+
+// Direkt beim Laden der Seite aufrufen
+attemptAutoLogin();
 
 console.log("✅ core.js loaded");

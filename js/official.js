@@ -82,15 +82,30 @@ A.listeners.onReady=()=>{
     else renderOfficial();
   });
   onValue(ref(db,`rooms/${A.room}/official`),snap=>{
-    const newO=snap.val();
-    if(newO&&newO.startedAt&&newO.startedAt!==A._lastOfficialId){
-      A._lastOfficialId=newO.startedAt;
-      A.switchTab("Games");
+    const prevO = A.state.official;
+    const newO = snap.val();
+    
+    if(newO && newO.startedAt && newO.startedAt !== A._lastOfficialId){
+      A._lastOfficialId = newO.startedAt;
+      if (!A.isHost) A.switchTab("Games"); // Host bleibt im Host-Tab!
       toast("⭐ Offizielle Runde gestartet!");
     }
-    if(!newO) A._lastOfficialId=null;
-    A.state.official=newO;
-    renderOfficial();
+    if(!newO) A._lastOfficialId = null;
+    
+    A.state.official = newO;
+
+    // 🚀 NEU: Smart Render Logic (wie in der Hochzeits-App)
+    const isNewQuestionOrPhase = newO && (!prevO || prevO.q !== newO.q || prevO.phase !== newO.phase);
+    const myPrevAns = (prevO && prevO.answers) ? prevO.answers[A.user] : undefined;
+    const myNewAns = (newO && newO.answers) ? newO.answers[A.user] : undefined;
+    const iJustAnswered = JSON.stringify(myPrevAns) !== JSON.stringify(myNewAns);
+
+    if (isNewQuestionOrPhase || iJustAnswered || !newO) {
+      renderOfficial();
+    } else {
+      updateLiveCounter(newO);
+    }
+
     updateTabPulse();
   });
   // Nur Start-Buttons binden die zu diesem Modul gehoeren
@@ -101,6 +116,16 @@ A.listeners.onReady=()=>{
     }
   });
 };
+
+function updateLiveCounter(o) {
+  if (!o || o.phase !== "answer") return;
+  const answered = Object.keys(o.answers || {}).length;
+  const total = Object.keys(A.players).length;
+  const counterEls = document.querySelectorAll(".live-counter-text");
+  counterEls.forEach(el => {
+    el.innerText = `${answered}/${total} haben geantwortet`;
+  });
+}
 
 function updateTabPulse(){
   const games=document.querySelector('[data-tab="Games"]');
@@ -413,18 +438,6 @@ function renderOfficial(){
   if(!o){ panel.classList.add("hidden"); return; }
   panel.classList.remove("hidden");
 
-  // PRESERVE INPUT STATE vor Re-Render
-  const preserveInput=(()=>{
-    const el=document.getElementById("offIn");
-    if(!el) return null;
-    return {
-      value:el.value,
-      hadFocus:document.activeElement===el,
-      selStart:el.selectionStart,
-      selEnd:el.selectionEnd
-    };
-  })();
-
   if(o.phase==="done"){
     $("officialBody").innerHTML=`
       <div class="q-big">${o.q||""}</div>
@@ -448,10 +461,13 @@ function renderOfficial(){
   const myAns=(o.answers||{})[A.user];
 
   if(o.phase==="answer"){
+    const answered = Object.keys(o.answers||{}).length;
+    const total = Object.keys(A.players).length;
+
     if(myAns!==undefined){
       html+=`<div class="flash">✅ Deine Antwort: <b>${typeof myAns==='object'?myAns.val:myAns}</b></div>`;
-      const answered=Object.keys(o.answers||{}).length;
-      html+=`<div class="sub">${answered}/${Object.keys(A.players).length} haben geantwortet</div>`;
+      // HIER ist die neue Klasse
+      html+=`<div class="sub live-counter-text">${answered}/${total} haben geantwortet</div>`;
     } else {
       if(o.type==="quiz-who"){
         const opts=Object.keys(A.players).map(p=>`<option>${p}</option>`).join("");
@@ -470,6 +486,8 @@ function renderOfficial(){
         }
       }
       html+=`<button id="offSend" class="btn-green">Senden</button>`;
+      // HIER ist die neue Klasse (Sichtbar während man tippt)
+      html+=`<div class="sub live-counter-text" style="text-align:center; margin-top: 15px;">${answered}/${total} haben geantwortet</div>`;
     }
   } else if(o.phase==="vote"){
     const unique=[...new Set(Object.values(o.answers||{}))];
@@ -486,16 +504,7 @@ function renderOfficial(){
   body.innerHTML=html;
 
   // RESTORE INPUT STATE nach Re-Render
-  if(preserveInput){
-    const el=document.getElementById("offIn");
-    if(el){
-      el.value=preserveInput.value;
-      if(preserveInput.hadFocus){
-        el.focus();
-        try{ el.setSelectionRange(preserveInput.selStart,preserveInput.selEnd); }catch(e){}
-      }
-    }
-  }
+  
 
   const si=$("offSend"); if(si) si.onclick=sendAnswer;
   const ev=$("evalNow"); if(ev) ev.onclick=evalOfficial;
