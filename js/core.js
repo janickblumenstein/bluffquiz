@@ -275,14 +275,12 @@ async function attemptAutoLogin() {
   const savedDevice = localStorage.getItem("malle26_deviceId");
   if (!savedName || !savedDevice) return;
 
-  // Namen schon mal ins Feld schreiben
   if (App.$("nameInp")) App.$("nameInp").value = savedName;
 
   try {
     App.room = (App.$("roomInp").value.trim() || "MALLE26").toUpperCase();
     const regSnap = await get(ref(db, `rooms/${App.room}/deviceReg/${savedName}`));
     
-    // Wenn Gerät und Name zusammenpassen -> Direkt rein!
     if (regSnap.exists() && regSnap.val().deviceId === savedDevice) {
       App.user = savedName;
       App.deviceId = savedDevice;
@@ -294,13 +292,19 @@ async function attemptAutoLogin() {
       attachListeners();
       bindCoreUI();
       if (App.listeners.onReady) App.listeners.onReady();
-      switchTab("Score"); // Start-Tab nach Auto-Login
+      switchTab("Score");
       toast(`Willkommen zurück, ${savedName}!`);
     }
   } catch (error) {
     console.error("Auto-login error:", error);
   }
 }
+
+// WICHTIG: Warte bis ALLE Module geladen haben ihre onReady-Handler registriert.
+// ES Modules laden asynchron - wir warten auf 'load' + kurzes Delay als Sicherheit.
+window.addEventListener("load", () => {
+  setTimeout(attemptAutoLogin, 150);
+});
 
 // Direkt beim Laden der Seite aufrufen
 attemptAutoLogin();
