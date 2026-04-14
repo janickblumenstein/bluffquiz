@@ -156,7 +156,7 @@ function buildBracket(participants){
 async function actuallyStart(){
   if(!A.isHost) return;
   
-  // Nutzt den verlässlichen lokalen State anstelle eines fehleranfälligen DB-Calls
+  // Nutzt den verlässlichen lokalen State
   const setup = A.state.tournamentSetup;
   if(!setup || !setup.gameType) {
       toast("Fehler: Turnier-Typ nicht gefunden. Bitte neu starten.");
@@ -167,12 +167,12 @@ async function actuallyStart(){
   if(participants.length<2) return alert("Mindestens 2 Teilnehmer waehlen!");
   
   const bracket=buildBracket(participants);
-  
-  // Kugelsicher: Garantiert, dass es ein String ist
   const safeGameType = String(setup.gameType);
 
-  await remove(ref(db,`rooms/${A.room}/tournamentSetup`));
-  await set(ref(db,`rooms/${A.room}/tournament`),{
+  // ATOMARES UPDATE: Löscht das Setup und erstellt das Turnier gleichzeitig
+  const updates = {};
+  updates[`rooms/${A.room}/tournamentSetup`] = null;
+  updates[`rooms/${A.room}/tournament`] = {
     active:true, 
     gameType: safeGameType, 
     matches:bracket.matches,
@@ -180,7 +180,9 @@ async function actuallyStart(){
     currentRound:1,
     currentMatchIdx:findFirstUnplayed(bracket.matches),
     startedAt:Date.now()
-  });
+  };
+
+  await update(ref(db), updates);
 }
 
 function findFirstUnplayed(matches){
