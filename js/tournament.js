@@ -144,14 +144,26 @@ function buildBracket(participants){
 
 async function actuallyStart(){
   if(!A.isHost) return;
-  const setup=(await get(ref(db,`rooms/${A.room}/tournamentSetup`))).val();
-  if(!setup) return;
+  
+  // Nutzt den verlässlichen lokalen State anstelle eines fehleranfälligen DB-Calls
+  const setup = A.state.tournamentSetup;
+  if(!setup || !setup.gameType) {
+      toast("Fehler: Turnier-Typ nicht gefunden. Bitte neu starten.");
+      return;
+  }
+  
   const participants=Object.keys(setup.picks||{}).filter(p=>setup.picks[p]);
   if(participants.length<2) return alert("Mindestens 2 Teilnehmer waehlen!");
+  
   const bracket=buildBracket(participants);
+  
+  // Kugelsicher: Garantiert, dass es ein String ist
+  const safeGameType = String(setup.gameType);
+
   await remove(ref(db,`rooms/${A.room}/tournamentSetup`));
   await set(ref(db,`rooms/${A.room}/tournament`),{
-    active:true, gameType:setup.gameType,
+    active:true, 
+    gameType: safeGameType, 
     matches:bracket.matches,
     byedHistory:bracket.byedHistory,
     currentRound:1,
