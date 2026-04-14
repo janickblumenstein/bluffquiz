@@ -305,6 +305,7 @@ function renderTournament(t){
     return;
   }
 
+  // --- DIESER TEIL WURDE AUS VERSEHEN GELÖSCHT ---
   const m=t.matches[idx];
   if(m.bye){
     setTimeout(()=>advanceTournament(idx,m.p1),800);
@@ -312,7 +313,7 @@ function renderTournament(t){
     return;
   }
 
-  // === HIER WAR DER FEHLER: Dieser Block fehlte! ===
+  // Hier sagt die App, welches Spiel gezeichnet wird!
   if(t.gameType==="reaction") renderReaction(t,idx,m,bh);
   else if(t.gameType==="battleship") renderBattleship(t,idx,m,bh+picker);
   else if(t.gameType==="tictactoe") renderTicTacToe(t,idx,m,bh+picker);
@@ -320,6 +321,7 @@ function renderTournament(t){
   else if(t.gameType==="memory") renderMemory(t,idx,m,bh+picker);
   else if(t.gameType==="roulette") renderRoulette(t,idx,m,bh+picker);
   else if(t.gameType==="stopwatch") renderStopwatch(t,idx,m,bh+picker);
+  // ------------------------------------------------
 
   // FIX: Zuschauer-Buttons IMMER neu verknüpfen, nachdem das HTML aktualisiert wurde
   setTimeout(()=>{
@@ -338,7 +340,17 @@ function renderTournament(t){
 
 function renderReaction(t,idx,m,bh){
   const body=$("officialBody");
-  const rd = (t.reaction && t.reaction[idx]) || { phase: "waiting", ready: {}, scores: { [m.p1]: 0, [m.p2]: 0 }, round: 1, history: [] };
+  const raw = (t.reaction && t.reaction[idx]) || {};
+  // Defensiv: Felder die fehlen koennten immer defaulten
+  const rd = {
+    phase: raw.phase || "waiting",
+    ready: raw.ready || {},
+    scores: raw.scores || { [m.p1]: 0, [m.p2]: 0 },
+    round: raw.round || 1,
+    history: raw.history || [],
+    winner: raw.winner,
+    goAt: raw.goAt
+  };
   const isPlayer=A.user===m.p1||A.user===m.p2;
   const opp = A.user === m.p1 ? m.p2 : m.p1;
   
@@ -710,17 +722,31 @@ async function swReady(idx, m) {
 
 function renderStopwatch(t, idx, m, bh) {
   const body = $("officialBody");
-  const md = (t.stopwatch && t.stopwatch[idx]);
+  const raw = (t.stopwatch && t.stopwatch[idx]);
   
-  if (!md) {
+  if (!raw) {
     body.innerHTML = `<div class="q-big">⏱️ ${m.p1} vs ${m.p2}</div>${A.isHost ? '<button class="btn-orange" id="swInit">Match starten</button>' : '<div class="sub">Warte auf Host...</div>'}${bh}`;
     const btn = $("swInit"); if (btn) btn.onclick = () => initStopwatch(idx, m);
     return;
   }
   
+  // Defensiv: Felder defaulten
+  const md = {
+    phase: raw.phase || "waiting",
+    times: raw.times || {},
+    ready: raw.ready || {},
+    scores: raw.scores || { [m.p1]: 0, [m.p2]: 0 },
+    round: raw.round || 1,
+    startTime: raw.startTime,
+    winner: raw.winner,
+    history: raw.history || []
+  };
+  
   const isPlayer = A.user === m.p1 || A.user === m.p2;
-  const t1 = (md.times || {})[m.p1];
-  const t2 = (md.times || {})[m.p2];
+  const t1 = md.times[m.p1];
+  const t2 = md.times[m.p2];
+  const score1 = md.scores[m.p1] || 0;
+  const score2 = md.scores[m.p2] || 0;
 
   let html = `<div class="q-big">⏱️ ${m.p1} vs ${m.p2}</div>`;
   html += `<div class="sub" style="text-align:center;">Stoppe die Zeit so nah wie möglich bei exakt <b>5.000 Sekunden!</b><br><span style="color:var(--orange)">Tipp: Nach 2 Sekunden wird die Uhr unsichtbar! 🙈</span></div>`;
