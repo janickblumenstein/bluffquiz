@@ -897,6 +897,7 @@ function renderMemory(t, idx, m, bh) {
     // Turn Indicator
     html += `<div class="flash ${md.turn === A.user ? 'gold' : ''}" style="text-align:center;">
       ${md.turn === A.user ? '<b>DU BIST DRAN!</b> Karte wählen...' : 'Warten auf ' + md.turn + '...'}
+      html += `<div class="sub" style="text-align:center;">Max. 3 Steine gleichzeitig! Merke dir deine Reihenfolge.</div>`;
     </div>`;
   }
 
@@ -1106,7 +1107,7 @@ async function tttMove(idx, cellIdx, m) {
   myStones.sort((a, b) => a.seq - b.seq);
 
   // Wenn man bereits 3 Steine hat, wird der älteste entfernt
-  if (myStones.length >= 4) {
+  if (myStones.length >= 3) {
     board[myStones[0].i] = 0;
   }
 
@@ -1188,7 +1189,7 @@ function renderTicTacToe(t, idx, m, bh) {
         
         // NEU: Wenn der Spieler 4 Steine hat, markiere den ältesten (index 0) als blass...
         // ABER NUR, wenn es der Stein des GEGNERS ist!
-        if (playerStones.length >= 4 && playerStones[0].seq === cell.seq && cell.p !== A.user) {
+        if (playerStones.length >= 3 && playerStones[0].seq === cell.seq && cell.p !== A.user) {
             style += "opacity: 0.3; transform: scale(0.9);";
         }
         style += isP1 ? "color:var(--gold);" : "color:var(--blue);";
