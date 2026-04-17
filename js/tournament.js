@@ -51,6 +51,7 @@ A.listeners.onReady=()=>{
   onValue(ref(db,`rooms/${A.room}/tournament`),snap=>{
     const wasActive=A.state.tournament&&A.state.tournament.active;
     A.state.tournament=snap.val();
+    if(A._tRenderLock) return; // RENDER-LOCK: Skip re-render waehrend ein Klick-Handler laeuft
     if(A.state.tournament&&A.state.tournament.active){
       if(!wasActive){ A.switchTab("Games"); toast("⚔️ Turnier gestartet!"); }
       renderOfficialPanel();
@@ -95,18 +96,7 @@ async function startSetup(gameType){
 
 function renderSetup(){
   const setup=A.state.tournamentSetup; if(!setup) return;
-  
-  // HIER FEHLTEN DIE NEUEN SPIELE!
-  const labels={
-    reaction: "⚡ Reaktions-Test",
-    battleship: "⚓ Schiffeversenken",
-    tictactoe: "⭕ TicTacToe-3",
-    bierduel: "🍺 Bier-Duell",
-    memory: "🧠 Bier-Memory",           // NEU
-    roulette: "💥 Bier-Roulette",      // NEU
-    stopwatch: "⏱️ 5-Sekunden-Stoppuhr" // NEU
-  };
-  
+  const labels={reaction:"⚡ Reaktions-Test",battleship:"⚓ Schiffeversenken",tictactoe:"⭕ TicTacToe-3",bierduel:"🍺 Bier-Duell"};
   const body=$("officialBody");
   const picks=setup.picks||{};
   let html=`<div class="q-big">${labels[setup.gameType]} Turnier</div>`;
@@ -155,34 +145,20 @@ function buildBracket(participants){
 
 async function actuallyStart(){
   if(!A.isHost) return;
-  
-  // Nutzt den verlässlichen lokalen State
-  const setup = A.state.tournamentSetup;
-  if(!setup || !setup.gameType) {
-      toast("Fehler: Turnier-Typ nicht gefunden. Bitte neu starten.");
-      return;
-  }
-  
+  const setup=(await get(ref(db,`rooms/${A.room}/tournamentSetup`))).val();
+  if(!setup) return;
   const participants=Object.keys(setup.picks||{}).filter(p=>setup.picks[p]);
   if(participants.length<2) return alert("Mindestens 2 Teilnehmer waehlen!");
-  
   const bracket=buildBracket(participants);
-  const safeGameType = String(setup.gameType);
-
-  // ATOMARES UPDATE: Verhindert Ladefehler beim Turnierstart
-  const updates = {};
-  updates[`rooms/${A.room}/tournamentSetup`] = null;
-  updates[`rooms/${A.room}/tournament`] = {
-    active:true, 
-    gameType: safeGameType, 
+  await remove(ref(db,`rooms/${A.room}/tournamentSetup`));
+  await set(ref(db,`rooms/${A.room}/tournament`),{
+    active:true, gameType:setup.gameType,
     matches:bracket.matches,
     byedHistory:bracket.byedHistory,
     currentRound:1,
     currentMatchIdx:findFirstUnplayed(bracket.matches),
     startedAt:Date.now()
-  };
-
-  await update(ref(db), updates);
+  });
 }
 
 function findFirstUnplayed(matches){
@@ -305,7 +281,6 @@ function renderTournament(t){
     return;
   }
 
-  // --- DIESER TEIL WURDE AUS VERSEHEN GELÖSCHT ---
   const m=t.matches[idx];
   if(m.bye){
     setTimeout(()=>advanceTournament(idx,m.p1),800);
@@ -313,7 +288,7 @@ function renderTournament(t){
     return;
   }
 
-  // Hier sagt die App, welches Spiel gezeichnet wird!
+  // Spielfeld aufbauen (ohne 'return', damit der Code unten noch ausgefuehrt wird!)
   if(t.gameType==="reaction") renderReaction(t,idx,m,bh);
   else if(t.gameType==="battleship") renderBattleship(t,idx,m,bh+picker);
   else if(t.gameType==="tictactoe") renderTicTacToe(t,idx,m,bh+picker);
@@ -321,9 +296,8 @@ function renderTournament(t){
   else if(t.gameType==="memory") renderMemory(t,idx,m,bh+picker);
   else if(t.gameType==="roulette") renderRoulette(t,idx,m,bh+picker);
   else if(t.gameType==="stopwatch") renderStopwatch(t,idx,m,bh+picker);
-  // ------------------------------------------------
 
-  // FIX: Zuschauer-Buttons IMMER neu verknüpfen, nachdem das HTML aktualisiert wurde
+  // FIX: Zuschauer-Buttons IMMER neu verknuepfen, nachdem das HTML aktualisiert wurde
   setTimeout(()=>{
     document.querySelectorAll("[data-spect]").forEach(b=>b.onclick=()=>{
       A._spectIdx=parseInt(b.dataset.spect);
@@ -338,115 +312,143 @@ function renderTournament(t){
 
 // === REACTION (First-Click-Wins via Transaction) ===
 
+// === REACTION (First-Click-Wins via Transaction) ===
 function renderReaction(t,idx,m,bh){
   const body=$("officialBody");
-  const raw = (t.reaction && t.reaction[idx]) || {};
-  // Defensiv: Felder die fehlen koennten immer defaulten
-  const rd = {
-    phase: raw.phase || "waiting",
-    ready: raw.ready || {},
-    scores: raw.scores || { [m.p1]: 0, [m.p2]: 0 },
-    round: raw.round || 1,
-    history: raw.history || [],
-    winner: raw.winner,
-    goAt: raw.goAt
+  const raw=(t.reaction&&t.reaction[idx])||{};
+  const md={
+    phase:raw.phase||"waiting",
+    ready:raw.ready||{},
+    scores:raw.scores||{[m.p1]:0,[m.p2]:0},
+    round:raw.round||1,
+    history:raw.history||[],
+    winner:raw.winner,
+    goAt:raw.goAt,
+    roundWinner:raw.roundWinner,
+    roundWinTime:raw.roundWinTime
   };
   const isPlayer=A.user===m.p1||A.user===m.p2;
-  const opp = A.user === m.p1 ? m.p2 : m.p1;
-  
-  let html=`<div class="q-big">⚡ ${m.p1} vs ${m.p2}</div>`;
+  const opp=A.user===m.p1?m.p2:m.p1;
+  const s1=md.scores[m.p1]||0, s2=md.scores[m.p2]||0;
 
+  let html=`<div class="q-big">⚡ ${m.p1} vs ${m.p2}</div>`;
   // Scoreboard
-  html += `<div class="card" style="background:rgba(52,152,219,0.1); border:1px solid var(--blue); margin-bottom:15px; padding:10px;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div style="text-align:left; flex:1;"><b>${m.p1}</b></div>
-      <div style="font-size:1.5rem; font-weight:900; color:var(--blue);">${rd.scores[m.p1]}:${rd.scores[m.p2]}</div>
-      <div style="text-align:right; flex:1;"><b>${m.p2}</b></div>
+  html+=`<div class="card" style="background:rgba(52,152,219,0.1);border:1px solid var(--blue);margin-bottom:12px;padding:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <b style="${A.user===m.p1?'color:var(--gold)':''}">${m.p1}</b>
+      <span style="font-size:1.5rem;font-weight:900;color:var(--blue)">${s1}:${s2}</span>
+      <b style="${A.user===m.p2?'color:var(--gold)':''}">${m.p2}</b>
     </div>
-    <div class="sub" style="text-align:center;">Best of 3 · Runde ${rd.round}</div>
+    <div class="sub" style="text-align:center">Best of 3 · Runde ${Math.min(3,md.round)}</div>
   </div>`;
 
-  if(rd.phase==="waiting"){
+  if(md.phase==="waiting"){
     if(isPlayer){
-      const rdy=rd.ready && rd.ready[A.user];
-      html+=`<button class="${rdy?'btn-green':'btn-blue'}" id="reactReady">${rdy?'✓ Bereit':'BEREIT DRÜCKEN'}</button>`;
+      const rdy=md.ready&&md.ready[A.user];
+      html+=`<div class="sub" style="text-align:center">Beide Spieler: Bereit druecken</div>`;
+      html+=`<button class="${rdy?'btn-green':'btn-blue'}" id="reactReady" ${rdy?'disabled':''}>${rdy?'✓ Bereit':'Bereit'}</button>`;
     } else html+=`<div class="sub" style="text-align:center">Warte auf Spieler...</div>`;
-  } else if(rd.phase==="countdown"){
-    html+=`<div id="reactBox" style="background:var(--red);height:180px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;margin:10px 0">WARTEN...</div>`;
-  } else if(rd.phase==="go"){
-    html+=`<div id="reactBox" style="background:var(--green);height:180px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:bold;color:#000;margin:10px 0;cursor:pointer;">JETZT!</div>`;
-  } else if(rd.phase==="round_done" || rd.phase==="done"){
-    const last = rd.history ? rd.history[rd.history.length-1] : null;
-    if(last){
-      const early = last.winTime === "FRUEH";
-      html += `<div class="flash ${early?'warn':''}" style="text-align:center;">
-        <div style="font-size:1.2rem;">${early ? '🚫 Zu früh gedrückt!' : '⏱️ Zeit-Check'}</div>
-        <div style="margin-top:5px;"><b>${last.winner}</b> war schneller!</div>
-        ${!early ? `<div class="sub">Reaktionszeit: ${(last.winTime/1000).toFixed(3)}s</div>` : ''}
-      </div>`;
-    }
-
-    if(rd.phase==="done"){
-      html += `<div class="flash gold" style="text-align:center; font-weight:bold;">🏆 MATCH-SIEG: ${rd.winner}</div>`;
-      if(A.isHost) html+=`<button class="btn-green" id="nextMatch">Turnier fortsetzen</button>`;
-    } else if(A.isHost) {
-      html += `<button class="btn-orange" id="nextReactRound">Nächste Runde starten</button>`;
-    }
-  }
-
-  body.innerHTML=html+bh;
-
-  // Event Bindings
-  const rdBtn = $("reactReady"); if(rdBtn) rdBtn.onclick = async () => {
-    await set(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/ready/${A.user}`),true);
-    const snap = await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/ready`));
-    const r = snap.val() || {};
-    if(r[m.p1] && r[m.p2]) {
-      const wait = 2000 + Math.random() * 4000;
-      await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "countdown", goAt: Date.now() + wait });
-    }
-  };
-
-  const nrBtn = $("nextReactRound"); if(nrBtn) nrBtn.onclick = async () => {
-    await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "waiting", ready: {}, goAt: null });
-  };
-
-  const nmBtn = $("nextMatch"); if(nmBtn) nmBtn.onclick = () => advanceTournament(idx, rd.winner);
-
-  // Countdown Logic
-  if(rd.phase==="countdown" && rd.goAt){
-    const diff = rd.goAt - Date.now();
-    if(diff <= 0) update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "go", goAt: Date.now() });
-    else A.timers.push(setTimeout(() => update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), { phase: "go", goAt: Date.now() }), diff));
-  }
-
-  // Click Logic
-  const rb = $("reactBox"); if(rb && isPlayer){
-    rb.onclick = async () => {
-      if(A._reactClicking) return;
-      A._reactClicking = true;
-      const tap = Date.now();
-      const current = (await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val();
-      if(!current || (current.phase !== "countdown" && current.phase !== "go")) { A._reactClicking=false; return; }
-
-      const winTime = current.phase === "countdown" ? "FRUEH" : tap - current.goAt;
-      const roundWinner = (winTime === "FRUEH") ? opp : A.user;
-      
-      const newScores = { ...rd.scores };
-      newScores[roundWinner]++;
-      const newHistory = [...(rd.history || []), { winner: roundWinner, winTime }];
-      const matchWinner = newScores[roundWinner] >= 2 ? roundWinner : null;
-
-      await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`), {
-        phase: matchWinner ? "done" : "round_done",
-        scores: newScores,
-        history: newHistory,
-        winner: matchWinner,
-        round: rd.round + 1
+    const r1=md.ready[m.p1],r2=md.ready[m.p2];
+    html+=`<div class="sub" style="text-align:center">${m.p1}: ${r1?'✅':'⏳'} | ${m.p2}: ${r2?'✅':'⏳'}</div>`;
+  } else if(md.phase==="countdown"){
+    html+=`<div id="reactBox" style="background:var(--red);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:bold;cursor:pointer;margin:10px 0">WARTEN...</div>`;
+  } else if(md.phase==="go"){
+    html+=`<div id="reactBox" style="background:var(--green);height:200px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:bold;cursor:pointer;color:#000;margin:10px 0">JETZT!</div>`;
+  } else if(md.phase==="round_done"){
+    // Kurze Ergebnis-Anzeige (auto-weiter nach 3s)
+    const early=md.roundWinTime==="FRUEH";
+    html+=`<div class="flash ${early?'warn':'gold'}" style="text-align:center;font-size:1.1rem">
+      ${early?'🚫 Zu früh gedrückt!':'⚡ Runde vorbei!'}<br>
+      <b>${md.roundWinner}</b> gewinnt Runde ${(md.round||1)-1}
+      ${!early&&typeof md.roundWinTime==='number'?` <span class="sub">(${md.roundWinTime}ms)</span>`:''}
+    </div>`;
+    html+=`<div class="sub" style="text-align:center">Nächste Runde startet gleich...</div>`;
+  } else if(md.phase==="done"){
+    html+=`<div class="flash gold" style="text-align:center;font-size:1.2rem">🏆 <b>${md.winner}</b> gewinnt das Match!</div>`;
+    if(md.history&&md.history.length){
+      md.history.forEach(h=>{
+        html+=`<div class="result-row"><span>R${h.round}: ${h.winTime==="FRUEH"?'🚫 zu früh':h.winTime+'ms'}</span><strong style="color:var(--gold)">🏆 ${h.winner}</strong></div>`;
       });
-      A._reactClicking = false;
+    }
+    if(A.isHost) html+=`<button class="btn-green" id="nextMatch">Turnier fortsetzen</button>`;
+  }
+  html+=bh;
+  if(A.isHost&&md.phase==="waiting") html+=`<hr><button class="btn-orange btn-sm" id="forceStart">Bypass Bereit</button>`;
+  body.innerHTML=html;
+
+  // --- EVENT BINDINGS ---
+  const rd=$("reactReady"); if(rd) rd.onclick=async()=>{
+    await set(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/ready/${A.user}`),true);
+    const r=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/ready`))).val()||{};
+    if(r[m.p1]&&r[m.p2]){
+      const wait=1500+Math.random()*3000;
+      await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
+    }
+  };
+  const fs=$("forceStart"); if(fs) fs.onclick=async()=>{
+    const wait=1500+Math.random()*3000;
+    await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"countdown",goAt:Date.now()+wait});
+  };
+  // Countdown->Go Transition
+  if(md.phase==="countdown"&&md.goAt){
+    const remaining=md.goAt-Date.now();
+    const flip=()=>update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
+    if(remaining<=0) flip();
+    else A.timers.push(setTimeout(flip,remaining));
+  }
+  // Auto-advance aus round_done → waiting (nach 3s, nur ein Client macht es)
+  if(md.phase==="round_done"){
+    const decider=[m.p1,m.p2].sort()[0];
+    if(A.user===decider||A.isHost){
+      A.timers.push(setTimeout(async()=>{
+        const check=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val();
+        if(check&&check.phase==="round_done"){
+          await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{
+            phase:"waiting", ready:{}, goAt:null, roundWinner:null, roundWinTime:null
+          });
+        }
+      },3000));
+    }
+  }
+  // BOX CLICK - First-Click-Wins via Transaction + Render Lock
+  const rb=$("reactBox"); if(rb&&isPlayer){
+    rb.onclick=async()=>{
+      if(A._reactClicking) return;
+      A._reactClicking=true;
+      A._tRenderLock=true;
+      const tap=Date.now();
+      rb.style.background="#555";
+      rb.innerText="✓ Erfasst...";
+      try {
+        const fresh=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val()||{};
+        let roundWinner,roundWinTime;
+        if(fresh.phase==="countdown"){
+          roundWinner=opp; roundWinTime="FRUEH";
+        } else if(fresh.phase==="go"){
+          const res=await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/roundWinner`),c=>c||A.user);
+          roundWinner=res.snapshot.val();
+          roundWinTime=tap-(fresh.goAt||tap);
+        } else { return; }
+        // Scores + History updaten
+        const curScores=fresh.scores||{[m.p1]:0,[m.p2]:0};
+        const newScores={...curScores};
+        newScores[roundWinner]=(newScores[roundWinner]||0)+1;
+        const newHistory=[...(fresh.history||[]),{round:fresh.round||1,winner:roundWinner,winTime:roundWinTime}];
+        const matchWinner=newScores[roundWinner]>=2?roundWinner:null;
+        const upd={scores:newScores,history:newHistory,roundWinner,roundWinTime,round:(fresh.round||1)+1};
+        if(matchWinner){
+          upd.phase="done"; upd.winner=matchWinner;
+        } else {
+          upd.phase="round_done"; // Zeigt Ergebnis kurz, dann auto-weiter
+        }
+        await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),upd);
+        if(matchWinner) setTimeout(()=>advanceTournament(idx,matchWinner),2500);
+      } finally {
+        setTimeout(()=>{A._reactClicking=false;A._tRenderLock=false;renderOfficialPanel();},300);
+      }
     };
   }
+  const nm=$("nextMatch"); if(nm) nm.onclick=()=>advanceTournament(idx,md.winner);
 }
 
 // === BATTLESHIP ===
@@ -652,179 +654,174 @@ function renderRoulette(t, idx, m, bh) {
   const rn = $("rlNext"); if (rn) rn.onclick = () => advanceTournament(idx, md.winner);
 }
 
-// === BIER-STOPPUHR (Initialisierung) ===
+// === BIER-STOPPUHR (5-Sekunden-Stopp) ===
+// === BIER-STOPPUHR (5-Sekunden-Stopp) ===
 async function initStopwatch(idx, m) {
   if (!A.isHost) return;
   const t = (await get(ref(db, `rooms/${A.room}/tournament`))).val();
   if (!t) return;
   const myRound = t.matches[idx].round;
   const updates = {};
-
   t.matches.forEach((mt, i) => {
     if (mt.round === myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2) {
       if (!(t.stopwatch && t.stopwatch[i])) {
         updates[i] = {
-          phase: "waiting",
-          times: {},
-          ready: {},
+          phase: "waiting", times: {}, ready: {},
           scores: { [mt.p1]: 0, [mt.p2]: 0 },
-          round: 1,
-          startedAt: Date.now()
+          round: 1, history: [], startedAt: Date.now()
         };
       }
     }
   });
   await update(ref(db, `rooms/${A.room}/tournament/stopwatch`), updates);
-}
-
-// === BIER-STOPPUHR (Timer-Stopp Logik) ===
-async function stopTimer(idx, m) {
-  const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
-  const d = (await get(r)).val();
-  if (!d || d.phase !== "running" || (d.times && d.times[A.user])) return;
-  
-  if (Date.now() < d.startTime) { toast("Zu früh!"); return; }
-
-  const elapsed = (Date.now() - d.startTime) / 1000;
-  await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/times/${A.user}`), elapsed);
-
-  const fresh = (await get(r)).val();
-  if (fresh.times && fresh.times[m.p1] && fresh.times[m.p2]) {
-    const diff1 = Math.abs(5 - fresh.times[m.p1]);
-    const diff2 = Math.abs(5 - fresh.times[m.p2]);
-    const roundWinner = diff1 < diff2 ? m.p1 : m.p2;
-    
-    const newScores = { ...d.scores };
-    newScores[roundWinner]++;
-    const matchWinner = newScores[roundWinner] >= 2 ? roundWinner : null;
-
-    if (matchWinner) {
-      await update(r, { phase: "done", winner: matchWinner, scores: newScores });
-      setTimeout(() => advanceTournament(idx, matchWinner), 3500);
-    } else {
-      // Nächste Runde vorbereiten
-      setTimeout(() => update(r, { phase: "waiting", ready: {}, times: {}, scores: newScores, round: d.round + 1 }), 3000);
-    }
-  }
+  toast(`${Object.keys(updates).length} Match(es) gestartet`);
 }
 
 async function swReady(idx, m) {
-  const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
   await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/ready/${A.user}`), true);
-  
-  const d = (await get(r)).val();
+  const d = (await get(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`))).val();
   if (d && d.ready && d.ready[m.p1] && d.ready[m.p2] && d.phase === "waiting") {
-      // Beide sind bereit -> Timer startet in exakt 2 Sekunden
-      await update(r, { phase: "running", startTime: Date.now() + 2000 });
+    await update(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`), { phase: "running", startTime: Date.now() + 2000 });
   }
 }
 
+async function stopTimer(idx, m) {
+  if (A._swStopping) return;
+  A._swStopping = true;
+  A._tRenderLock = true; // RENDER LOCK: Verhindere Flash beim Gegner
+  try {
+    const r = ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}`);
+    const d = (await get(r)).val();
+    if (!d || d.phase !== "running") return;
+    if (d.times && d.times[A.user]) return;
+    if (Date.now() < (d.startTime || 0)) { toast("Zu früh!"); return; }
+
+    const elapsed = (Date.now() - d.startTime) / 1000;
+    await set(ref(db, `rooms/${A.room}/tournament/stopwatch/${idx}/times/${A.user}`), elapsed);
+
+    // Pruefen ob BEIDE gestoppt haben
+    const fresh = (await get(r)).val();
+    if (fresh.times && fresh.times[m.p1] != null && fresh.times[m.p2] != null) {
+      // Nur EIN Client wertet aus (deterministic: alphabetisch erster Spieler)
+      const decider = [m.p1, m.p2].sort()[0];
+      if (A.user !== decider) return;
+
+      const t1 = fresh.times[m.p1], t2 = fresh.times[m.p2];
+      const diff1 = Math.abs(5 - t1), diff2 = Math.abs(5 - t2);
+      const roundWinner = diff1 < diff2 ? m.p1 : (diff2 < diff1 ? m.p2 : (Math.random() > 0.5 ? m.p1 : m.p2));
+      
+      const newScores = { ...(fresh.scores || { [m.p1]: 0, [m.p2]: 0 }) };
+      newScores[roundWinner] = (newScores[roundWinner] || 0) + 1;
+      const newHistory = [...(fresh.history || []), { round: fresh.round || 1, t1, t2, winner: roundWinner }];
+      const matchWinner = newScores[roundWinner] >= 2 ? roundWinner : null;
+
+      if (matchWinner) {
+        await update(r, { phase: "done", winner: matchWinner, scores: newScores, history: newHistory });
+        setTimeout(() => advanceTournament(idx, matchWinner), 4000);
+      } else {
+        await update(r, { phase: "round_done", scores: newScores, history: newHistory });
+        setTimeout(async () => {
+          const check = (await get(r)).val();
+          if (check && check.phase === "round_done") {
+            await update(r, { phase: "waiting", ready: {}, times: {}, round: (check.round || 1) + 1, startTime: null });
+          }
+        }, 3500);
+      }
+    }
+  } finally {
+    setTimeout(() => { A._swStopping = false; A._tRenderLock = false; renderOfficialPanel(); }, 300);
+  }
+}
 
 function renderStopwatch(t, idx, m, bh) {
   const body = $("officialBody");
   const raw = (t.stopwatch && t.stopwatch[idx]);
-  
   if (!raw) {
     body.innerHTML = `<div class="q-big">⏱️ ${m.p1} vs ${m.p2}</div>${A.isHost ? '<button class="btn-orange" id="swInit">Match starten</button>' : '<div class="sub">Warte auf Host...</div>'}${bh}`;
     const btn = $("swInit"); if (btn) btn.onclick = () => initStopwatch(idx, m);
     return;
   }
-  
-  // Defensiv: Felder defaulten
+  // Defensiv-Defaults
   const md = {
-    phase: raw.phase || "waiting",
-    times: raw.times || {},
-    ready: raw.ready || {},
+    phase: raw.phase || "waiting", times: raw.times || {}, ready: raw.ready || {},
     scores: raw.scores || { [m.p1]: 0, [m.p2]: 0 },
-    round: raw.round || 1,
-    startTime: raw.startTime,
-    winner: raw.winner,
-    history: raw.history || []
+    round: raw.round || 1, startTime: raw.startTime,
+    winner: raw.winner, history: raw.history || []
   };
-  
   const isPlayer = A.user === m.p1 || A.user === m.p2;
-  const t1 = md.times[m.p1];
-  const t2 = md.times[m.p2];
-  const score1 = md.scores[m.p1] || 0;
-  const score2 = md.scores[m.p2] || 0;
+  const myTime = md.times[A.user];
+  const t1 = md.times[m.p1], t2 = md.times[m.p2];
+  const s1 = md.scores[m.p1] || 0, s2 = md.scores[m.p2] || 0;
 
   let html = `<div class="q-big">⏱️ ${m.p1} vs ${m.p2}</div>`;
-  html += `<div class="sub" style="text-align:center;">Stoppe die Zeit so nah wie möglich bei exakt <b>5.000 Sekunden!</b><br><span style="color:var(--orange)">Tipp: Nach 2 Sekunden wird die Uhr unsichtbar! 🙈</span></div>`;
+  // Scoreboard
+  html += `<div class="card" style="background:rgba(52,152,219,0.1);border:1px solid var(--blue);margin-bottom:12px;padding:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <b style="${A.user===m.p1?'color:var(--gold)':''}">${m.p1}</b>
+      <span style="font-size:1.5rem;font-weight:900;color:var(--blue)">${s1}:${s2}</span>
+      <b style="${A.user===m.p2?'color:var(--gold)':''}">${m.p2}</b>
+    </div>
+    <div class="sub" style="text-align:center">Best of 3 · Runde ${Math.min(3,md.round)}</div>
+  </div>`;
+  html += `<div class="sub" style="text-align:center">Stoppe bei exakt <b>5.000s!</b> Nach 2s wird die Uhr unsichtbar 🙈</div>`;
 
   if (md.phase === "waiting") {
-      html += `<div class="flash" style="text-align:center; margin-top:15px;">`;
-      if (isPlayer) {
-          const rdy = md.ready && md.ready[A.user];
-          html += `<button class="${rdy ? 'btn-ghost' : 'btn-blue'}" id="swRdy" ${rdy ? 'disabled' : ''}>${rdy ? '✅ Du bist bereit' : 'Start drücken!'}</button>`;
-          if (!rdy) html += `<div class="sub" style="margin-top:5px;">Sobald beide bereit sind, startet der Countdown.</div>`;
-      } else {
-          const rdy1 = md.ready && md.ready[m.p1];
-          const rdy2 = md.ready && md.ready[m.p2];
-          html += `Warte auf Spieler...<br>${m.p1}: ${rdy1 ? '✅' : '⏳'} | ${m.p2}: ${rdy2 ? '✅' : '⏳'}`;
-      }
-      html += `</div>`;
+    html += `<div class="flash" style="text-align:center;margin-top:15px;">`;
+    if (isPlayer) {
+      const rdy = md.ready[A.user];
+      html += `<button class="${rdy?'btn-ghost':'btn-blue'}" id="swRdy" ${rdy?'disabled':''}>${rdy?'✅ Bereit':'Start drücken!'}</button>`;
+    } else html += `Warte auf Spieler...`;
+    html += `<div class="sub" style="margin-top:8px">${m.p1}: ${md.ready[m.p1]?'✅':'⏳'} | ${m.p2}: ${md.ready[m.p2]?'✅':'⏳'}</div></div>`;
   } else if (md.phase === "running") {
-      const myTime = md.times && md.times[A.user];
-      html += `<div id="swBox" style="background:var(--card2); height:150px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:3.5rem; font-weight:bold; cursor:${isPlayer && !myTime ? 'pointer' : 'default'}; margin:15px 0; border:2px solid var(--blue);">`;
-      
-      if (myTime) {
-         html += `<span style="color:var(--green)">✅ Gestoppt!</span>`;
-      } else {
-         html += `<span id="swDisplay">Bereit machen...</span>`;
-      }
-      html += `</div>`;
-      
-      if (isPlayer && !myTime) {
-          html += `<button class="btn-red" style="padding:15px; font-size:1.5rem;" id="swStop">🛑 STOPP!</button>`;
-      } else if (isPlayer && myTime) {
-          html += `<div class="sub" style="text-align:center;">Warte auf Gegner...</div>`;
-      }
-  } else if (md.phase === "done") {
-      const diff1 = Math.abs(5 - t1);
-      const diff2 = Math.abs(5 - t2);
-      html += `<div class="flash gold" style="text-align:center; margin-top:15px;">
-         <div style="font-size:1.2rem;">🏆 <b>${md.winner}</b> gewinnt!</div>
-         <hr style="border-color:rgba(0,0,0,0.1);">
-         <div style="display:flex; justify-content:space-between; font-size:1.1rem; margin-top:10px;">
-             <div style="${md.winner === m.p1 ? 'font-weight:bold; color:var(--gold);' : 'opacity:0.6;'}">
-                 <div>${m.p1}</div>
-                 <div>${t1 ? t1.toFixed(3) : '---'}s <br><small style="font-size:0.7rem">(Δ ${diff1.toFixed(3)})</small></div>
-             </div>
-             <div style="${md.winner === m.p2 ? 'font-weight:bold; color:var(--gold);' : 'opacity:0.6;'}">
-                 <div>${m.p2}</div>
-                 <div>${t2 ? t2.toFixed(3) : '---'}s <br><small style="font-size:0.7rem">(Δ ${diff2.toFixed(3)})</small></div>
-             </div>
-         </div>
+    html += `<div id="swBox" style="background:var(--card2);height:150px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:3.5rem;font-weight:bold;margin:15px 0;border:2px solid var(--blue);">`;
+    if (myTime != null) html += `<span style="color:var(--green)">✅ ${myTime.toFixed(3)}s</span>`;
+    else html += `<span id="swDisplay">...</span>`;
+    html += `</div>`;
+    if (isPlayer && myTime == null) {
+      html += `<button class="btn-red" style="padding:15px;font-size:1.5rem" id="swStop">🛑 STOPP!</button>`;
+    } else if (isPlayer) {
+      html += `<div class="sub" style="text-align:center">Warte auf Gegner...</div>`;
+    }
+  } else if (md.phase === "round_done") {
+    const last = md.history.length ? md.history[md.history.length - 1] : null;
+    if (last) {
+      const d1 = Math.abs(5 - last.t1), d2 = Math.abs(5 - last.t2);
+      html += `<div class="flash gold" style="text-align:center">
+        Runde ${last.round}: 🏆 <b>${last.winner}</b><br>
+        <span class="sub">${m.p1}: ${last.t1.toFixed(3)}s (Δ${d1.toFixed(3)}) · ${m.p2}: ${last.t2.toFixed(3)}s (Δ${d2.toFixed(3)})</span>
+        <div class="sub" style="margin-top:5px">Nächste Runde in 3s...</div>
       </div>`;
-      if (A.isHost) html += `<button class="btn-green" id="swNext" style="margin-top:10px;">Nächstes Match</button>`;
+    }
+  } else if (md.phase === "done") {
+    html += `<div class="flash gold" style="text-align:center;font-size:1.2rem">🏆 <b>${md.winner}</b> gewinnt!</div>`;
+    if (md.history.length) {
+      md.history.forEach(h => {
+        const d1 = Math.abs(5 - h.t1), d2 = Math.abs(5 - h.t2);
+        html += `<div class="result-row" style="font-size:.8rem"><span>R${h.round}: ${m.p1} ${h.t1.toFixed(2)}s(Δ${d1.toFixed(2)}) · ${m.p2} ${h.t2.toFixed(2)}s(Δ${d2.toFixed(2)})</span><strong style="color:var(--gold)">🏆 ${h.winner}</strong></div>`;
+      });
+    }
+    if (A.isHost) html += `<button class="btn-green" id="swNext" style="margin-top:10px">Nächstes Match</button>`;
   }
 
   body.innerHTML = html + bh;
-
-  // Event Bindings
   const rBtn = $("swRdy"); if (rBtn) rBtn.onclick = () => swReady(idx, m);
   const sBtn = $("swStop"); if (sBtn) sBtn.onclick = () => stopTimer(idx, m);
-  const bBtn = $("swBox"); if (bBtn && isPlayer && md.phase==="running" && (!md.times || !md.times[A.user])) bBtn.onclick = () => stopTimer(idx, m);
+  const bBtn = $("swBox"); if (bBtn && isPlayer && md.phase === "running" && myTime == null) { bBtn.style.cursor = "pointer"; bBtn.onclick = () => stopTimer(idx, m); }
   const nBtn = $("swNext"); if (nBtn) nBtn.onclick = () => advanceTournament(idx, md.winner);
 
-  // Visueller Live-Timer
-  if (md.phase === "running") {
-      const display = $("swDisplay");
-      if (display) {
-         const updateTimer = () => {
-             const now = Date.now();
-             const diff = now - md.startTime;
-             if (diff < 0) {
-                 display.innerText = "⏳ " + Math.ceil(Math.abs(diff)/1000) + "s";
-             } else if (diff < 2000) {
-                 display.innerText = (diff / 1000).toFixed(2) + "s";
-             } else {
-                 display.innerText = "🙈 ???";
-             }
-         };
-         // Wir fügen das Intervall der App hinzu, damit es sauber aufgeräumt wird
-         A.timers.push(setInterval(updateTimer, 50));
-      }
+  // Live-Timer
+  if (md.phase === "running" && myTime == null) {
+    const display = $("swDisplay");
+    if (display) {
+      const tick = () => {
+        const diff = Date.now() - md.startTime;
+        if (diff < 0) display.innerText = "⏳ " + Math.ceil(Math.abs(diff) / 1000) + "s";
+        else if (diff < 2000) display.innerText = (diff / 1000).toFixed(2) + "s";
+        else display.innerText = "🙈 ???";
+      };
+      tick();
+      A.timers.push(setInterval(tick, 50));
+    }
   }
 }
 
@@ -975,6 +972,7 @@ function renderMemory(t, idx, m, bh) {
     // Turn Indicator
     html += `<div class="flash ${md.turn === A.user ? 'gold' : ''}" style="text-align:center;">
       ${md.turn === A.user ? '<b>DU BIST DRAN!</b> Karte wählen...' : 'Warten auf ' + md.turn + '...'}
+      html += `<div class="sub" style="text-align:center;">Max. 3 Steine gleichzeitig! Merke dir deine Reihenfolge.</div>`;
     </div>`;
   }
 
