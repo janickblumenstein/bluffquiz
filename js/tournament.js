@@ -392,7 +392,13 @@ function renderReaction(t,idx,m,bh){
   // Countdown->Go Transition
   if(md.phase==="countdown"&&md.goAt){
     const remaining=md.goAt-Date.now();
-    const flip=()=>update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
+    const flip=async()=>{
+      // Nur flippen wenn Phase noch countdown ist (nicht wenn jemand zu frueh geklickt hat)
+      const check=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val();
+      if(check&&check.phase==="countdown"){
+        await update(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`),{phase:"go",goAt:Date.now()});
+      }
+    };
     if(remaining<=0) flip();
     else A.timers.push(setTimeout(flip,remaining));
   }
@@ -423,6 +429,7 @@ function renderReaction(t,idx,m,bh){
         const fresh=(await get(ref(db,`rooms/${A.room}/tournament/reaction/${idx}`))).val()||{};
         let roundWinner,roundWinTime;
         if(fresh.phase==="countdown"){
+          A.clearTimers(); // WICHTIG: Countdown→Go Timer stoppen!
           roundWinner=opp; roundWinTime="FRUEH";
         } else if(fresh.phase==="go"){
           const res=await runTransaction(ref(db,`rooms/${A.room}/tournament/reaction/${idx}/roundWinner`),c=>c||A.user);
