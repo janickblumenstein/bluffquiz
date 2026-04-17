@@ -96,7 +96,7 @@ async function startSetup(gameType){
 
 function renderSetup(){
   const setup=A.state.tournamentSetup; if(!setup) return;
-  const labels={reaction:"⚡ Reaktions-Test",battleship:"⚓ Schiffeversenken",tictactoe:"⭕ TicTacToe-3",bierduel:"🍺 Bier-Duell"};
+  const labels={reaction:"⚡ Reaktions-Test",battleship:"⚓ Schiffeversenken",tictactoe:"⭕ TicTacToe-3",bierduel:"🍺 Bier-Duell",memory:"🧠 Bier-Memory",roulette:"💥 Bierdeckel-Roulette",stopwatch:"⏱️ 5-Sekunden-Stoppuhr"};
   const body=$("officialBody");
   const picks=setup.picks||{};
   let html=`<div class="q-big">${labels[setup.gameType]} Turnier</div>`;
@@ -701,11 +701,8 @@ async function stopTimer(idx, m) {
 
     // Pruefen ob BEIDE gestoppt haben
     const fresh = (await get(r)).val();
-    if (fresh.times && fresh.times[m.p1] != null && fresh.times[m.p2] != null) {
-      // Nur EIN Client wertet aus (deterministic: alphabetisch erster Spieler)
-      const decider = [m.p1, m.p2].sort()[0];
-      if (A.user !== decider) return;
-
+    if (fresh.times && fresh.times[m.p1] != null && fresh.times[m.p2] != null && fresh.phase === "running") {
+      // Phase-Check: Nur auswerten wenn noch "running" (verhindert Doppel-Auswertung)
       const t1 = fresh.times[m.p1], t2 = fresh.times[m.p2];
       const diff1 = Math.abs(5 - t1), diff2 = Math.abs(5 - t2);
       const roundWinner = diff1 < diff2 ? m.p1 : (diff2 < diff1 ? m.p2 : (Math.random() > 0.5 ? m.p1 : m.p2));
