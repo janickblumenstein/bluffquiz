@@ -846,8 +846,30 @@ async function initMemory(idx, m) {
     if (mt.round === myRound && !mt.winner && !mt.bye && mt.p1 && mt.p2) {
       if (!(t.memory && t.memory[i])) {
         // Deck für jedes Match individuell mischen
-        const shuffledDeck = shuffle([...deck]);
-        // State: hidden, flipped, matched
+        // Shuffle + sicherstellen dass keine identischen Karten nebeneinander
+        let shuffledDeck = shuffle([...deck]);
+        const cols = 3;
+        for (let pass = 0; pass < 10; pass++) {
+          let clean = true;
+          for (let j = 0; j < shuffledDeck.length; j++) {
+            const right = j + 1;
+            const below = j + cols;
+            // Horizontal-Nachbar (nur wenn gleiche Reihe)
+            if (right < shuffledDeck.length && right % cols !== 0 && shuffledDeck[j] === shuffledDeck[right]) {
+              // Tausche mit zufaelliger nicht-benachbarter Position
+              const swap = (right + 2 + Math.floor(Math.random() * (shuffledDeck.length - 4))) % shuffledDeck.length;
+              [shuffledDeck[right], shuffledDeck[swap]] = [shuffledDeck[swap], shuffledDeck[right]];
+              clean = false;
+            }
+            // Vertikal-Nachbar
+            if (below < shuffledDeck.length && shuffledDeck[j] === shuffledDeck[below]) {
+              const swap = (below + 2 + Math.floor(Math.random() * (shuffledDeck.length - 4))) % shuffledDeck.length;
+              [shuffledDeck[below], shuffledDeck[swap]] = [shuffledDeck[swap], shuffledDeck[below]];
+              clean = false;
+            }
+          }
+          if (clean) break;
+        }
         const board = shuffledDeck.map(id => ({ id, state: "hidden" }));
         
         updates[i] = {

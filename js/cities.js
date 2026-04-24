@@ -235,13 +235,14 @@ function renderCitiesTable(entries) {
         <thead style="cursor:pointer; user-select:none;">
             <tr>
                 <th style="padding:10px; position:sticky; left:0; background:var(--card2); z-index:2; border-right:1px solid var(--border);" onclick="window.setCitySort('name')">Stadt${indicator('name')}</th>
-                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('votes')">Pkt${indicator('votes')}</th>
-                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('price')">Budget${indicator('price')}</th>
-                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('beerPrice')">0.5l Bier${indicator('beerPrice')}</th>
-                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('tempMay')">Temp Mai${indicator('tempMay')}</th>
+                <th style="padding:10px; position:sticky; background:var(--card2);" onclick="window.setCitySort('votes')">Pkt${indicator('votes')}</th>
                 <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('flightTime')">Flugzeit${indicator('flightTime')}</th>
                 <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('depCh')">Hinflug${indicator('depCh')}</th>
                 <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('depBack')">Rückflug${indicator('depBack')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('price')">Budget${indicator('price')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('beerPrice')">0.5l Bier${indicator('beerPrice')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('tempMay')">Temp Mai${indicator('tempMay')}</th>
+           
             </tr>
         </thead>
         <tbody>`;
