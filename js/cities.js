@@ -1,4 +1,4 @@
-// === cities.js - Staedte-Voting mit Karte, Sticky-Tabelle und Metropolen-Daten ===
+// === cities.js - Städte-Voting mit Karte, Sticky-Tabelle und Metropolen-Daten ===
 const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore}=A;
 
 // Erweiterte Datenbank: Koordinaten, Ø Bierpreis (CHF), erwartete Temp 13. März 2027 (°C, Klimanormale Mitte März), Flugzeit ab Basel (ca.)
@@ -26,7 +26,7 @@ const EUROPE_CITIES = {
   "Kiew":              { coords: [50.4501,  30.5234], beer: 2.0,  temp: 6,  flight: "2h 40m" },
   "Kopenhagen":        { coords: [55.6761,  12.5683], beer: 7.0,  temp: 5,  flight: "1h 40m", price: 282, depCh: "07:10", depBack: "09:50" },
   "Krakau":            { coords: [50.0647,  19.9450], beer: 3.0,  temp: 7,  flight: "1h 35m" },
-  "Las Vegas":         { coords: [36.1691,-115.1499], beer: 8.5,  temp: 21, flight: "11h 30m" ,price:951, depCH: "13:55", depBack: "19:20"},
+  "Las Vegas":         { coords: [36.1691,-115.1499], beer: 8.5,  temp: 21, flight: "11h 30m" ,price: 951, depCh: "13:55", depBack: "19:20"},
   "Lissabon":          { coords: [38.7223,  -9.1393], beer: 3.0,  temp: 17, flight: "2h 40m" },
   "Ljubljana":         { coords: [46.0569,  14.5058], beer: 3.5,  temp: 11, flight: "1h 20m", price: 199, depCh: "13:10", depBack: "15:10" },
   "London":            { coords: [51.5074,  -0.1278], beer: 7.0,  temp: 10, flight: "1h 35m", price: 175, depCh: "07:10", depBack: "12:20" },
@@ -307,7 +307,7 @@ function renderVoteAction(aa,round,list,entries){
   if(round.type==="pos3"){
     const bonusUsed=(round.bonusUsed||{})[A.user]||0;
     const canBonus=(me.bonusVotes||0)>bonusUsed;
-    aa.innerHTML=`<hr><h3>Vergib 3 Punkte (max. 3 Staedte):</h3>`+activeOnly.map(([k,city])=>{
+    aa.innerHTML=`<hr><h3>Vergib 3 Punkte (max. 3 Städte):</h3>`+activeOnly.map(([k,city])=>{
       const sel=myV&&myV.includes(k);
       return `<button class="${sel?'btn-green':'btn-ghost'}" style="text-align:left" data-city="${k}">${sel?'✓ ':''}${city.name}</button>`;
     }).join("")+(canBonus?`<hr><div class="sub">Du hast Bonus-Stimmen! +1 fuer:</div>`+activeOnly.map(([k,city])=>`<button class="btn-purple btn-sm" data-bonus="${k}">⭐ +1 ${city.name}</button>`).join(""):"");
@@ -333,7 +333,7 @@ function renderVoteAction(aa,round,list,entries){
   else if(round.type==="duel"){
     const duelCities=round.duelCities||[];
     if(duelCities.length<2 && A.isHost){
-      aa.innerHTML=`<hr><div class="sub">Waehle 2 Staedte fuers Duell:</div>`+activeOnly.map(([k,city])=>{
+      aa.innerHTML=`<hr><div class="sub">Waehle 2 Städte fuers Duell:</div>`+activeOnly.map(([k,city])=>{
         const sel=duelCities.includes(k);
         return `<button class="${sel?'btn-orange':'btn-ghost'}" style="text-align:left" data-duelpick="${k}">${sel?'⚔️ ':''}${city.name}</button>`;
       }).join("");
@@ -589,7 +589,7 @@ async function lowestOut(){
   if(!active.length) return;
   const minV=Math.min(...active.map(e=>e[1].votes||0));
   const losers=active.filter(e=>(e[1].votes||0)===minV);
-  if(!confirm(`${losers.length} Stadt/Staedte mit Score ${minV} werden eliminiert: ${losers.map(l=>l[1].name).join(", ")}?`)) return;
+  if(!confirm(`${losers.length} Stadt/Städte mit Score ${minV} werden eliminiert: ${losers.map(l=>l[1].name).join(", ")}?`)) return;
   for(const [k] of losers) await update(ref(db,`rooms/${A.room}/cities/list/${k}`),{status:"eliminated"});
   toast(`${losers.length} raus`);
 }
@@ -604,7 +604,7 @@ async function resetVotes(){
 
 async function reactivateAll(){
   if(!A.isHost) return;
-  if(!confirm("Alle Staedte wieder aktivieren?")) return;
+  if(!confirm("Alle Städte wieder aktivieren?")) return;
   const list=((A.state.cities||{}).list)||{};
   for(const k of Object.keys(list)) await update(ref(db,`rooms/${A.room}/cities/list/${k}`),{status:"active"});
   toast("Alle reaktiviert");
