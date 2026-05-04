@@ -1,59 +1,69 @@
 // === cities.js - Staedte-Voting mit Karte, Sticky-Tabelle und Metropolen-Daten ===
 const A=window.App, {db,ref,set,onValue,update,get,remove,$,toast,awardScore}=A;
 
-// Erweiterte Datenbank: Koordinaten, Ø Bierpreis (CHF), Ø Temp Mai (°C), Flugzeit ab Basel (ca.)
+// Erweiterte Datenbank: Koordinaten, Ø Bierpreis (CHF), erwartete Temp 13. März 2027 (°C, Klimanormale Mitte März), Flugzeit ab Basel (ca.)
 const EUROPE_CITIES = {
-  "Amsterdam": { coords: [52.3676, 4.9041], beer: 6.5, temp: 13, flight: "1h 25m" },
-  "Athen": { coords: [37.9838, 23.7275], beer: 4.5, temp: 21, flight: "2h 40m" },
-  "Barcelona": { coords: [41.3851, 2.1734], beer: 3.5, temp: 18, flight: "1h 50m" },
-  "Belgrad": { coords: [44.7866, 20.4489], beer: 2.5, temp: 18, flight: "1h 45m" },
-  "Berlin": { coords: [52.5200, 13.4050], beer: 4.5, temp: 14, flight: "1h 20m" },
-  "Bratislava": { coords: [48.1486, 17.1077], beer: 2.5, temp: 16, flight: "1h 25m" },
-  "Budapest": { coords: [47.4979, 19.0402], beer: 2.5, temp: 17, flight: "1h 35m" },
-  "Bukarest": { coords: [44.4268, 26.1025], beer: 2.5, temp: 18, flight: "2h 20m" },
-  "Dublin": { coords: [53.3498, -6.2603], beer: 6.5, temp: 11, flight: "2h 30m" ,price:"172",depCH:"13:50",depBack:"10:00" },
-  "Dubrovnik": { coords: [42.6507, 18.0944], beer: 4.0, temp: 18, flight: "1h 45m" },
-  "Edinburgh": { coords: [55.9533, -3.1883], beer: 6.0, temp: 11, flight: "2h 00m" },
-  "Florenz": { coords: [43.7696, 11.2558], beer: 5.5, temp: 19, flight: "1h 15m" },
-  "Hamburg": { coords: [53.5511, 9.9937], beer: 4.5, temp: 13, flight: "1h 15m" },
-  "Helsinki": { coords: [60.1695, 24.9354], beer: 7.5, temp: 10, flight: "2h 45m" },
-  "Ibiza-Stadt": { coords: [38.9067, 1.4206], beer: 6.0, temp: 19, flight: "1h 55m" },
-  "Istanbul": { coords: [41.0082, 28.9784], beer: 3.5, temp: 18, flight: "2h 55m" },
-  "Kopenhagen": { coords: [55.6761, 12.5683], beer: 7.0, temp: 12, flight: "1h 40m" },
-  "Krakau": { coords: [50.0647, 19.9450], beer: 3.0, temp: 15, flight: "1h 35m" },
-  "Lissabon": { coords: [38.7223, -9.1393], beer: 3.0, temp: 18, flight: "2h 40m" },
-  "London": { coords: [51.5074, -0.1278], beer: 7.0, temp: 14, flight: "1h 35m" },
-  "Madrid": { coords: [40.4168, -3.7038], beer: 3.5, temp: 18, flight: "2h 10m" },
-  "Mailand": { coords: [45.4642, 9.1900], beer: 5.5, temp: 18, flight: "0h 55m" },
-  "Málaga": { coords: [36.7213, -4.4213], beer: 3.0, temp: 20, flight: "2h 35m" },
-  "München": { coords: [48.1351, 11.5820], beer: 5.0, temp: 14, flight: "0h 55m" },
-  "Neapel": { coords: [40.8518, 14.2681], beer: 3.5, temp: 20, flight: "1h 45m" },
-  "Oslo": { coords: [59.9139, 10.7522], beer: 9.0, temp: 12, flight: "2h 20m" },
-  "Palma de Mallorca": { coords: [39.5696, 2.6502], beer: 4.0, temp: 19, flight: "1h 50m" },
-  "Paris": { coords: [48.8566, 2.3522], beer: 7.5, temp: 15, flight: "1h 15m" },
-  "Porto": { coords: [41.1579, -8.6291], beer: 2.5, temp: 17, flight: "2h 30m" },
-  "Prag": { coords: [50.0755, 14.4378], beer: 2.5, temp: 15, flight: "1h 20m" },
-  "Reykjavik": { coords: [64.1466, -21.9426], beer: 10.0, temp: 7, flight: "3h 50m" },
-  "Riga": { coords: [56.9496, 24.1052], beer: 4.0, temp: 12, flight: "2h 25m" },
-  "Rom": { coords: [41.9028, 12.4964], beer: 5.0, temp: 21, flight: "1h 35m" },
-  "Sevilla": { coords: [37.3891, -5.9845], beer: 3.0, temp: 22, flight: "2h 35m" },
-  "Sofia": { coords: [42.6977, 23.3219], beer: 2.0, temp: 16, flight: "2h 15m" },
-  "Split": { coords: [43.5081, 16.4402], beer: 3.5, temp: 20, flight: "1h 35m" },
-  "Stockholm": { coords: [59.3293, 18.0686], beer: 7.5, temp: 12, flight: "2h 25m" },
-  "Tallinn": { coords: [59.4370, 24.7536], beer: 4.5, temp: 11, flight: "2h 40m" },
-  "Valletta": { coords: [35.8989, 14.5146], beer: 4.0, temp: 20, flight: "2h 15m" },
-  "Valencia": { coords: [39.4699, -0.3763], beer: 3.0, temp: 19, flight: "2h 05m" },
-  "Venedig": { coords: [45.4408, 12.3155], beer: 6.0, temp: 18, flight: "1h 10m" },
-  "Warschau": { coords: [52.2297, 21.0122], beer: 3.5, temp: 15, flight: "1h 55m" },
-  "Wien": { coords: [48.2082, 16.3738], beer: 4.5, temp: 16, flight: "1h 20m" },
-  "Zagreb": { coords: [45.8150, 15.9819], beer: 3.0, temp: 17, flight: "1h 25m" },
-  "Zürich": { coords: [47.3769, 8.5417], beer: 8.0, temp: 14, flight: "0h 0m" },
-  "Kiew": { coords: [50.4501, 30.5234], beer: 2.0, temp: 16, flight: "2h 40m" },
-  "Lyon": { coords: [45.7640, 4.8357], beer: 6.0, temp: 16, flight: "1h 00m" },
-  "Marseille": { coords: [43.2965, 5.3698], beer: 5.5, temp: 18, flight: "1h 25m" },
-  "Turin": { coords: [45.0703, 7.6869], beer: 5.0, temp: 17, flight: "1h 00m" },
-  "Bordeaux": { coords: [44.8378, -0.5792], beer: 6.0, temp: 17, flight: "1h 35m" },
-  "Las Vegas": { coords: [36.1691, -115.1499], beer: 8.5, temp: 28, flight: "14h 00m"}
+  "Amsterdam":         { coords: [52.3676,   4.9041], beer: 6.5,  temp: 9,  flight: "1h 25m" },
+  "Athen":             { coords: [37.9838,  23.7275], beer: 4.5,  temp: 16, flight: "2h 40m", price: 228, depCh: "09:15", depBack: "13:45" },
+  "Barcelona":         { coords: [41.3851,   2.1734], beer: 3.5,  temp: 16, flight: "1h 50m", price: 198, depCh: "15:45", depBack: "09:35" },
+  "Belgrad":           { coords: [44.7866,  20.4489], beer: 2.5,  temp: 12, flight: "1h 45m" },
+  "Berlin":            { coords: [52.5200,  13.4050], beer: 4.5,  temp: 8,  flight: "1h 20m" },
+  "Bordeaux":          { coords: [44.8378,  -0.5792], beer: 6.0,  temp: 14, flight: "1h 35m" },
+  "Bratislava":        { coords: [48.1486,  17.1077], beer: 2.5,  temp: 10, flight: "1h 25m" },
+  "Brüssel":           { coords: [50.8503,   4.3517], beer: 5.0,  temp: 10, flight: "1h 10m", price: 275, depCh: "07:30", depBack: "10:00" },
+  "Budapest":          { coords: [47.4979,  19.0402], beer: 2.5,  temp: 11, flight: "1h 35m" },
+  "Bukarest":          { coords: [44.4268,  26.1025], beer: 2.5,  temp: 11, flight: "2h 20m" },
+  "Chicago":           { coords: [41.8781,  -87.629309], beer: 7.0,  temp: 5, flight: "10h 10m", price: 600, depCh: "13:10", depBack: "19:50" },
+  "Dublin":            { coords: [53.3498,  -6.2603], beer: 6.5,  temp: 9,  flight: "2h 30m", price: 172, depCh: "10:00", depBack: "13:50" },
+  "Dubrovnik":         { coords: [42.6507,  18.0944], beer: 4.0,  temp: 14, flight: "1h 45m" },
+  "Düsseldorf":        { coords: [51.2277,   6.7735], beer: 4.5,  temp: 9,  flight: "1h 20m", price: 182, depCh: "07:35", depBack: "09:45" },
+  "Edinburgh":         { coords: [55.9533,  -3.1883], beer: 6.0,  temp: 8,  flight: "2h 00m" },
+  "Florenz":           { coords: [43.7696,  11.2558], beer: 5.5,  temp: 14, flight: "1h 15m" },
+  "Hamburg":           { coords: [53.5511,   9.9937], beer: 4.5,  temp: 8,  flight: "1h 15m", price: 101, depCh: "06:00", depBack: "09:45" },
+  "Helsinki":          { coords: [60.1695,  24.9354], beer: 7.5,  temp: 2,  flight: "2h 45m" },
+  "Ibiza-Stadt":       { coords: [38.9067,   1.4206], beer: 6.0,  temp: 16, flight: "1h 55m" },
+  "Istanbul":          { coords: [41.0082,  28.9784], beer: 3.5,  temp: 11, flight: "3h 00m", price: 133, depCh: "12:50", depBack: "10:40" },
+  "Kiew":              { coords: [50.4501,  30.5234], beer: 2.0,  temp: 6,  flight: "2h 40m" },
+  "Kopenhagen":        { coords: [55.6761,  12.5683], beer: 7.0,  temp: 5,  flight: "1h 40m", price: 282, depCh: "07:10", depBack: "09:50" },
+  "Krakau":            { coords: [50.0647,  19.9450], beer: 3.0,  temp: 7,  flight: "1h 35m" },
+  "Las Vegas":         { coords: [36.1691,-115.1499], beer: 8.5,  temp: 21, flight: "11h 30m" ,price:951, depCH: "13:55", depBack: "19:20"},
+  "Lissabon":          { coords: [38.7223,  -9.1393], beer: 3.0,  temp: 17, flight: "2h 40m" },
+  "Ljubljana":         { coords: [46.0569,  14.5058], beer: 3.5,  temp: 11, flight: "1h 20m", price: 199, depCh: "13:10", depBack: "15:10" },
+  "London":            { coords: [51.5074,  -0.1278], beer: 7.0,  temp: 10, flight: "1h 35m", price: 175, depCh: "07:10", depBack: "12:20" },
+  "Luxemburg":         { coords: [49.6116,   6.1319], beer: 5.0,  temp: 9,  flight: "1h 05m", price: 255, depCh: "09:00", depBack: "10:45" },
+  "Lyon":              { coords: [45.7640,   4.8357], beer: 6.0,  temp: 13, flight: "1h 00m" },
+  "Madrid":            { coords: [40.4168,  -3.7038], beer: 3.5,  temp: 16, flight: "2h 30m", price: 110, depCh: "06:05", depBack: "10:15" },
+  "Mailand":           { coords: [45.4642,   9.1900], beer: 5.5,  temp: 13, flight: "0h 55m" },
+  "Málaga":            { coords: [36.7213,  -4.4213], beer: 3.0,  temp: 19, flight: "2h 35m" },
+  "Malta":             { coords: [35,9375,  14.3754], beer: 3.3,  temp: 15, flight: "2h 35m" , price: 242, depCh: "06:45", depBack: "14:45" },
+  "Manchester":        { coords: [53.4808,  -2.2426], beer: 6.0,  temp: 9,  flight: "2h 00m", price: 264, depCh: "07:10", depBack: "09:10" },
+  "Marseille":         { coords: [43.2965,   5.3698], beer: 5.5,  temp: 14, flight: "1h 25m", price: 242, depCh: "12:35", depBack: "14:50" },
+  "Miami":             { coords: [25.7742,   -80.1904], beer: 6.0,  temp: 25, flight: "10h 50m", price: 660, depCh: "09:50", depBack: "17:40" },
+  "München":           { coords: [48.1351,  11.5820], beer: 5.0,  temp: 9,  flight: "0h 55m", price: 201, depCh: "09:50", depBack: "11:35" },
+  "Neapel":            { coords: [40.8518,  14.2681], beer: 3.5,  temp: 15, flight: "1h 45m", price: 159, depCh: "07:45", depBack: "15:05" },
+  "New York":          { coords: [40.7128, -74.0060], beer: 8.0,  temp: 9,  flight: "9h 00m", price: 566, depCh: "09:50", depBack: "17:25" },
+  "Nizza":             { coords: [43.7102,   7.2620], beer: 6.0,  temp: 14, flight: "1h 15m", price: 222, depCh: "07:35", depBack: "09:40" },
+  "Oslo":              { coords: [59.9139,  10.7522], beer: 9.0,  temp: 4,  flight: "2h 30m", price: 272, depCh: "09:40", depBack: "13:00" },
+  "Palma de Mallorca": { coords: [39.5696,   2.6502], beer: 4.0,  temp: 17, flight: "1h 50m" },
+  "Paris":             { coords: [48.8566,   2.3522], beer: 7.5,  temp: 12, flight: "1h 15m", price: 147, depCh: "10:30", depBack: "12:45" },
+  "Porto":             { coords: [41.1579,  -8.6291], beer: 2.5,  temp: 16, flight: "2h 45m", price: 230, depCh: "09:30", depBack: "12:05" },
+  "Prag":              { coords: [50.0755,  14.4378], beer: 2.5,  temp: 8,  flight: "2h 30m", price: 148, depCh: "07:25", depBack: "09:40" },
+  "Reykjavik":         { coords: [64.1466, -21.9426], beer: 10.0, temp: 3,  flight: "3h 50m" },
+  "Riga":              { coords: [56.9496,  24.1052], beer: 4.0,  temp: 3,  flight: "2h 25m" },
+  "Rom":               { coords: [41.9028,  12.4964], beer: 5.0,  temp: 15, flight: "1h 35m", price: 180, depCh: "10:55", depBack: "09:35" },
+  "Sevilla":           { coords: [37.3891,  -5.9845], beer: 3.0,  temp: 19, flight: "2h 35m" },
+  "Sofia":             { coords: [42.6977,  23.3219], beer: 2.0,  temp: 10, flight: "2h 15m" },
+  "Split":             { coords: [43.5081,  16.4402], beer: 3.5,  temp: 14, flight: "1h 35m" },
+  "Stockholm":         { coords: [59.3293,  18.0686], beer: 7.5,  temp: 4,  flight: "2h 30m", price: 233, depCh: "09:55", depBack: "13:10" },
+  "Tallinn":           { coords: [59.4370,  24.7536], beer: 4.5,  temp: 2,  flight: "2h 40m" },
+  "Turin":             { coords: [45.0703,   7.6869], beer: 5.0,  temp: 13, flight: "1h 00m" },
+  "Valencia":          { coords: [39.4699,  -0.3763], beer: 3.0,  temp: 18, flight: "2h 05m" },
+  "Valletta":          { coords: [35.8989,  14.5146], beer: 4.0,  temp: 17, flight: "2h 15m" },
+  "Venedig":           { coords: [45.4408,  12.3155], beer: 6.0,  temp: 12, flight: "1h 10m", price: 166, depCh: "07:35", depBack: "15:00" },
+  "Warschau":          { coords: [52.2297,  21.0122], beer: 3.5,  temp: 7,  flight: "1h 55m" },
+  "Wien":              { coords: [48.2082,  16.3738], beer: 4.5,  temp: 10, flight: "1h 20m" },
+  "Zagreb":            { coords: [45.8150,  15.9819], beer: 3.0,  temp: 12, flight: "1h 25m" },
+  "Zürich":            { coords: [47.3769,   8.5417], beer: 8.0,  temp: 10, flight: "0h 0m"  }
 };
 
 let map = null;
@@ -115,13 +125,13 @@ const prevSeed=A.listeners.seedDefaults;
 A.listeners.seedDefaults=async()=>{
   if(prevSeed) await prevSeed();
   const cityObj={};
-  const startCities = ["Lissabon", "Prag", "Las Vegas", "Budapest", "Valencia","Dublin"];
+  const startCities = ["Athen", "Barcelona", "Brüssel", "Chicago","Dublin", "Düsseldorf", "Hamburg", "Istanbul", "Kopenhagen", "Las Vegas","Ljubljana", "London", "Luxemburg", "Madrid", "Manchester", "Marseille", "Miami","München", "Neapel", "New York", "Nizza", "Oslo", "Paris", "Porto", "Prag", "Rom", "Stockholm", "Venedig"];
   
   startCities.forEach((n,i)=>{
     const data = EUROPE_CITIES[n] || {};
     cityObj["c_"+i]={
       name: n, status: "active", votes: 0, 
-      price: data.price || "", depCh: data.depCH || "", depBack: data.depBack || "",
+      price: data.price || "", depCh: data.depCh || "", depBack: data.depBack || "",
       beerPrice: data.beer || "", 
       tempMay: data.temp || "", 
       flightTime: data.flight || ""
@@ -241,7 +251,7 @@ function renderCitiesTable(entries) {
                 <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('depBack')">Rückflug${indicator('depBack')}</th>
                 <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('price')">Budget${indicator('price')}</th>
                 <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('beerPrice')">0.5l Bier${indicator('beerPrice')}</th>
-                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('tempMay')">Temp Mai${indicator('tempMay')}</th>
+                <th style="padding:10px; background:var(--card2);" onclick="window.setCitySort('tempMay')">Temp März${indicator('tempMay')}</th>
            
             </tr>
         </thead>
@@ -261,12 +271,12 @@ function renderCitiesTable(entries) {
             <td style="padding:10px; background:var(--card); ${rowStyle}">
                 <span class="vote-pill ${city.votes < 0 ? 'neg' : ''}" style="display:inline-block; padding:2px 6px;">${city.votes>0?'+':''}${city.votes||0}</span>
             </td>
-            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.price || '-'}</td>
-            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.beerPrice ?  city.beerPrice : '-'}</td>
-            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.tempMay ? city.tempMay + ' °C' : '-'}</td>
             <td style="padding:10px; background:var(--card); ${rowStyle}">${city.flightTime || '-'}</td>
             <td style="padding:10px; background:var(--card); font-size:0.7rem; ${rowStyle}">${city.depCh || '-'}</td>
             <td style="padding:10px; background:var(--card); font-size:0.7rem; ${rowStyle}">${city.depBack || '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.price || '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.beerPrice ? city.beerPrice : '-'}</td>
+            <td style="padding:10px; background:var(--card); ${rowStyle}">${city.tempMay ? city.tempMay + ' °C' : '-'}</td>
         </tr>`;
     });
 
@@ -428,7 +438,7 @@ function openCityEditor(cid){
            <input id="edBeer" type="number" step="0.5" value="${city.beerPrice||''}" placeholder="z.B. 4.5">
        </div>
        <div>
-           <label class="sub">Temp Mai (°C):</label>
+           <label class="sub">Temp März (°C):</label>
            <input id="edTemp" type="number" value="${city.tempMay||''}" placeholder="z.B. 21">
        </div>
     </div>
@@ -478,9 +488,9 @@ async function addCity(){
       name: v, 
       status: "active", 
       votes: 0, 
-      price: "", 
-      depCh: "", 
-      depBack: "",
+      price: data.price || "", 
+      depCh: data.depCh || "", 
+      depBack: data.depBack || "",
       beerPrice: data.beer || "",
       tempMay: data.temp || "",
       flightTime: data.flight || ""
