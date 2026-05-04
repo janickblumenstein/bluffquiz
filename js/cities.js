@@ -11,7 +11,7 @@ const EUROPE_CITIES = {
   "Bratislava": { coords: [48.1486, 17.1077], beer: 2.5, temp: 16, flight: "1h 25m" },
   "Budapest": { coords: [47.4979, 19.0402], beer: 2.5, temp: 17, flight: "1h 35m" },
   "Bukarest": { coords: [44.4268, 26.1025], beer: 2.5, temp: 18, flight: "2h 20m" },
-  "Dublin": { coords: [53.3498, -6.2603], beer: 6.5, temp: 11, flight: "2h 05m" },
+  "Dublin": { coords: [53.3498, -6.2603], beer: 6.5, temp: 11, flight: "2h 30m" ,price:"172",depCH:"13:50",depBack:"10:00" },
   "Dubrovnik": { coords: [42.6507, 18.0944], beer: 4.0, temp: 18, flight: "1h 45m" },
   "Edinburgh": { coords: [55.9533, -3.1883], beer: 6.0, temp: 11, flight: "2h 00m" },
   "Florenz": { coords: [43.7696, 11.2558], beer: 5.5, temp: 19, flight: "1h 15m" },
@@ -53,7 +53,7 @@ const EUROPE_CITIES = {
   "Marseille": { coords: [43.2965, 5.3698], beer: 5.5, temp: 18, flight: "1h 25m" },
   "Turin": { coords: [45.0703, 7.6869], beer: 5.0, temp: 17, flight: "1h 00m" },
   "Bordeaux": { coords: [44.8378, -0.5792], beer: 6.0, temp: 17, flight: "1h 35m" },
-  "Las Vegas": { coords: [36.1691, -115.1499], beer: 8.5, temp: 28, flight: "14h 00m" }
+  "Las Vegas": { coords: [36.1691, -115.1499], beer: 8.5, temp: 28, flight: "14h 00m"}
 };
 
 let map = null;
@@ -115,13 +115,13 @@ const prevSeed=A.listeners.seedDefaults;
 A.listeners.seedDefaults=async()=>{
   if(prevSeed) await prevSeed();
   const cityObj={};
-  const startCities = ["Lissabon", "Prag", "Las Vegas", "Budapest", "Valencia"];
+  const startCities = ["Lissabon", "Prag", "Las Vegas", "Budapest", "Valencia","Dublin"];
   
   startCities.forEach((n,i)=>{
     const data = EUROPE_CITIES[n] || {};
     cityObj["c_"+i]={
       name: n, status: "active", votes: 0, 
-      price: "", depCh: "", depBack: "",
+      price: data.price || "", depCh: data.depCH || "", depBack: data.depBack || "",
       beerPrice: data.beer || "", 
       tempMay: data.temp || "", 
       flightTime: data.flight || ""
